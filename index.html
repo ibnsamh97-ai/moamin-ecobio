@@ -31,6 +31,10 @@
   <symbol id="i-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
   <symbol id="i-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 0 0-14.9-4M4 4v4h4M4 13a8 8 0 0 0 14.9 4M20 20v-4h-4"/></symbol>
   <symbol id="i-send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 3 10 14"/><path d="M21 3 14.5 21l-4.5-7-7-4.5Z"/></symbol>
+  <symbol id="i-building" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V8l7-4.5L19 8v13"/><path d="M9.5 21v-5h5v5M8 10.5h2M14 10.5h2M8 13.5h2M14 13.5h2"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M8 5.5v13l10.5-6.5Z"/></symbol>
+  <symbol id="i-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></symbol>
+  <symbol id="i-map" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M9 4 3.5 6v14L9 18l6 2 5.5-2V4L15 6Z"/><path d="M9 4v14M15 6v14"/></symbol>
   <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
   <symbol id="i-clip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 11.2 12.2 19.5a5.2 5.2 0 0 1-7.4-7.4l8.6-8.6a3.4 3.4 0 0 1 4.9 4.9l-8.5 8.5a1.7 1.7 0 0 1-2.4-2.4l7.8-7.8"/></symbol>
   <symbol id="i-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></symbol>
@@ -126,6 +130,7 @@
       <a class="module " href="#water"><span class="ic"><svg><use href="#i-drop"/></svg></span><h3>مختبر جودة المياه</h3><p>WQI وHPI ومطابقة المواصفة العراقية 417 ونظام خبير يقترح المعالجة الحيوية.</p><span class="meta">WQI · HPI · IQS 417</span></a>
       <a class="module " href="#analysis"><span class="ic"><svg><use href="#i-brain"/></svg></span><h3>التحليل الذكي</h3><p>نموذج تعلم آلي يتدرّب داخل المتصفح، وكشف الأيام الشاذة، واتجاه مصادر التلوث.</p><span class="meta">Ridge · Z-score</span></a>
       <a class="module " href="#reports"><span class="ic"><svg><use href="#i-file"/></svg></span><h3>التقارير PDF</h3><p>تقارير رسمية باسم المختبر فيها الجداول والرسوم والصور، جاهزة للمشرف.</p><span class="meta">PDF</span></a>
+      <a class="module bio" href="#campus"><span class="ic"><svg><use href="#i-building"/></svg></span><h3>جولة في القسم 3D</h3><p>تجوّل داخل قسم علوم الحياة بطابقيه، وادخل المختبرات واضغط على الأجهزة لتعرف ما تقيسه.</p><span class="meta">جولة تلقائية · خريطة</span></a>
       <a class="module bio" href="#river"><span class="ic"><svg><use href="#i-river"/></svg></span><h3>محاكاة دجلة 3D</h3><p>شغّل مصادر التلوث وطبّق المعالجة النباتية والحيوية وراقب صحة النهر.</p><span class="meta">WebGL</span></a>
       <a class="module bio" href="#micro"><span class="ic"><svg><use href="#i-microbe"/></svg></span><h3>العالم المجهري 3D</h3><p>بكتيريا تفكك النفط أو تمتص العناصر الثقيلة حسب الحرارة وpH والمغذيات.</p><span class="meta">Pseudomonas · Biosorption</span></a>
       <a class="module pol" href="#molecules"><span class="ic"><svg><use href="#i-atom"/></svg></span><h3>مكتبة الملوثات 3D</h3><p>نماذج جزيئية لعشرة ملوثات مع مصادرها وحدودها ومعالجتها.</p><span class="meta">BTEX · PAHs</span></a>
@@ -331,6 +336,50 @@
 </section>
 
 <!-- ======================= محاكاة دجلة ======================= -->
+<section class="view" id="view-campus" data-title="جولة في القسم">
+  <div class="wrap">
+    <div class="view-head">
+      <div>
+        <span class="eyebrow">Virtual department tour · 3D</span>
+        <h2>جولة ثلاثية الأبعاد في قسم علوم الحياة</h2>
+        <p>امشِ من الساحة الأمامية إلى داخل القسم، وتنقّل بين المختبرات والقاعات في الطابقين، واضغط على أي جهاز لتعرف ما يقيسه وتفتح الحاسبة المرتبطة به.</p>
+      </div>
+    </div>
+    <div class="tour-stage" id="tour-stage">
+      <canvas id="tour-canvas" aria-label="جولة ثلاثية الأبعاد داخل قسم علوم الحياة"></canvas>
+      <div class="tour-where" id="tour-where">الساحة الأمامية للقسم</div>
+      <div class="tour-btns">
+        <button class="btn icon-btn" type="button" id="tour-play" title="جولة تلقائية" aria-label="جولة تلقائية"><svg><use href="#i-play"/></svg></button>
+        <button class="btn icon-btn on" type="button" id="tour-map-t" title="الخريطة" aria-label="الخريطة"><svg><use href="#i-map"/></svg></button>
+        <button class="btn icon-btn" type="button" id="tour-full" title="ملء الشاشة" aria-label="ملء الشاشة"><svg><use href="#i-expand"/></svg></button>
+      </div>
+      <div class="tour-map" id="tour-map">
+        <div class="seg" id="tour-floors"><button type="button" data-f="0" class="on">الأرضي</button><button type="button" data-f="1">الأول</button></div>
+        <canvas id="tour-map-c" aria-label="خريطة الطابق: اضغط على غرفة للانتقال إليها"></canvas>
+      </div>
+      <div class="tour-joy" id="tour-joy" hidden><span></span></div>
+      <button class="btn btn-primary tour-stairs" type="button" id="tour-stairs" hidden></button>
+      <div class="tour-cap" id="tour-cap" hidden></div>
+      <div class="tour-tip" id="tour-tip" hidden></div>
+      <div class="tour-info" id="tour-info" hidden></div>
+      <div class="tour-fade" id="tour-fade"></div>
+      <div class="tour-intro" id="tour-intro">
+        <div class="tour-intro-box">
+          <svg class="ti-ic"><use href="#i-building"/></svg>
+          <h3>أهلاً بك في قسم علوم الحياة</h3>
+          <ul>
+            <li>اسحب بالماوس أو بإصبعك لتلتفت حولك.</li>
+            <li>اضغط على الأرض لتمشي إليها، أو استخدم W A S D والأسهم، أو عصا التحكم على الهاتف.</li>
+            <li>اضغط على أي جهاز في المختبر لتعرف ما يقيسه.</li>
+          </ul>
+          <div class="row" style="justify-content:center"><button class="btn btn-primary" type="button" id="tour-start"><svg><use href="#i-play"/></svg>ابدأ الجولة التلقائية</button><button class="btn" type="button" id="tour-self">تجوّل بنفسي</button></div>
+        </div>
+      </div>
+    </div>
+    <div class="grid g-3 tour-rooms" id="tour-rooms" style="margin-top:16px"></div>
+  </div>
+</section>
+
 <section class="view" id="view-river" data-title="محاكاة دجلة 3D">
   <div class="wrap">
     <div class="view-head">
@@ -823,6 +872,7 @@
 <script src="js/river3d.js"></script>
 <script src="js/micro3d.js"></script>
 <script src="js/molecules3d.js"></script>
+<script src="js/campus3d.js"></script>
 <script src="js/chat.js"></script>
 <script src="js/report.js"></script>
 <script src="js/samples.js"></script>

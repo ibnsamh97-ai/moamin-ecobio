@@ -517,6 +517,7 @@
       { id: "analysis", label: "التحليل الذكي", icon: "i-brain", desc: "تعلم آلي وكشف الشذوذ لبيانات الهواء" }
     ] },
     { label: "ثلاثي الأبعاد", icon: "i-cube", items: [
+      { id: "campus", label: "جولة في القسم", icon: "i-building", desc: "تجوّل ثلاثي الأبعاد داخل قسم علوم الحياة ومختبراته" },
       { id: "river", label: "محاكاة دجلة", icon: "i-river", desc: "مصادر التلوث والمعالجة الحيوية" },
       { id: "micro", label: "العالم المجهري", icon: "i-microbe", desc: "بكتيريا تفكك النفط وتمتص المعادن" },
       { id: "molecules", label: "مكتبة الملوثات", icon: "i-atom", desc: "نماذج جزيئية لعشرة ملوثات" }
