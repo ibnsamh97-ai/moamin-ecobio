@@ -6,4 +6,4 @@
    هذا الرابط ليس سرياً؛ المفتاح نفسه محفوظ داخل Cloudflare ولا يظهر هنا.
    ===================================================================== */
 window.ECO = window.ECO || {};
-ECO.GEMINI_PROXY = "";
+ECO.GEMINI_PROXY = "https://ecobioai.moaminbio.workers.dev";
