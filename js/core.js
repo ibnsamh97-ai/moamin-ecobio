@@ -299,7 +299,9 @@
     if (status === 413) return "الملف المرفق كبير جداً. الحد الأقصى نحو 9 ميغابايت.";
     if (/location is not supported/i.test(msg)) return "خدمة Gemini غير متاحة من موقع الخادم الحالي.";
     if (shared) {
-      if (code === "ORIGIN_NOT_ALLOWED") return "خادم المساعد لا يقبل الطلبات من هذا الرابط. (لصاحب الموقع: أضف رابط الموقع إلى ALLOWED_ORIGINS في إعدادات الـ Worker)";
+      if (code === "ORIGIN_NOT_ALLOWED") return location.protocol === "file:"
+        ? "المساعد المشترك لا يعمل عند فتح الموقع من ملف على الجهاز. افتح الموقع من رابطه على GitHub Pages."
+        : `خادم المساعد لا يقبل الطلبات من هذا الرابط: ${location.origin} (لصاحب الموقع: أضف هذا الرابط إلى ALLOWED_ORIGINS في إعدادات الـ Worker)`;
       if (code === "GEMINI_KEY_MISSING") return "خادم المساعد يعمل لكن مفتاح Gemini لم يُضَف إليه بعد (GEMINI_KEY).";
       if (code === "VISITOR_RATE_LIMIT") return "أرسلت طلبات كثيرة خلال دقيقة واحدة. انتظر قليلاً ثم أعد المحاولة.";
       if (status === 429) return "استُهلكت الحصة المجانية للمساعد مؤقتاً بسبب كثرة الاستخدام. حاول بعد قليل، أو أضف مفتاحك المجاني الخاص من الإعدادات ليعمل عندك فوراً.";
