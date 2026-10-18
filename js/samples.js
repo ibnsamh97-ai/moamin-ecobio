@@ -74,7 +74,8 @@
       if (a.dataset.act === "lab") ECO.water.fill(s.v || {}, { name: s.code + " – " + (s.site || ""), site: s.site, date: s.date, source: `عيّنة ${s.code} من خريطة العينات` });
       if (a.dataset.act === "pdf") sampleReport(s);
     });
-    U.$("#smp-legend").innerHTML = [["good", "WQI ≤ 50 جيدة"], ["warn", "51–75 رديئة"], ["bad", "76–100 رديئة جداً"], ["severe", "> 100 غير صالحة"], ["info", "عينة بلا WQI"]].map(([t, l]) => `<span><i style="background:${ECO.TONES[t]}"></i>${l}</span>`).join("") + `<span><i class="lg-rs"></i>بحث منشور</span>`;
+    U.$("#smp-legend").innerHTML = [["good", "WQI ≤ 50 جيدة"], ["warn", "51–75 رديئة"], ["bad", "76–100 رديئة جداً"], ["severe", "> 100 غير صالحة"], ["info", "عينة بلا WQI"]].map(([t, l]) => `<span><i style="background:${ECO.TONES[t]}"></i>${l}</span>`).join("") + `<span><i class="lg-rs"></i>بحث منشور</span><span><i class="lg-ct"></i>موقع باحث</span>`;
+    ECO.bus.emit("samples-map", S.map);
   }
 
   function popupHTML(s) {
@@ -274,6 +275,8 @@
   /* ---------------- واجهة عامة ---------------- */
   ECO.samples = {
     list: () => S.list,
+    map: () => S.map,
+    params: PARAMS,
     startAdd(pending) { S.pending = pending || null; ECO.go("samples"); setTimeout(() => { setAdding(true); U.toast("اضغط على الخريطة في موقع العينة، أو اختر «عينة في موقعي»"); }, 300); },
     openNew(data) { ECO.go("samples"); setTimeout(() => openSheet(data), 350); }
   };

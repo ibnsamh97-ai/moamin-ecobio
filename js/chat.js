@@ -23,6 +23,8 @@
     if (smp.length) parts.push(`عينات المستخدم على الخريطة (${smp.length}): ` + smp.slice(-8).map(s => `${s.code} ${s.site || ""} [${s.type}] ${s.lat.toFixed(4)},${s.lon.toFixed(4)}${s.wqi != null ? " WQI=" + s.wqi : ""}`).join("؛ "));
     if (ECO.lastVision) parts.push(`آخر قراءة صورة: Forel-Ule=${ECO.lastVision.fu} (${ECO.lastVision.class})، درجة التلوث المرئي ${ECO.lastVision.score}/100`);
     if (ECO.RESEARCH) parts.push("بحوث جامعة تكريت المتاحة في المنصة (بيانات منشورة):\n" + ECO.RESEARCH.map(r => `- ${r.authors} (${r.year})، ${r.place}: ${r.summary}`).join("\n"));
+    const ct = ECO.contrib ? ECO.contrib.list() : [];
+    if (ct.length) parts.push(`مواقع بحوث الأساتذة المعتمدة على خريطة المنصة (${ct.length}):\n` + ct.slice(-15).map(s => `- ${s.place} (${s.lat}, ${s.lon}) [${s.type}]: ${(s.title ? s.title + " " : "") + s.researcher}، ${s.institution} (${s.year}) – ${s.research}${s.params && Object.keys(s.params).length ? " | " + Object.entries(s.params).map(([k, v]) => k + "=" + v).join(", ") : ""}`).join("\n"));
     if (ECO.lastWater) parts.push(`آخر عيّنة مياه في المختبر: ${ECO.lastWater.name} – WQI=${ECO.lastWater.wqi.toFixed(1)} (${ECO.lastWater.cls})، HPI=${ECO.lastWater.hpi == null ? "—" : ECO.lastWater.hpi.toFixed(1)}، التجاوزات: ${ECO.lastWater.exceed.join("، ") || "لا يوجد"}`);
     return parts.length ? `\n\n---\n[بيانات المنصة الحية للاستخدام عند الحاجة فقط]\n${parts.join("\n\n")}` : "";
   }

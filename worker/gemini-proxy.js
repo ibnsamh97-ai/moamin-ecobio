@@ -1,9 +1,10 @@
 /* =====================================================================
-   EcoBio AI — خادم Gemini المشترك (Cloudflare Worker)
+   EcoBio AI — الخادم المشترك (Cloudflare Worker)
    ---------------------------------------------------------------------
-   يحفظ مفتاح Gemini سراً على خوادم Cloudflare، ويمرّر طلبات موقعك فقط
-   إلى Google، فيعمل المساعد الذكي عند كل من يفتح الموقع دون أن يظهر
-   المفتاح لأحد.
+   1) يحفظ مفتاح Gemini سراً ويمرّر طلبات موقعك فقط إلى Google، فيعمل
+      المساعد الذكي عند كل من يفتح الموقع دون أن يظهر المفتاح لأحد.
+   2) يحفظ «مواقع بحوث الأساتذة» في قاعدة بيانات مشتركة (Workers KV)،
+      مع مراجعة المشرف قبل ظهور أي موقع للعموم.
 
    المتغيرات (Worker → Settings → Variables and Secrets):
      GEMINI_KEY       نوعه Secret  — مفتاح Gemini من Google AI Studio (إلزامي)
@@ -14,6 +15,10 @@
      MODEL            نوعه Text    — فرض نموذج واحد لكل الطلبات (اختياري)
      FALLBACK_MODELS  نوعه Text    — نماذج بديلة عند نفاد حصة النموذج الأول،
                                      مفصولة بفاصلة (اختياري، الافتراضي gemini-flash-lite-latest)
+     ADMIN_KEY        نوعه Secret  — كلمة سر لوحة مراجعة مواقع الباحثين
+
+   الربط (Worker → Settings → Bindings → Add → KV namespace):
+     SITES            قاعدة بيانات KV لمواقع بحوث الأساتذة
    ===================================================================== */
 
 const UPSTREAM = "https://generativelanguage.googleapis.com";
@@ -32,6 +37,128 @@ function limited(ip, max) {
   arr.push(now); hits.set(ip, arr);
   if (hits.size > 5000) hits.clear();
   return false;
+}
+
+/* ---------------------------------------------------------------------
+   مواقع بحوث الأساتذة (Workers KV)
+   p:<id>     مساهمة بانتظار المراجعة
+   approved   قائمة المواقع المعتمدة الظاهرة لكل الزوار
+--------------------------------------------------------------------- */
+const IRAQ = { s: 29.0, n: 37.6, w: 38.7, e: 48.8 };
+const TYPES = ["مياه نهر", "مياه بئر", "مياه صرف", "مياه شرب", "تربة", "رواسب", "نبات", "هواء"];
+const TITLES = ["أ.د.", "أ.م.د.", "م.د.", "م.م.", "د.", "باحث", "طالب دراسات عليا"];
+const subs = new Map(), badKeys = new Map();
+
+function over(map, key, max, ms) {
+  const now = Date.now();
+  const arr = (map.get(key) || []).filter(t => now - t < ms);
+  map.set(key, arr);
+  if (map.size > 5000) map.clear();
+  return arr.length >= max;
+}
+const mark = (map, key) => { const arr = map.get(key) || []; arr.push(Date.now()); map.set(key, arr); };
+const str = (v, max) => String(v == null ? "" : v).replace(/[\u0000-\u001f\u007f<>]/g, " ").replace(/\s+/g, " ").trim().slice(0, max);
+function same(a, b) {
+  a = String(a); b = String(b);
+  let d = a.length ^ b.length;
+  for (let i = 0; i < Math.max(a.length, b.length); i++) d |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0);
+  return d === 0;
+}
+
+function cleanSite(o) {
+  const errors = [], lat = Number(o.lat), lon = Number(o.lon), year = Number(o.year);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) || lat < IRAQ.s || lat > IRAQ.n || lon < IRAQ.w || lon > IRAQ.e) errors.push("coords");
+  const s = {
+    lat: Number.isFinite(lat) ? +lat.toFixed(6) : null, lon: Number.isFinite(lon) ? +lon.toFixed(6) : null,
+    place: str(o.place, 120), type: TYPES.includes(o.type) ? o.type : "مياه نهر",
+    researcher: str(o.researcher, 80), title: TITLES.includes(o.title) ? o.title : "",
+    institution: str(o.institution, 160), research: str(o.research, 300), year,
+    link: str(o.link, 300), sampled: /^\d{4}(-\d{2}){0,2}$/.test(String(o.sampled || "")) ? String(o.sampled) : "",
+    notes: str(o.notes, 800), params: {}
+  };
+  if (s.researcher.length < 3) errors.push("researcher");
+  if (s.institution.length < 3) errors.push("institution");
+  if (s.research.length < 5) errors.push("research");
+  if (s.place.length < 2) errors.push("place");
+  if (!Number.isInteger(year) || year < 1950 || year > new Date().getFullYear() + 1) errors.push("year");
+  if (s.link && !/^https?:\/\/\S+$/i.test(s.link)) errors.push("link");
+  if (o.params && typeof o.params === "object") {
+    for (const [k, v] of Object.entries(o.params).slice(0, 40)) {
+      const n = Number(v);
+      if (/^[a-z0-9_]{1,16}$/.test(k) && v !== "" && v !== null && Number.isFinite(n) && n >= 0 && n < 1e7) s.params[k] = n;
+    }
+  }
+  return { s, errors };
+}
+
+async function readList(env, key) {
+  try { const v = await env.SITES.get(key, "json"); return Array.isArray(v) ? v : []; } catch (e) { return []; }
+}
+async function readBody(req, max) {
+  if (Number(req.headers.get("Content-Length") || 0) > max) return { tooLarge: true };
+  const t = await req.text();
+  if (t.length > max) return { tooLarge: true };
+  try { return { data: JSON.parse(t) }; } catch (e) { return { bad: true }; }
+}
+
+async function sites(req, env, path, ip, reply, fail) {
+  if (!env.SITES) return fail(503, "SITES_NOT_CONFIGURED", "The SITES KV namespace is not bound to this Worker.");
+
+  // قائمة المواقع المعتمدة (لكل الزوار)
+  if (req.method === "GET" && path === "/v1/sites") {
+    const list = await readList(env, "approved");
+    return reply(200, { sites: list, count: list.length });
+  }
+
+  // مساهمة جديدة من باحث: تُحفظ بانتظار المراجعة
+  if (req.method === "POST" && path === "/v1/sites") {
+    const b = await readBody(req, 32768);
+    if (b.tooLarge) return fail(413, "TOO_LARGE", "Submission is too large.");
+    if (b.bad || !b.data || typeof b.data !== "object") return fail(400, "BAD_JSON", "Invalid JSON.");
+    if (b.data.website) return reply(200, { ok: true, pending: true }); // فخ للبرامج الآلية
+    if (over(subs, ip, 6, 3600000)) return fail(429, "TOO_MANY_SUBMISSIONS", "Too many submissions from this visitor. Try again later.");
+    const { s, errors } = cleanSite(b.data);
+    if (errors.length) return reply(400, { error: { code: 400, status: "INVALID_FIELDS", message: "Some fields are invalid.", fields: errors } });
+    mark(subs, ip);
+    s.id = crypto.randomUUID().replace(/-/g, "").slice(0, 12);
+    s.submitted = new Date().toISOString();
+    await env.SITES.put("p:" + s.id, JSON.stringify(s));
+    return reply(200, { ok: true, pending: true, id: s.id });
+  }
+
+  // لوحة المراجعة (بكلمة سر المشرف)
+  if (req.method === "POST" && path === "/v1/sites/admin") {
+    if (!env.ADMIN_KEY) return fail(503, "ADMIN_NOT_CONFIGURED", "ADMIN_KEY secret is not set on the Worker.");
+    if (over(badKeys, ip, 8, 900000)) return fail(429, "TOO_MANY_ATTEMPTS", "Too many wrong passwords. Wait 15 minutes.");
+    const b = await readBody(req, 8192);
+    if (b.tooLarge || b.bad || !b.data) return fail(400, "BAD_JSON", "Invalid JSON.");
+    const o = b.data;
+    if (typeof o.key !== "string" || !same(o.key, env.ADMIN_KEY)) { mark(badKeys, ip); return fail(401, "BAD_ADMIN_KEY", "Wrong review password."); }
+    const id = String(o.id || "").replace(/[^a-f0-9]/g, "").slice(0, 12);
+    if (o.action === "list") {
+      const keys = await env.SITES.list({ prefix: "p:" });
+      const pending = (await Promise.all(keys.keys.map(k => env.SITES.get(k.name, "json")))).filter(Boolean)
+        .sort((a, b) => String(b.submitted).localeCompare(String(a.submitted)));
+      return reply(200, { pending, approved: await readList(env, "approved") });
+    }
+    if (o.action === "approve") {
+      const p = await env.SITES.get("p:" + id, "json");
+      if (!p) return fail(404, "NOT_FOUND", "This submission no longer exists.");
+      const list = (await readList(env, "approved")).filter(x => x.id !== p.id);
+      list.push({ ...p, approved: new Date().toISOString() });
+      await env.SITES.put("approved", JSON.stringify(list));
+      await env.SITES.delete("p:" + id);
+      return reply(200, { ok: true, count: list.length });
+    }
+    if (o.action === "reject") { await env.SITES.delete("p:" + id); return reply(200, { ok: true }); }
+    if (o.action === "delete") {
+      const list = (await readList(env, "approved")).filter(x => x.id !== id);
+      await env.SITES.put("approved", JSON.stringify(list));
+      return reply(200, { ok: true, count: list.length });
+    }
+    return fail(400, "BAD_ACTION", "Unknown action.");
+  }
+  return fail(404, "NOT_ALLOWED", "Unknown sites endpoint.");
 }
 
 export default {
@@ -63,12 +190,19 @@ export default {
       return reply(200, {
         service: "EcoBio AI – Gemini shared server",
         key_configured: Boolean(env.GEMINI_KEY),
+        sites_configured: Boolean(env.SITES),
+        admin_configured: Boolean(env.ADMIN_KEY),
         allowed_origins: allowed,
         ok: Boolean(env.GEMINI_KEY) && allowed.length > 0
       });
     }
 
     if (!okOrigin) return fail(403, "ORIGIN_NOT_ALLOWED", "This server only answers requests from the EcoBio AI site. Add the site origin to ALLOWED_ORIGINS.");
+    const ip = req.headers.get("CF-Connecting-IP") || "local";
+
+    /* مواقع بحوث الأساتذة */
+    if (path === "/v1/sites" || path.startsWith("/v1/sites/")) return sites(req, env, path, ip, reply, fail);
+
     if (!env.GEMINI_KEY) return fail(500, "GEMINI_KEY_MISSING", "GEMINI_KEY secret is not set on the Worker.");
 
     /* قائمة النماذج */
@@ -83,7 +217,6 @@ export default {
     const asked = decodeURIComponent(m[1]);
     if (!MODEL_RE.test(asked)) return fail(400, "MODEL_NOT_ALLOWED", "Only Gemini text models are available on this server.");
 
-    const ip = req.headers.get("CF-Connecting-IP") || "local";
     if (limited(ip, Number(env.RATE_PER_MIN) || 10)) return fail(429, "VISITOR_RATE_LIMIT", "Too many requests from this visitor. Wait a minute.");
 
     const len = Number(req.headers.get("Content-Length") || 0);

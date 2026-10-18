@@ -31,6 +31,7 @@
   <symbol id="i-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
   <symbol id="i-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 0 0-14.9-4M4 4v4h4M4 13a8 8 0 0 0 14.9 4M20 20v-4h-4"/></symbol>
   <symbol id="i-send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 3 10 14"/><path d="M21 3 14.5 21l-4.5-7-7-4.5Z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
   <symbol id="i-clip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 11.2 12.2 19.5a5.2 5.2 0 0 1-7.4-7.4l8.6-8.6a3.4 3.4 0 0 1 4.9 4.9l-8.5 8.5a1.7 1.7 0 0 1-2.4-2.4l7.8-7.8"/></symbol>
   <symbol id="i-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></symbol>
   <symbol id="i-spark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 13.8 9.2 20 11l-6.2 1.8L12 19l-1.8-6.2L4 11l6.2-1.8Z"/><path d="M19 3v4M17 5h4"/></symbol>
@@ -480,6 +481,7 @@
       <div class="row">
         <button class="btn btn-primary" id="smp-add" type="button"><svg><use href="#i-plus"/></svg>إضافة عينة</button>
         <button class="btn" id="smp-gps" type="button"><svg><use href="#i-gps"/></svg>عينة في موقعي</button>
+        <button class="btn btn-bio" id="ct-open" type="button"><svg><use href="#i-book"/></svg>أضف موقع بحثك</button>
       </div>
     </div>
     <div id="smp-import-bar"></div>
@@ -502,10 +504,21 @@
           <div class="field"><label>الخريطة الأساسية</label><div class="seg" id="smp-base"></div></div>
           <div class="field" id="smp-date-f" hidden><label for="smp-date">تاريخ صورة القمر</label><input type="date" id="smp-date" class="input"></div>
           <label class="toggle" for="smp-show-rs"><input type="checkbox" id="smp-show-rs" checked><span class="sw"></span>بحوث جامعة تكريت</label>
+          <label class="toggle" for="smp-show-sh"><input type="checkbox" id="smp-show-sh" checked><span class="sw"></span>مواقع الباحثين</label>
           <label class="toggle" for="smp-show-st"><input type="checkbox" id="smp-show-st"><span class="sw"></span>محطات رصد الهواء</label>
         </div>
         <div class="mapbox" dir="ltr"><div id="smp-map" style="position:absolute;inset:0"></div><div class="map-hint" id="smp-hint" hidden>اضغط على الخريطة في موقع العينة</div></div>
         <div class="legend-row" id="smp-legend"></div>
+      </div>
+    </div>
+    <div class="panel ct-panel" id="ct-panel">
+      <div class="panel-h"><h3>مواقع بحوث الأساتذة</h3><span class="chip tone-none" id="ct-count">…</span></div>
+      <p class="muted ct-intro">مواقع عمل الباحثين وأساتذة الجامعات على الخريطة، مع عناوين بحوثهم ونتائجها. كل موقع يراجَع من المشرفة قبل أن يظهر، ثم يظهر لكل زوار المنصة.</p>
+      <div id="ct-note"></div>
+      <div class="ct-list" id="ct-list"></div>
+      <div class="row" style="margin-top:14px">
+        <button class="btn btn-bio" id="ct-open2" type="button"><svg><use href="#i-plus"/></svg>أضف موقع بحثك</button>
+        <a class="btn btn-ghost btn-sm" href="#review"><svg><use href="#i-check"/></svg>لوحة المراجعة (للمشرفة)</a>
       </div>
     </div>
   </div>
@@ -535,6 +548,64 @@
         <span class="status-line muted" id="smp-form-status"></span>
       </div>
     </form>
+  </div>
+  <div class="sheet-wrap" id="ct-sheet" hidden>
+    <form class="sheet" id="ct-form" novalidate>
+      <div class="sheet-h"><h3>أضف موقع بحثك</h3><button class="btn icon-btn btn-ghost" type="button" id="ct-close" aria-label="إغلاق"><svg><use href="#i-close"/></svg></button></div>
+      <p class="muted" style="font-size:.82rem;margin-bottom:12px">أضف موقعاً عملت فيه في بحث منشور أو قيد النشر. بعد موافقة المشرفة يظهر على الخريطة لكل زوار المنصة مع اسمك وعنوان بحثك.</p>
+      <h4 class="ct-h">الباحث</h4>
+      <div class="grid g-3" style="gap:10px">
+        <div class="field"><label for="ct-researcher">الاسم الكامل *</label><input id="ct-researcher" class="input" autocomplete="name"></div>
+        <div class="field"><label for="ct-title">اللقب العلمي</label><select id="ct-title" class="input"></select></div>
+        <div class="field"><label for="ct-inst">الجامعة / الكلية / القسم *</label><input id="ct-inst" class="input" placeholder="جامعة تكريت – كلية العلوم – قسم علوم الحياة"></div>
+      </div>
+      <h4 class="ct-h">البحث</h4>
+      <div class="grid g-3" style="gap:10px">
+        <div class="field ct-wide"><label for="ct-research">عنوان البحث *</label><textarea id="ct-research" class="input" rows="2"></textarea></div>
+        <div class="field"><label for="ct-year">سنة النشر *</label><input id="ct-year" type="number" class="input" dir="ltr" inputmode="numeric"></div>
+        <div class="field ct-wide2"><label for="ct-link">رابط البحث أو DOI</label><input id="ct-link" class="input" dir="ltr" placeholder="https://doi.org/..."></div>
+      </div>
+      <h4 class="ct-h">الموقع</h4>
+      <div class="grid g-3" style="gap:10px">
+        <div class="field"><label for="ct-place">اسم الموقع *</label><input id="ct-place" class="input" placeholder="مثال: دجلة – جسر تكريت"></div>
+        <div class="field"><label for="ct-type">نوع العينة</label><select id="ct-type" class="input"></select></div>
+        <div class="field"><label for="ct-sampled">شهر أخذ العينات</label><input id="ct-sampled" type="month" class="input" dir="ltr"></div>
+        <div class="field"><label for="ct-lat">خط العرض *</label><input id="ct-lat" class="input mono" dir="ltr" inputmode="decimal" placeholder="34.6052"></div>
+        <div class="field"><label for="ct-lon">خط الطول *</label><input id="ct-lon" class="input mono" dir="ltr" inputmode="decimal" placeholder="43.6851"></div>
+        <div class="field"><label>&nbsp;</label><div class="row" style="gap:6px"><button class="btn btn-sm" type="button" id="ct-pick"><svg><use href="#i-pin"/></svg>من الخريطة</button><button class="btn btn-sm" type="button" id="ct-gps"><svg><use href="#i-gps"/></svg>موقعي</button></div></div>
+      </div>
+      <details class="adv" style="margin-top:12px"><summary>نتائج القياس في هذا الموقع (اختياري)</summary><div class="param-grid" id="ct-params" style="margin-top:10px"></div></details>
+      <div class="field" style="margin-top:12px"><label for="ct-notes">ملاحظات (طريقة العمل، الموسم، أهم استنتاج)</label><textarea id="ct-notes" class="input" rows="2"></textarea></div>
+      <input type="text" id="ct-website" name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+      <label class="ct-ok"><input type="checkbox" id="ct-ok"><span>أؤكد أن البيانات من عمل بحثي حقيقي، وأوافق على عرضها للعموم مع اسمي وعنوان بحثي.</span></label>
+      <div class="row" style="margin-top:14px">
+        <button class="btn btn-primary" type="submit" id="ct-send"><svg><use href="#i-send"/></svg>إرسال للمراجعة</button>
+        <span class="status-line" id="ct-status"></span>
+      </div>
+    </form>
+  </div>
+</section>
+
+<!-- ======================= مراجعة مساهمات الباحثين (للمشرف) ======================= -->
+<section class="view" id="view-review" data-title="مراجعة مساهمات الباحثين">
+  <div class="wrap">
+    <div class="view-head">
+      <div>
+        <span class="eyebrow">Supervisor review</span>
+        <h2>مراجعة مساهمات الباحثين</h2>
+        <p>المواقع التي يضيفها الأساتذة لا تظهر للعموم إلا بعد موافقتك هنا. كلمة السر تُحفظ في هذه الجلسة فقط.</p>
+      </div>
+    </div>
+    <div class="panel rv-login" id="rv-login">
+      <div class="field"><label for="rv-key">كلمة سر المراجعة</label><input id="rv-key" type="password" class="input" autocomplete="current-password" dir="ltr"></div>
+      <button class="btn btn-primary" id="rv-enter" type="button"><svg><use href="#i-check"/></svg>دخول</button>
+      <p class="status-line" id="rv-status"></p>
+    </div>
+    <div id="rv-body" hidden>
+      <div class="row" style="margin-bottom:14px"><button class="btn btn-sm" id="rv-refresh" type="button"><svg><use href="#i-refresh"/></svg>تحديث</button><button class="btn btn-sm btn-ghost" id="rv-out" type="button">خروج</button><a class="btn btn-sm btn-ghost" href="#samples"><svg><use href="#i-pin"/></svg>الخريطة</a></div>
+      <div class="panel" style="margin-bottom:16px"><div class="panel-h"><h3>بانتظار المراجعة</h3><span class="chip tone-warn" id="rv-pcount">0</span></div><div id="rv-pending" class="rv-list"></div></div>
+      <div class="panel"><div class="panel-h"><h3>المواقع المعتمدة</h3><span class="chip tone-good" id="rv-acount">0</span></div><div id="rv-approved" class="rv-list"></div></div>
+    </div>
   </div>
 </section>
 
@@ -755,6 +826,7 @@
 <script src="js/chat.js"></script>
 <script src="js/report.js"></script>
 <script src="js/samples.js"></script>
+<script src="js/contrib.js"></script>
 <script src="js/research.js"></script>
 <script src="js/calc.js"></script>
 <script src="js/vision.js"></script>

@@ -527,6 +527,7 @@
   ];
   const NAV = [];
   GROUPS.forEach(g => (g.items ? g.items.forEach(i => NAV.push({ ...i, group: g.label })) : NAV.push(g)));
+  NAV.push({ id: "review", label: "مراجعة مساهمات الباحثين", icon: "i-check", hidden: true }); // صفحة المشرف، لا تظهر في القائمة
   ECO.NAV = NAV;
   const ico = id => `<svg aria-hidden="true"><use href="#${id}"/></svg>`;
   let current = null;
