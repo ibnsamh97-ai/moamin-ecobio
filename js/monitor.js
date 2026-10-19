@@ -29,6 +29,14 @@
       m.on("click", () => select(s.id));
       markers[s.id] = m;
     });
+    // مفتاح ألوان مؤشر الهواء الصحي على الخريطة
+    const lg = L.control({ position: "bottomright" });
+    lg.onAdd = () => {
+      const div = L.DomUtil.create("div", "map-legend");
+      div.innerHTML = `<b>مؤشر الهواء الصحي (PM2.5)</b>` + [["good", "0–50 جيد"], ["fair", "51–100 مقبول"], ["warn", "101–150 حسّاس"], ["bad", "151–200 غير صحي"], ["severe", "201–300 جداً"], ["hazard", "> 300 خطر"]].map(([t, l]) => `<span><i style="background:${ECO.TONES[t]}"></i>${l}</span>`).join("");
+      return div;
+    };
+    lg.addTo(map);
   }
 
   function setDate(date) {

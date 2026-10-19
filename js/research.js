@@ -25,6 +25,9 @@
       const m = L.marker([r.lat, r.lon], { icon: L.divIcon({ className: "rs-pin" + (r.supervisor ? " sup" : ""), html: "<span></span>", iconSize: [22, 22], iconAnchor: [11, 11] }) }).addTo(S.map);
       m.bindTooltip(r.place, { className: "eco-tip" }); m.on("click", () => select(r.id)); S.markers[r.id] = m;
     });
+    const lg = L.control({ position: "bottomright" });
+    lg.onAdd = () => { const d = L.DomUtil.create("div", "map-legend"); d.innerHTML = `<b>بحوث منشورة على دجلة</b><span><i class="pin" style="background:#5fbf55"></i>بحث المشرفة</span><span><i class="pin" style="background:#8f6fe0"></i>بحث منشور آخر</span>`; return d; };
+    lg.addTo(S.map);
   }
 
   function renderList() {

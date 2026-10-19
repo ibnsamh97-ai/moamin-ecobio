@@ -340,6 +340,11 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
 .leaflet-container { background: #020a0d; font-family: var(--f-body); }
 .leaflet-tooltip.eco-tip { background: var(--ink-1); color: var(--text); border: 1px solid var(--line-2); border-radius: 8px; box-shadow: var(--shadow); direction: rtl; font-family: var(--f-body); }
 .leaflet-tooltip.eco-tip::before { display: none; }
+.map-legend { background: rgba(5, 17, 22, .82); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; font-size: .72rem; color: var(--muted); line-height: 1.5; backdrop-filter: blur(6px); max-width: 190px; }
+.map-legend b { display: block; color: var(--text); font-size: .74rem; margin-bottom: 5px; }
+.map-legend span { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.map-legend i { width: 11px; height: 11px; border-radius: 3px; flex: none; display: inline-block; }
+.map-legend i.pin { border-radius: 50%; border: 2px solid #e4f1ed; }
 .leaflet-control-attribution { background: rgba(5, 17, 22, .75) !important; color: var(--faint) !important; font-size: 10px !important; }
 .leaflet-control-attribution a { color: var(--muted) !important; }
 .leaflet-bar a { background: var(--ink-1) !important; color: var(--text) !important; border-color: var(--line) !important; }

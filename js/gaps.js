@@ -190,6 +190,9 @@ ${near}
     L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", { maxZoom: 18, attribution: "Esri" }).addTo(S.map);
     U.labelLayers().addTo(S.map);
     L.polyline(ECO.TIGRIS, { color: "#4fc8dc", weight: 2, opacity: 0.7 }).addTo(S.map);
+    const lg = L.control({ position: "bottomright" });
+    lg.onAdd = () => { const d = L.DomUtil.create("div", "map-legend"); d.innerHTML = `<b>حالة البحث في المنطقة</b>` + [[ECO.TONES.good, "مدروسة"], [ECO.TONES.warn, "دراسة قديمة"], [ECO.TONES.severe, "فجوة — لا بحث"]].map(([c, l]) => `<span><i style="background:${c}"></i>${l}</span>`).join("") + `<span class="faint" style="margin-top:3px">حجم الدائرة = عدد البحوث</span>`; return d; };
+    lg.addTo(S.map);
   }
 
   function init() {
