@@ -86,6 +86,7 @@
       <small dir="ltr">${s.lat.toFixed(5)}, ${s.lon.toFixed(5)} · ${U.esc(s.date || "")}</small>
       ${s.photo ? `<img src="${s.photo}" alt="">` : ""}
       ${vals ? `<table>${vals}</table>` : ""}
+      ${s.palmer ? `<small>مؤشر Palmer للطحالب: <b>${s.palmer.score}</b> – ${U.esc(s.palmer.class)}</small>` : ""}
       <div class="pop-act">
         <a class="btn btn-sm" href="${gmaps(s.lat, s.lon)}" target="_blank" rel="noopener">Google Maps</a>
         <a class="btn btn-sm" href="${U.gdir(s.lat, s.lon)}" target="_blank" rel="noopener">الطريق إليه</a>
@@ -279,7 +280,14 @@
     map: () => S.map,
     params: PARAMS,
     startAdd(pending) { S.pending = pending || null; ECO.go("samples"); setTimeout(() => { setAdding(true); U.toast("اضغط على الخريطة في موقع العينة، أو اختر «عينة في موقعي»"); }, 300); },
-    openNew(data) { ECO.go("samples"); setTimeout(() => openSheet(data), 350); }
+    openNew(data) { ECO.go("samples"); setTimeout(() => openSheet(data), 350); },
+    // إضافة نتيجة من أداة أخرى (مثل مؤشر Palmer) إلى عيّنة محفوظة
+    attach(id, extra) {
+      const s = S.list.find(x => x.id === id); if (!s) return false;
+      Object.assign(s, extra); save();
+      if (S.map) render();
+      return true;
+    }
   };
 
   ECO.views.samples = {

@@ -521,12 +521,15 @@
     { label: "الرصد", icon: "i-sat", items: [
       { id: "monitor", label: "الرصد الفضائي الحي", icon: "i-sat", desc: "قراءات الأقمار الصناعية لسبع محطات على دجلة" },
       { id: "samples", label: "خريطة العينات", icon: "i-pin", desc: "حدد عيناتك على خريطة فضائية عالية الدقة" },
-      { id: "research", label: "بحوث جامعة تكريت", icon: "i-book", desc: "نتائج منشورة حقيقية على الخريطة والجداول" }
+      { id: "research", label: "بحوث جامعة تكريت", icon: "i-book", desc: "نتائج منشورة حقيقية على الخريطة والجداول" },
+      { id: "space", label: "دجلة من الفضاء", icon: "i-layers", desc: "عكورة النهر وطحالبه من صور Sentinel-2 بدقة 10 م" },
+      { id: "gaps", label: "الفجوات البحثية", icon: "i-map", desc: "ماذا دُرس وأين ومتى، واقتراح عناوين رسائل" }
     ] },
     { label: "المختبر", icon: "i-flask", items: [
       { id: "water", label: "مختبر جودة المياه", icon: "i-drop", desc: "WQI و HPI والمطابقة للمواصفة العراقية" },
       { id: "calc", label: "الحاسبات العلمية", icon: "i-calc", desc: "أكثر من 20 حاسبة للتلوث والمعالجة" },
       { id: "vision", label: "قراءة الصور", icon: "i-camera", desc: "مؤشر لون الماء Forel-Ule وقراءة أوراق النتائج" },
+      { id: "palmer", label: "المجهر الذكي", icon: "i-scan", desc: "مؤشر Palmer للتلوث العضوي من صور الطحالب" },
       { id: "analysis", label: "التحليل الذكي", icon: "i-brain", desc: "تعلم آلي وكشف الشذوذ لبيانات الهواء" }
     ] },
     { label: "ثلاثي الأبعاد", icon: "i-cube", items: [

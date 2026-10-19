@@ -123,6 +123,9 @@
   <div class="wrap">
     <div class="section-title"><h2>وحدات المنصة</h2><span class="muted">اثنتا عشرة أداة للرصد والتحليل والمعالجة</span></div>
     <div class="modules">
+      <a class="module is-new" href="#space"><span class="ic"><svg><use href="#i-layers"/></svg></span><span class="new-tag">جديد</span><h3>دجلة من الفضاء</h3><p>عكورة النهر وطحالبه من صور القمر الأوروبي Sentinel-2 بدقة 10 م، لأي نقطة وأي تاريخ منذ 2017.</p><span class="meta">Sentinel-2 · NDTI · NDCI</span></a>
+      <a class="module bio is-new" href="#palmer"><span class="ic"><svg><use href="#i-scan"/></svg></span><span class="new-tag">جديد</span><h3>المجهر الذكي</h3><p>صوّر شريحة الطحالب بالهاتف، والذكاء الاصطناعي يقترح الأجناس ويُحسب مؤشر Palmer للتلوث العضوي.</p><span class="meta">Palmer 1969 · Gemini Vision</span></a>
+      <a class="module is-new" href="#gaps"><span class="ic"><svg><use href="#i-map"/></svg></span><span class="new-tag">جديد</span><h3>الفجوات البحثية</h3><p>ماذا دُرس وأين ومتى في صلاح الدين، واقتراح عناوين رسائل للخانات الفارغة بأجهزة القسم.</p><span class="meta">Research gaps · AI</span></a>
       <a class="module " href="#samples"><span class="ic"><svg><use href="#i-pin"/></svg></span><h3>خريطة العينات</h3><p>حدد مواقع عيناتك على صور فضائية عالية الدقة وافتحها في خرائط Google، وشاركها برابط.</p><span class="meta">Esri · Sentinel-2 · GPS</span></a>
       <a class="module bio" href="#research"><span class="ic"><svg><use href="#i-book"/></svg></span><h3>بحوث جامعة تكريت</h3><p>نتائج منشورة حقيقية لباحثي الجامعة على الخريطة، ومنها بحث المشرفة عن بكتيريا دجلة في تكريت.</p><span class="meta">5 بحوث · مصادر موثقة</span></a>
       <a class="module " href="#calc"><span class="ic"><svg><use href="#i-calc"/></svg></span><h3>الحاسبات العلمية</h3><p>أكثر من 20 حاسبة: SAR، Igeo، RI، HQ، BOD، COD، لانكماير، BCF وغيرها، بمعادلاتها ومراجعها.</p><span class="meta">Water · Sediment · Risk</span></a>
@@ -681,6 +684,113 @@
   </div>
 </section>
 
+<!-- ======================= دجلة من الفضاء ======================= -->
+<section class="view" id="view-space" data-title="دجلة من الفضاء">
+  <div class="wrap">
+    <div class="view-head">
+      <div>
+        <span class="eyebrow">Sentinel-2 · 10 m · since 2017</span>
+        <h2>دجلة من الفضاء</h2>
+        <p>صور حقيقية من القمر الأوروبي Sentinel-2 لنهر دجلة بدقة 10 أمتار، تصل صورة جديدة كل يومين إلى خمسة أيام. اختر تاريخاً واضغط على مجرى النهر لتقرأ مؤشري العكورة والكلوروفيل، ثم تتبّع النقطة عبر الأشهر والسنين وقارنها بعيناتك الحقلية.</p>
+      </div>
+      <button class="btn" type="button" id="sp-home"><svg><use href="#i-pin"/></svg>تكريت – وسط النهر</button>
+    </div>
+    <div class="grid sp-grid">
+      <div class="panel map-panel sp-mappanel">
+        <div class="sp-top">
+          <div class="seg" id="sp-layer"></div>
+          <div class="field sp-df"><label for="sp-date">تاريخ آخر</label><input type="date" id="sp-date" class="input"></div>
+        </div>
+        <div class="sp-dates" id="sp-dates"></div>
+        <div class="mapbox sp-mapbox" dir="ltr"><div id="sp-map" style="position:absolute;inset:0"></div><div class="sp-mapnote" id="sp-mapnote" hidden></div></div>
+        <div id="sp-legend"></div>
+      </div>
+      <aside class="grid" style="align-content:start">
+        <div class="panel">
+          <div class="panel-h"><h3>قراءة النقطة</h3><span class="sub" id="sp-count"></span></div>
+          <div id="sp-read"><p class="faint">اضغط على مجرى النهر في الخريطة.</p></div>
+        </div>
+      </aside>
+    </div>
+    <div class="panel" id="sp-series" hidden style="margin-top:16px"></div>
+    <p class="faint sp-foot">المصدر: Copernicus Sentinel-2 Level-2A (وكالة الفضاء الأوروبية) عبر Microsoft Planetary Computer. مؤشر العكورة <bdi dir="ltr">NDTI = (B04 − B03) / (B04 + B03)</bdi> (Lacaux وآخرون، 2007)، ومؤشر الكلوروفيل <bdi dir="ltr">NDCI = (B05 − B04) / (B05 + B04)</bdi> (Mishra وMishra، 2012). المؤشرات نسبية من الانعكاسية السطحية، تصلح للمقارنة عبر الزمن والمكان، ولا تساوي تراكيز مختبرية.</p>
+  </div>
+</section>
+
+<!-- ======================= الفجوات البحثية ======================= -->
+<section class="view" id="view-gaps" data-title="الفجوات البحثية">
+  <div class="wrap">
+    <div class="view-head">
+      <div>
+        <span class="eyebrow">Research gap map</span>
+        <h2>خريطة الفجوات البحثية</h2>
+        <p>ماذا دُرس، وأين، ومتى في محافظة صلاح الدين؟ الجدول يجمع بحوث جامعة تكريت المنشورة في المنصة ومواقع البحوث التي يضيفها الأساتذة، ويُظهر الخانات الفارغة التي تصلح موضوعات لرسائل جديدة.</p>
+      </div>
+      <div class="seg" id="gp-media"></div>
+    </div>
+    <div class="gp-stats" id="gp-stats"></div>
+    <div class="panel" style="margin-top:14px">
+      <div class="panel-h"><h3>المنطقة × محور البحث</h3><span class="sub gp-keys"><span><i class="gp-key ok"></i>مدروس خلال 5 سنوات</span><span><i class="gp-key old"></i>أقدم من 5 سنوات</span><span><i class="gp-key gap"></i>فجوة</span></span></div>
+      <div class="gp-scroll" id="gp-matrix"></div>
+      <p class="faint gp-note">الأعداد حسب البحوث المسجلة في المنصة فقط، وليست حصراً لكل ما نُشر. كلما أضاف الأساتذة مواقع بحوثهم من «خريطة العينات» صارت الخريطة أدق.</p>
+    </div>
+    <div class="grid g-side gp-grid" style="margin-top:16px">
+      <div class="panel gp-mapp"><div class="mapbox gp-mapbox" dir="ltr"><div id="gp-map" style="position:absolute;inset:0"></div></div><p class="faint gp-maplbl" id="gp-maplbl"></p></div>
+      <div class="panel" id="gp-detail"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= المجهر الذكي ======================= -->
+<section class="view" id="view-palmer" data-title="المجهر الذكي">
+  <div class="wrap">
+    <div class="view-head">
+      <div>
+        <span class="eyebrow">Palmer algal pollution index</span>
+        <h2>المجهر الذكي – مؤشر Palmer</h2>
+        <p>صوّر شريحة الطحالب من عدسة المجهر بالهاتف فيقترح الذكاء الاصطناعي الأجناس الظاهرة، ثم تؤكدها أنت ويحسب الموقع مؤشر Palmer (1969) للتلوث العضوي: 20 فأكثر تلوث عالٍ، و15–19 تلوث محتمل، وأقل من 15 تلوث قليل.</p>
+      </div>
+    </div>
+    <div class="grid pm-grid">
+      <div class="grid" style="align-content:start">
+        <div class="panel">
+          <div class="panel-h"><h3>1. صور الشريحة</h3><span class="sub">حتى 4 صور · اختياري</span></div>
+          <input type="file" id="pm-file" accept="image/*" multiple hidden>
+          <div class="pm-imgs" id="pm-imgs"></div>
+          <button class="btn btn-primary" type="button" id="pm-ai" disabled><svg><use href="#i-spark"/></svg>اقترح الأجناس من الصور</button>
+          <div id="pm-ai-out" class="pm-ai-out"></div>
+          <p class="faint pm-note">ضع عدسة الهاتف ملاصقة للعدسة العينية للمجهر، وصوّر بقوة 40× أو 100× بإضاءة متوسطة. يمكنك أيضاً اختيار الأجناس يدوياً بلا صور.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-h"><h3>3. النتيجة</h3><span class="sub">Palmer, 1969</span></div>
+          <div class="gauge-wrap" id="pm-gauge"></div>
+          <div class="pm-sel" id="pm-sel"></div>
+          <div id="pm-low"></div>
+          <div class="grid g-2 pm-meta">
+            <div class="field"><label for="pm-site">موقع العينة</label><input id="pm-site" class="input" placeholder="مثلاً: دجلة – جسر تكريت"></div>
+            <div class="field"><label for="pm-date">التاريخ</label><input id="pm-date" type="date" class="input"></div>
+            <div class="field pm-wide"><label for="pm-sample">ربط بعيّنة على الخريطة</label><select id="pm-sample" class="input"></select></div>
+          </div>
+          <div class="row pm-acts">
+            <button class="btn btn-primary" type="button" id="pm-save"><svg><use href="#i-check"/></svg>حفظ النتيجة</button>
+            <button class="btn" type="button" id="pm-pdf"><svg><use href="#i-file"/></svg>تقرير PDF</button>
+            <button class="btn btn-ghost" type="button" id="pm-clear">مسح الاختيار</button>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-h"><h3>النتائج المحفوظة</h3></div>
+          <div id="pm-hist"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-h"><h3>2. الأجناس الموجودة في العينة</h3><span class="sub">20 جنساً · الدرجة بجانب كل جنس</span></div>
+        <div id="pm-list"></div>
+        <div class="pm-float" id="pm-float" aria-live="polite"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- ======================= الحاسبات العلمية ======================= -->
 <section class="view" id="view-calc" data-title="الحاسبات العلمية">
   <div class="wrap">
@@ -880,6 +990,9 @@
 <script src="js/report.js"></script>
 <script src="js/samples.js"></script>
 <script src="js/contrib.js"></script>
+<script src="js/space.js"></script>
+<script src="js/gaps.js"></script>
+<script src="js/palmer.js"></script>
 <script src="js/research.js"></script>
 <script src="js/calc.js"></script>
 <script src="js/vision.js"></script>

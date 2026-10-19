@@ -23,6 +23,8 @@
     if (ECO.lastAnalysis) parts.push("ملخص آخر تحليل ذكي:\n" + JSON.stringify(ECO.lastAnalysis));
     const smp = ECO.samples ? ECO.samples.list() : [];
     if (smp.length) parts.push(`عينات المستخدم على الخريطة (${smp.length}): ` + smp.slice(-8).map(s => `${s.code} ${s.site || ""} [${s.type}] ${s.lat.toFixed(4)},${s.lon.toFixed(4)}${s.wqi != null ? " WQI=" + s.wqi : ""}`).join("؛ "));
+    if (ECO.lastSpace) parts.push(`آخر تحليل «دجلة من الفضاء» (Sentinel-2، مؤشرات نسبية من الانعكاسية السطحية): ${JSON.stringify(ECO.lastSpace)}`);
+    if (ECO.lastPalmer) parts.push(`آخر نتيجة لمؤشر Palmer للطحالب: المجموع ${ECO.lastPalmer.score} (${ECO.lastPalmer.class})، الأجناس: ${ECO.lastPalmer.genera.join(", ")}${ECO.lastPalmer.site ? "، الموقع: " + ECO.lastPalmer.site : ""}`);
     if (ECO.lastVision) parts.push(`آخر قراءة صورة: Forel-Ule=${ECO.lastVision.fu} (${ECO.lastVision.class})، درجة التلوث المرئي ${ECO.lastVision.score}/100`);
     if (ECO.RESEARCH) parts.push("بحوث جامعة تكريت المتاحة في المنصة (بيانات منشورة):\n" + ECO.RESEARCH.map(r => `- ${r.authors} (${r.year})، ${r.place}: ${r.summary}`).join("\n"));
     const ct = ECO.contrib ? ECO.contrib.list() : [];

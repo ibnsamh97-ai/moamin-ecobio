@@ -7,6 +7,8 @@
       مع مراجعة المشرف قبل ظهور أي موقع للعموم.
    3) يجلب أرصاد المطارات الرسمية (METAR) من aviationweather.gov للتحقق
       الأرضي من تقديرات الغبار، لأن تلك الخدمة لا تسمح للمتصفح بطلبها مباشرة.
+   4) ممر احتياطي لبيانات القمر الصناعي Sentinel-2 من Microsoft Planetary
+      Computer (بحث الصور وقراءة قيم البكسل) إذا رفض المتصفح طلبها مباشرة.
 
    المتغيرات (Worker → Settings → Variables and Secrets):
      GEMINI_KEY       نوعه Secret  — مفتاح Gemini من Google AI Studio (إلزامي)
@@ -196,6 +198,35 @@ async function metar(url, reply, fail) {
   return reply(200, body);
 }
 
+/* ---------- ممر Sentinel-2 من Microsoft Planetary Computer ----------
+   GET /v1/pc/stac/search?...            ← /api/stac/v1/search
+   GET /v1/pc/data/item/point/lon,lat?... ← /api/data/v1/item/point/lon,lat
+   GET /v1/pc/data/item/tilejson.json?... ← /api/data/v1/item/tilejson.json
+   بيانات عامة مجانية لا تحتاج مفتاحاً؛ نمرّر فقط هذه المسارات الثلاثة. */
+const PC_API = "https://planetarycomputer.microsoft.com/api";
+const PC_RE = /^\/v1\/pc\/(stac\/search|data\/item\/point\/-?\d{1,3}(\.\d{1,8})?,-?\d{1,2}(\.\d{1,8})?|data\/item\/tilejson\.json)$/;
+const pcCache = new Map();
+
+async function pc(url, path, raw, fail) {
+  if (!PC_RE.test(path)) return fail(404, "NOT_ALLOWED", "Unknown satellite endpoint.");
+  if (url.search.length > 4000) return fail(414, "TOO_LONG", "Query is too long.");
+  const target = PC_API + path.replace(/^\/v1\/pc\/(stac|data)\//, (m, a) => `/${a}/v1/`) + url.search;
+  // قيم البكسل لا تتغير لصورة معينة، فنخزنها أطول؛ نتائج البحث تتغير بوصول صور جديدة
+  const ttl = path.includes("/point/") ? 86400000 : path.endsWith("tilejson.json") ? 3600000 : 900000;
+  const now = Date.now(), hit = pcCache.get(target);
+  if (hit && now - hit.at < ttl) return raw(200, hit.text);
+  let r;
+  try { r = await fetch(target, { headers: { "User-Agent": "EcoBioAI/1.0 (Tikrit University environmental education project)", "Accept": "application/json" } }); }
+  catch (e) { return fail(502, "PC_UPSTREAM", "Planetary Computer did not answer."); }
+  const text = await r.text();
+  if (!r.ok) return raw(r.status, text.slice(0, 2000));
+  if (text.length < 400000) {
+    pcCache.set(target, { at: now, text });
+    if (pcCache.size > 400) pcCache.delete(pcCache.keys().next().value);
+  }
+  return raw(200, text);
+}
+
 export default {
   async fetch(req, env) {
     const origin = req.headers.get("Origin") || "";
@@ -214,6 +245,9 @@ export default {
       status, headers: { ...cors, "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" }
     });
     const fail = (status, code, message) => reply(status, { error: { code: status, status: code, message } });
+    const raw = (status, text) => new Response(text, {
+      status, headers: { ...cors, "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" }
+    });
 
     const url = new URL(req.url);
     const path = url.pathname.replace(/\/+$/, "") || "/";
@@ -228,6 +262,7 @@ export default {
         sites_configured: Boolean(env.SITES),
         admin_configured: Boolean(env.ADMIN_KEY),
         metar: true,
+        satellite: true,
         allowed_origins: allowed,
         ok: Boolean(env.GEMINI_KEY) && allowed.length > 0
       });
@@ -241,6 +276,9 @@ export default {
 
     /* أرصاد المطارات للتحقق الأرضي (لا تحتاج مفتاحاً) */
     if (req.method === "GET" && path === "/v1/metar") return metar(url, reply, fail);
+
+    /* بيانات Sentinel-2 (ممر احتياطي، لا يحتاج مفتاحاً) */
+    if (req.method === "GET" && path.startsWith("/v1/pc/")) return pc(url, path, raw, fail);
 
     if (!env.GEMINI_KEY) return fail(500, "GEMINI_KEY_MISSING", "GEMINI_KEY secret is not set on the Worker.");
 
