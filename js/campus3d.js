@@ -12,6 +12,9 @@
   const FONT = '"Readex Pro","IBM Plex Sans Arabic","Noto Sans Arabic","Noto Naskh Arabic",Tahoma,Arial,sans-serif';
   const TEX = "assets/campus/";
   const OWNER = (ECO.PROJECT && ECO.PROJECT.student) || "مؤمن خلف عبدالله";
+  /* ترحيب صوتي بصوت رجالي عربي (مولَّد محلياً بنموذج Piper «kareem»)، ومنحنى فتح الفم كل 40 ملّي ثانية */
+  const GREET = { url: TEX + "greet.mp3", text: "أهلاً بالزائر الكريم، مرحباً بك", env: "0,0,0,0,0,2,7,8,7,5,4,5,6,9,8,7,6,4,4,2,6,7,5,2,1,1,1,3,9,9,9,9,7,3,2,4,6,6,5,7,6,4,3,1,0,2,7,9,8,7,6,7,8,9,5,5,4,4,2,1,0,0,2,4,6,8,9,4,3,2,1,1,3,7,7,3,7,8,5,5,6,5,2,3,5,1,0,2,3,2,0,0,0,0,0,0,0".split(",").map(Number) };
+  const GZ = 25.0; // استراحة الطلبة: في الوسط أمام القسم على الممر الرئيسي
 
   /* الغرف حسب المخطط الهندسي للقسم. row: N شمال الممر، S جنوبه. d عمق الغرفة. door مركز الباب على الممر.
      الأسماء والرموز كما هي على لوحات الأبواب والمخططات في الصور */
@@ -71,9 +74,10 @@
 
   let st = null, scene, cam, stageEl, canvas, built = false, active = false, focused = false;
   const MAT = {}, BATCH = {}, INST = {}, SOLID = [[], []], PICK = [], FLOORS = [], BLOCK = [], TEXJOBS = [], REG = [], ANIM = [];
-  const P = { x: 0, z: 24, lvl: 0, yaw: 0, pitch: 0.02, bob: 0, gy: GY };
+  const P = { x: 0, z: 37, lvl: 0, yaw: 0, pitch: 0.03, bob: 0, gy: GY };
   const keys = {}, joy = { x: 0, y: 0 };
   let walkPath = null, stuck = 0, anim = null, tour = false, whereT = 0, ledTex = null, mapFloor = 0, lastWhere = "", avatar = null, clockT = 0;
+  let voice = null, voiceReady = false, muted = !!(U.store && U.store.get("tourMute", false));
 
   /* ---------------------------------------------------------------
      أدوات مساعدة
@@ -1038,30 +1042,34 @@
     pav(-22.4, -1.2, -16.42, 7.95); pav(16.42, -1.2, 22.4, 7.95);
     pav(-26.5, -11.5, 26.5, -7.95); pav(-26.5, -7.95, -22.28, 15.0); pav(22.28, -7.95, 26.5, 15.0);
     // حافة ممر المشاة
-    [[-48, 18.2, -1.9, 18.32], [1.9, 18.2, 48, 18.32], [-1.98, 18.2, -1.9, 52], [1.9, 18.2, 1.98, 52]].forEach(([a, b, c2, d]) => bx("stone", a, GY - 0.02, b, c2, GY + 0.08, d));
+    [[-48, 18.2, -1.9, 18.32], [1.9, 18.2, 48, 18.32], [-1.98, 18.2, -1.9, GZ - 4.8], [1.9, 18.2, 1.98, GZ - 4.8], [-1.98, GZ + 4.8, -1.9, 52], [1.9, GZ + 4.8, 1.98, 52]].forEach(([a, b, c2, d]) => bx("stone", a, GY - 0.02, b, c2, GY + 0.08, d));
     // مساكب الحجر أمام القاعات (كما في الصور)
     planter(-15.6, 9.0, -4.4, 13.4, [[-12.5, 11.2, 0.95], [-7.4, 11.0, 0.85]]);
     planter(4.4, 9.0, 15.6, 13.4, [[7.4, 11.0, 0.85], [12.5, 11.2, 0.95]]);
     // الأشجار والنخيل حول القسم
-    [[-30, 9, 1.2], [-31, -4, 1.1], [30, 8, 1.15], [31, -5, 1.2], [-12, -14, 1.1], [0, -15, 1.25], [13, -14, 1.05], [-27, 22, 1.2], [-9, 23, 1.0], [8, 22.5, 1.1], [18, 23, 1.2], [-36, 30, 1.3], [24, 34, 1.2], [-8, 36, 1.1], [7, 40, 1.25], [-18, 42, 1.2], [33, 21, 1.1], [-40, 14, 1.2], [40, -2, 1.3], [-42, -12, 1.1], [16, 46, 1.2]].forEach(([x, z, k]) => tree(x, z, k));
-    [[14.5, 31.0, 1.0], [6.5, 29.5, 0.9], [-4.5, 28.0, 0.95], [21, 28, 1.0]].forEach(([x, z, k]) => tree(x, z, k, true));
+    [[-30, 9, 1.2], [-31, -4, 1.1], [30, 8, 1.15], [31, -5, 1.2], [-12, -14, 1.1], [0, -15, 1.25], [13, -14, 1.05], [-27, 22, 1.2], [-15, 24, 1.0], [18, 23, 1.2], [-36, 30, 1.3], [24, 34, 1.2], [-8, 36, 1.1], [7, 40, 1.25], [-18, 42, 1.2], [33, 21, 1.1], [-40, 14, 1.2], [40, -2, 1.3], [-42, -12, 1.1], [16, 46, 1.2]].forEach(([x, z, k]) => tree(x, z, k));
+    [[15.5, 32.0, 1.0], [7.5, 32.0, 0.9], [-7.5, 32.0, 0.95], [21, 28, 1.0]].forEach(([x, z, k]) => tree(x, z, k, true));
 
-    // استراحة الطلبة: مظلة بيضاء بهيكل حديد ومقاعد
-    const gx = -21.0, gz = 27.5, gw = 4.2, gd = 2.9;
-    for (const sx of [-1, 0, 1]) for (const sz of [-1, 1]) { bx("white", gx + sx * gw - 0.06, GY, gz + sz * gd - 0.06, gx + sx * gw + 0.06, 2.65, gz + sz * gd + 0.06); solid(0, gx + sx * gw - 0.1, gz + sz * gd - 0.1, gx + sx * gw + 0.1, gz + sz * gd + 0.1); }
-    bx("white", gx - gw - 0.1, 2.58, gz - gd - 0.1, gx + gw + 0.1, 2.7, gz + gd + 0.1);
-    [-1, 1].forEach(k => { const rf = new THREE.BoxGeometry(2 * gw + 0.6, 0.05, gd + 0.45); rf.rotateX(k * 0.4); addGeo("whiteRoof", rf, gx, 3.22, gz + k * (gd / 2 + 0.05)); });
+    // استراحة الطلبة في الوسط أمام القسم: مظلة بيضاء بهيكل حديد، الممر يمر تحتها والمقاعد على جانبيه
+    const gw = 2.9, gl = 4.2;
+    flat("floorPav", -3.6, GZ - 4.8, 3.6, GZ + 4.8, GY + 0.014);
+    for (const sx of [-1, 1]) for (const sz of [-1, 0, 1]) { const x = sx * gw, z = GZ + sz * gl; bx("white", x - 0.06, GY, z - 0.06, x + 0.06, 2.65, z + 0.06); solid(0, x - 0.1, z - 0.1, x + 0.1, z + 0.1); }
+    bx("white", -gw - 0.1, 2.58, GZ - gl - 0.1, gw + 0.1, 2.7, GZ + gl + 0.1);
+    const ang = Math.atan2(1.2, gw + 0.2), sl = Math.hypot(gw + 0.2, 1.2) + 0.12;
+    [-1, 1].forEach(k => { const rf = new THREE.BoxGeometry(sl, 0.05, 2 * gl + 0.6); addGeo("whiteRoof", rf, k * (gw + 0.2) / 2, 2.7 + 0.6, GZ, 0, 1, 1, 1, 0, -k * ang); });
     M.whiteRoof = lam(0xf4f4f1, { side: THREE.DoubleSide, transparent: true, opacity: 0.93 });
-    const gab = new THREE.Shape(); gab.moveTo(-gd - 0.2, 0); gab.lineTo(gd + 0.2, 0); gab.lineTo(0, 1.2); gab.lineTo(-gd - 0.2, 0);
-    [-1, 1].forEach(k => { const g2 = new THREE.ShapeGeometry(gab); g2.rotateY(Math.PI / 2); addGeo("whiteRoof", g2, gx + k * (gw + 0.05), 2.68, gz); });
-    for (const bz of [-1.5, 1.5]) for (const bxx of [-2.6, 0.0, 2.6]) { bx("white", gx + bxx - 0.95, GY, gz + bz - 0.18, gx + bxx + 0.95, 0.4, gz + bz + 0.18); bx("woodDark", gx + bxx - 0.95, 0.4, gz + bz - 0.21, gx + bxx + 0.95, 0.45, gz + bz + 0.21); solid(0, gx + bxx - 0.95, gz + bz - 0.2, gx + bxx + 0.95, gz + bz + 0.2); }
-    flat("floorPav", gx - gw - 0.4, gz - gd - 0.4, gx + gw + 0.4, gz + gd + 0.4, GY + 0.006);
+    const gab = new THREE.Shape(); gab.moveTo(-gw - 0.2, 0); gab.lineTo(gw + 0.2, 0); gab.lineTo(0, 1.2); gab.lineTo(-gw - 0.2, 0);
+    [-1, 1].forEach(k => addGeo("whiteRoof", new THREE.ShapeGeometry(gab), 0, 2.68, GZ + k * (gl + 0.05)));
+    for (const sx of [-1, 1]) for (const dz of [-2.7, 0, 2.7]) { const x = sx * 2.15, z = GZ + dz; bx("white", x - 0.18, GY, z - 0.95, x + 0.18, 0.4, z + 0.95); bx("woodDark", x - 0.21, 0.4, z - 0.95, x + 0.21, 0.45, z + 0.95); bx("white", x + sx * 0.17, 0.45, z - 0.95, x + sx * 0.21, 0.85, z + 0.95); solid(0, x - 0.21, z - 0.95, x + 0.21, z + 0.95); }
+    // مسكبتان بسياج أبيض على جانبي الاستراحة (كما في الصور)
+    planter(4.9, GZ - 3.6, 10.6, GZ + 3.6, [[7.8, GZ - 1.2, 0.9]]); planter(-10.6, GZ - 3.6, -4.9, GZ + 3.6, [[-7.8, GZ + 1.2, 0.9]]);
+    [-1, 1].forEach(k => { const x = k * 4.92; for (let z = GZ - 3.5; z <= GZ + 3.51; z += 0.7) bx("white", x - 0.025, 0.45, z - 0.025, x + 0.025, 1.3, z + 0.025); bx("white", x - 0.03, 1.27, GZ - 3.55, x + 0.03, 1.32, GZ + 3.55); bx("white", x - 0.02, 0.85, GZ - 3.55, x + 0.02, 0.88, GZ + 3.55); });
     // اللافتة الزرقاء «استراحة الطلبة» وعمود إنارة شمسي أسود بجانبها
-    bx("metal", -14.3, GY, 20.95, -14.2, 2.15, 21.05);
-    planeAt(M.blueSign, 1.6, 0.75, -14.25, 2.45, 21.07, 0); planeAt(M.blueSign, 1.6, 0.75, -14.25, 2.45, 20.93, Math.PI);
-    bx("black", -14.4, 2.08, 20.98, -14.1, 2.84, 21.02);
+    bx("metal", 3.95, GY, GZ + 5.15, 4.05, 2.15, GZ + 5.25);
+    planeAt(M.blueSign, 1.6, 0.75, 4.0, 2.45, GZ + 5.27, 0); planeAt(M.blueSign, 1.6, 0.75, 4.0, 2.45, GZ + 5.13, Math.PI);
+    bx("black", 3.85, 2.08, GZ + 5.18, 4.15, 2.84, GZ + 5.22);
     const solarPole = (x, z) => { bx("black", x - 0.07, GY, z - 0.07, x + 0.07, 4.6, z + 0.07); bx("black", x - 0.18, 4.6, z - 0.4, x + 0.18, 4.66, z + 0.4); bx("white", x - 0.16, 4.58, z - 0.36, x + 0.16, 4.6, z + 0.36); bx("black", x - 0.32, 3.4, z - 0.12, x + 0.32, 3.95, z - 0.1); solid(0, x - 0.12, z - 0.12, x + 0.12, z + 0.12); };
-    solarPole(-15.0, 21.3); solarPole(-11, 18.7); solarPole(11, 18.7); solarPole(26, 18.7); solarPole(-28, 18.7);
+    solarPole(4.8, GZ + 5.6); solarPole(-11, 18.7); solarPole(11, 18.7); solarPole(26, 18.7); solarPole(-28, 18.7);
     // عمود الإنارة الفيروزي ذو الذراعين (أمام المساكب)
     bx("tealPole", 3.6, GY, 14.35, 3.72, 4.2, 14.47); bx("tealPole", 3.0, 4.15, 14.38, 4.3, 4.23, 14.44); [3.05, 4.25].forEach(x => bx("grey", x - 0.07, 4.0, 14.36, x + 0.07, 4.15, 14.46)); solid(0, 3.55, 14.3, 3.77, 14.52);
     M.tealPole = lam(0x5fb3c2);
@@ -1076,7 +1084,7 @@
     const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.2, 1.0, 18), s); tube.rotation.x = 0.42; tube.position.set(0, 2.15, 0.32); g.add(tube);
     const eyep = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.13, 0.32, 16), s); eyep.rotation.x = 0.42; eyep.position.set(0, 2.72, 0.06); g.add(eyep);
     const obj = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.1, 0.34, 14), s); obj.position.set(0, 1.5, 0.52); g.add(obj);
-    g.position.set(12.2, GY, 26.5); g.rotation.y = -0.5; const st2 = compact(g); st2.userData.device = "sculpture"; scene.add(st2); PICK.push(st2); solid(0, 11.2, 25.5, 13.2, 27.5);
+    g.position.set(14.6, GY, 24.6); g.rotation.y = -0.5; const st2 = compact(g); st2.userData.device = "sculpture"; scene.add(st2); PICK.push(st2); solid(0, 13.6, 23.6, 15.6, 25.6);
     DEV.sculpture = { name: "مجسّم المجهر", what: "مجسّم أبيض كبير لمجهر ضوئي في حديقة الكلية قرب قسم علوم الحياة؛ يرمز إلى أداة عالم الأحياء الأولى.", tool: { view: "palmer", label: "جرّب المجهر الذكي" } };
     // كشك بسقف قرميد أحمر
     bx("ext", 25, GY, 25, 29, 2.6, 28.5); solid(0, 25, 25, 29, 28.5);
@@ -1148,23 +1156,45 @@
     add(head, S(0.06, 14, 8, 0), M.hair, 0, 0.04, 0.035, 1.1, 0.42, 0.95);
     body.add(head); root.add(body);
     [armR, armL, head, body, root].forEach(mergeGroup);
+    const mouth = new THREE.Mesh(new THREE.SphereGeometry(0.016, 12, 8), MAT.lips.clone()); mouth.material.color.set(0x3a1d14); mouth.position.set(0, 0.05, 0.091); mouth.scale.set(1.25, 0.15, 0.5); head.add(mouth);
     // فقاعة الترحيب
     const bubble = new THREE.Sprite(new THREE.SpriteMaterial({ map: textTex(720, 230, (g, w, h) => {
       g.fillStyle = "rgba(255,255,255,.96)"; g.beginPath(); g.roundRect ? g.roundRect(6, 6, w - 12, h - 52, 34) : g.rect(6, 6, w - 12, h - 52); g.fill();
       g.beginPath(); g.moveTo(w / 2 - 22, h - 48); g.lineTo(w / 2, h - 8); g.lineTo(w / 2 + 22, h - 48); g.fill();
-      g.fillStyle = "#1d5b3f"; g.font = `800 50px ${FONT}`; g.fillText("أهلاً بكم في قسم علوم الحياة", w / 2, 66);
+      g.fillStyle = "#1d5b3f"; fitFont(g, GREET.text, 800, 50, w - 60); g.fillText(GREET.text, w / 2, 66);
       g.fillStyle = "#555"; g.font = `600 36px ${FONT}`; g.fillText(OWNER, w / 2, 134);
     }), transparent: true, depthWrite: false }));
     bubble.scale.set(1.45, 0.46, 1); bubble.position.set(0, 2.22, 0); root.add(bubble);
     root.position.set(1.75, 0, 7.1); root.rotation.y = -0.15;
     const picked = new THREE.Group(); picked.add(root); picked.userData.device = "owner"; scene.add(picked); PICK.push(picked);
     solid(0, 1.5, 6.85, 2.0, 7.35);
-    avatar = { root, body, head, armR, armL, bubble, t: 0, wave: 0 };
+    avatar = { root, body, head, armR, armL, bubble, mouth, t: 0, wave: 0, armed: true };
   }
+  /* الصوت: يُهيّأ عند أول لمسة من الزائر (شرط المتصفحات)، ثم يُشغَّل عند الاقتراب من الشخصية */
+  function prepVoice() {
+    if (voice) return;
+    try {
+      voice = new Audio(GREET.url); voice.preload = "auto"; voice.muted = true;
+      const p = voice.play(); const done = () => { try { voice.pause(); voice.currentTime = 0; } catch (e) { /* */ } voice.muted = false; voiceReady = true; };
+      if (p && p.then) p.then(done).catch(() => { voice.muted = false; voiceReady = true; }); else done();
+    } catch (e) { voice = null; }
+  }
+  function speak() {
+    if (!voice || muted) return false;
+    try { voice.pause(); voice.currentTime = 0; voice.muted = false; const p = voice.play(); if (p && p.catch) p.catch(() => {}); } catch (e) { return false; }
+    return true;
+  }
+  function setMute(m) { muted = m; if (U.store) U.store.set("tourMute", m); if (m && voice) try { voice.pause(); } catch (e) { /* */ } const b = U.$("#tour-voice"); if (b) { b.classList.toggle("on", !m); b.querySelector("use").setAttribute("href", m ? "#i-mute" : "#i-volume"); b.title = m ? "تشغيل صوت الترحيب" : "كتم صوت الترحيب"; } }
   function animateAvatar(dt) {
     if (!avatar) return;
     const a = avatar; a.t += dt;
     const dx = P.x - a.root.position.x, dz = P.z - a.root.position.z, d = Math.hypot(dx, dz), near = P.lvl === 0 && d < 9;
+    if (P.lvl === 0 && d < 6.5 && a.armed && voiceReady) { if (speak()) a.armed = false; }
+    if (d > 11 || P.lvl) a.armed = true;
+    let open = 0;
+    if (voice && !voice.paused) { const k = Math.floor(voice.currentTime / 0.04); open = (GREET.env[k] || 0) / 9; }
+    a.mouth.scale.y += ((0.15 + open * 0.95) - a.mouth.scale.y) * Math.min(1, dt * 18);
+    a.head.rotation.x = open * 0.05;
     a.body.scale.y = 1 + Math.sin(a.t * 2.1) * 0.006;
     const want = near ? clamp(angLerp(0, Math.atan2(dx, dz) - a.root.rotation.y, 1), -0.9, 0.9) : 0;
     a.head.rotation.y += (want - a.head.rotation.y) * Math.min(1, dt * 4);
@@ -1194,11 +1224,11 @@
     REG.push({ id: "land", lvl: 0, x0: -2.9, z0: -7.15, x1: 2.9, z1: -4.6, name: "بسطة الدرج", short: "", kind: "stair" });
     REG.push({ id: "store", lvl: 0, x0: -2.9, z0: -4.6, x1: -0.6, z1: -1.45, name: "غرفة تحت الدرج", short: "", kind: "closed" });
   }
-  const OUTSIDE = { id: "out", lvl: 0, kind: "outside", portal: [{ x: 0, z: 0.3 }, { x: 0, z: 4.3 }, { x: 0, z: 8.7 }], spot: { x: 0, z: 24, yaw: 0 } };
+  const OUTSIDE = { id: "out", lvl: 0, kind: "outside", portal: [{ x: 0, z: 0.3 }, { x: 0, z: 4.3 }, { x: 0, z: 8.7 }], spot: { x: 0, z: 37, yaw: 0 } };
   function regionAt(x, z, lvl) {
     for (const r of REG) if (r.lvl === lvl && x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1) return r;
     if (lvl === 0) {
-      const porch = Math.abs(x) < 3 && z > 5.3 && z < 10.2, gaz = x > -26 && x < -16 && z > 24 && z < 31;
+      const porch = Math.abs(x) < 3 && z > 5.3 && z < 10.2, gaz = Math.abs(x) < 3.5 && z > GZ - 4.7 && z < GZ + 4.7;
       return Object.assign({}, OUTSIDE, { name: porch ? "باب القسم" : gaz ? "استراحة الطلبة" : (z > 7.9 && Math.abs(x) < 18 ? "الساحة الأمامية للقسم" : "حرم الكلية") });
     }
     return null;
@@ -1324,9 +1354,10 @@
   }
   function startTour() {
     U.$("#tour-intro").hidden = true; closeInfo();
-    P.lvl = 0; P.x = 0; P.z = 27; P.yaw = 0; P.pitch = 0.05; P.gy = GY;
+    P.lvl = 0; P.x = 0; P.z = 38; P.yaw = 0; P.pitch = 0.05; P.gy = GY;
     play([
-      { p: [0, EG, 24], look: [0, 3.7, 5.4], move: 1.2, hold: 4.0, cap: "قسم علوم الحياة – كلية التربية للعلوم الصرفة، جامعة تكريت (أُسس عام ١٩٩٢)" },
+      { p: [0, EG, 35.5], look: [0, 3.2, 5.4], move: 1.2, hold: 4.0, cap: "قسم علوم الحياة – كلية التربية للعلوم الصرفة، جامعة تكريت (أُسس عام ١٩٩٢)" },
+      { p: [0.2, EG, 27.6], look: [0, 1.7, 21.5], move: 2.6, hold: 1.6, cap: "استراحة الطلبة أمام القسم" },
       { p: [0.4, EG, 12.6], look: [1.75, 1.75, 7.1], move: 3.4, hold: 3.4, cap: OWNER + " يرحّب بكم عند باب القسم" },
       { p: [0, E0, 8.4], look: [0, 1.6, 3.5], move: 1.8, cap: "الباب الخشبي المشبّك للمدخل الرئيسي" },
       { p: [0.3, E0, 4.3], look: [-2.9, 1.7, 3.15], move: 2.0, hold: 2.6, cap: "تعليمات انضباط الطلبة في المدخل" },
@@ -1431,7 +1462,7 @@
   function bindInput() {
     let down = null;
     canvas.addEventListener("pointerdown", e => {
-      focused = true; canvas.setPointerCapture(e.pointerId);
+      focused = true; canvas.setPointerCapture(e.pointerId); prepVoice();
       down = { x: e.clientX, y: e.clientY, t: performance.now(), moved: 0 };
       if (anim && anim.isTour) { anim = null; tour = false; caption(""); U.$("#tour-play").classList.remove("on"); }
       U.$("#tour-intro").hidden = true;
@@ -1447,7 +1478,7 @@
       if (!down) return; const d = down; down = null;
       if (d.moved < 7 && performance.now() - d.t < 450 && !anim) {
         const h = pick(e.clientX, e.clientY);
-        if (h && h.device) openInfo(h.device);
+        if (h && h.device) { openInfo(h.device); if (h.device === "owner") speak(); }
         else if (h && h.floor && Math.abs(h.point.y - groundY(h.point.x, h.point.z, P.lvl)) < 0.45) { const path = routeTo(h.point.x, h.point.z); if (path) { walkPath = path; stuck = 0; showMarker(h.point.x, h.point.y, h.point.z); closeInfo(); } }
       }
     };
@@ -1455,22 +1486,24 @@
     canvas.addEventListener("pointerleave", () => { U.$("#tour-tip").hidden = true; });
     window.addEventListener("keydown", e => {
       if (!active || !focused || /input|textarea|select/i.test(e.target.tagName)) return;
-      if (["KeyW", "KeyA", "KeyS", "KeyD", "KeyQ", "KeyE", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "ShiftLeft", "ShiftRight"].includes(e.code)) { keys[e.code] = true; if (e.code.startsWith("Arrow")) e.preventDefault(); if (anim && anim.isTour) { anim = null; tour = false; caption(""); } U.$("#tour-intro").hidden = true; }
+      if (["KeyW", "KeyA", "KeyS", "KeyD", "KeyQ", "KeyE", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "ShiftLeft", "ShiftRight"].includes(e.code)) { keys[e.code] = true; prepVoice(); if (e.code.startsWith("Arrow")) e.preventDefault(); if (anim && anim.isTour) { anim = null; tour = false; caption(""); } U.$("#tour-intro").hidden = true; }
       if (e.code === "Escape") { closeInfo(); exitFull(); }
     });
     window.addEventListener("keyup", e => { keys[e.code] = false; });
     window.addEventListener("blur", () => Object.keys(keys).forEach(k => (keys[k] = false)));
     document.addEventListener("pointerdown", e => { if (!stageEl.contains(e.target)) focused = false; });
     const jz = U.$("#tour-joy"), knob = jz.querySelector("span"); let jid = null, jc = null;
-    jz.addEventListener("pointerdown", e => { e.stopPropagation(); jid = e.pointerId; jz.setPointerCapture(jid); const r = jz.getBoundingClientRect(); jc = { x: r.left + r.width / 2, y: r.top + r.height / 2, R: r.width / 2 }; moveJoy(e); U.$("#tour-intro").hidden = true; if (anim && anim.isTour) { anim = null; tour = false; caption(""); } });
+    jz.addEventListener("pointerdown", e => { e.stopPropagation(); prepVoice(); jid = e.pointerId; jz.setPointerCapture(jid); const r = jz.getBoundingClientRect(); jc = { x: r.left + r.width / 2, y: r.top + r.height / 2, R: r.width / 2 }; moveJoy(e); U.$("#tour-intro").hidden = true; if (anim && anim.isTour) { anim = null; tour = false; caption(""); } });
     const moveJoy = e => { if (jid !== e.pointerId) return; let dx = e.clientX - jc.x, dy = e.clientY - jc.y; const d = Math.hypot(dx, dy), m = jc.R * 0.85; if (d > m) { dx *= m / d; dy *= m / d; } knob.style.transform = `translate(${dx}px,${dy}px)`; joy.x = dx / m; joy.y = dy / m; };
     jz.addEventListener("pointermove", moveJoy);
     const jend = () => { jid = null; joy.x = 0; joy.y = 0; knob.style.transform = ""; };
     jz.addEventListener("pointerup", jend); jz.addEventListener("pointercancel", jend);
-    U.$("#tour-play").onclick = () => { if (anim && anim.isTour) { anim = null; tour = false; caption(""); U.$("#tour-play").classList.remove("on"); } else startTour(); };
+    U.$("#tour-play").onclick = () => { prepVoice(); if (anim && anim.isTour) { anim = null; tour = false; caption(""); U.$("#tour-play").classList.remove("on"); } else startTour(); };
     const fit = () => { if (window.innerWidth <= 900 && !stageEl.classList.contains("full")) { const hh = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--header-h")) || 64; window.scrollTo({ top: stageEl.getBoundingClientRect().top + window.scrollY - hh - 8, behavior: "smooth" }); } };
-    U.$("#tour-self").onclick = () => { U.$("#tour-intro").hidden = true; focused = true; fit(); };
-    U.$("#tour-start").onclick = () => { fit(); startTour(); };
+    U.$("#tour-self").onclick = () => { prepVoice(); U.$("#tour-intro").hidden = true; focused = true; fit(); };
+    U.$("#tour-start").onclick = () => { prepVoice(); fit(); startTour(); };
+    U.$("#tour-voice").onclick = () => { prepVoice(); setMute(!muted); if (!muted && avatar) avatar.armed = true; };
+    setMute(muted);
     U.$("#tour-map-t").onclick = () => { const m = U.$("#tour-map"); m.hidden = !m.hidden; U.$("#tour-map-t").classList.toggle("on", !m.hidden); drawMap(); };
     U.$("#tour-map-c").addEventListener("click", mapClick);
     U.$("#tour-floors").onclick = e => { const b = e.target.closest("button"); if (!b) return; mapFloor = +b.dataset.f; U.$$("#tour-floors button").forEach(x => x.classList.toggle("on", x === b)); drawMap(); };
@@ -1533,7 +1566,7 @@
   ECO.views.campus = {
     init() { build(); },
     show() { active = true; if (st) { st.start(); setTimeout(() => { st.resize(); drawMap(); }, 50); } },
-    hide() { active = false; Object.keys(keys).forEach(k => (keys[k] = false)); if (st) st.stop(); exitFull(); }
+    hide() { active = false; Object.keys(keys).forEach(k => (keys[k] = false)); if (voice) try { voice.pause(); } catch (e) { /* */ } if (st) st.stop(); exitFull(); }
   };
-  ECO.campus = { state: () => ({ x: P.x, z: P.z, lvl: P.lvl, yaw: P.yaw, where: lastWhere, anim: !!anim }), teleport, startTour, openInfo, regions: () => REG, rooms: ROOMS, set: o => { walkPath = null; anim = null; hideMarker(); Object.assign(P, o); P.gy = groundY(P.x, P.z, P.lvl); applyCam(); where(true); }, climb, descend, keys, info: () => st && st.renderer.info.render, speed: 1, solids: () => SOLID, walkTo: (x, z) => { const p = routeTo(x, z); if (p) { walkPath = p; stuck = 0; } return p; }, walking: () => !!walkPath };
+  ECO.campus = { state: () => ({ x: P.x, z: P.z, lvl: P.lvl, yaw: P.yaw, where: lastWhere, anim: !!anim }), teleport, startTour, openInfo, regions: () => REG, rooms: ROOMS, set: o => { walkPath = null; anim = null; hideMarker(); Object.assign(P, o); P.gy = groundY(P.x, P.z, P.lvl); applyCam(); where(true); }, climb, descend, keys, info: () => st && st.renderer.info.render, speed: 1, solids: () => SOLID, walkTo: (x, z) => { const p = routeTo(x, z); if (p) { walkPath = p; stuck = 0; } return p; }, walking: () => !!walkPath, voice: () => ({ ready: voiceReady, muted, playing: !!(voice && !voice.paused), t: voice ? voice.currentTime : 0, mouth: avatar ? avatar.mouth.scale.y : 0 }), speak };
 })();
