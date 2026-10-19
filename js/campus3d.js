@@ -11,9 +11,8 @@
   const FH = 3.7, CH = 3.2, EYE = 1.62, GY = -0.15, RISE = 1.85 / 11, RUN = 0.3;
   const FONT = '"Readex Pro","IBM Plex Sans Arabic","Noto Sans Arabic","Noto Naskh Arabic",Tahoma,Arial,sans-serif';
   const TEX = "assets/campus/";
-  const OWNER = (ECO.PROJECT && ECO.PROJECT.student) || "مؤمن خلف عبدالله";
-  /* ترحيب صوتي بصوت صاحب المنصة نفسه، ومنحنى فتح الفم كل 40 ملّي ثانية لمزامنة حركة الشفاه */
-  const GREET = { url: TEX + "greet_voice.mp3", text: "أهلاً بالزائر الكريم، مرحباً بك", env: "0,0,0,2,8,9,8,7,5,7,8,8,7,8,8,7,7,7,7,5,4,6,8,9,9,8,8,8,5,7,6,4,2,1,4,8,8,6,9,8,7,7,6,6,5,3,2,1,0,0,0,3,6,7,8,7,7,6,4,2,2,9,5,3,9,7,7,7,5,8,9,7,4,1,0,1,0,0,0,0".split(",").map(Number) };
+  const OWNER = "مؤمن"; // الاسم الظاهر في الجولة (بطلب صاحب المنصة)
+  const GREET_TEXT = "أهلاً بالزائر الكريم، مرحباً بك";
   const GZ = 25.0; // استراحة الطلبة: في الوسط أمام القسم على الممر الرئيسي
 
   /* الغرف حسب المخطط الهندسي للقسم. row: N شمال الممر، S جنوبه. d عمق الغرفة. door مركز الباب على الممر.
@@ -77,7 +76,6 @@
   const P = { x: 0, z: 37, lvl: 0, yaw: 0, pitch: 0.03, bob: 0, gy: GY };
   const keys = {}, joy = { x: 0, y: 0 };
   let walkPath = null, stuck = 0, anim = null, tour = false, whereT = 0, ledTex = null, mapFloor = 0, lastWhere = "", avatar = null, clockT = 0;
-  let voice = null, voiceReady = false, muted = !!(U.store && U.store.get("tourMute", false));
 
   /* ---------------------------------------------------------------
      أدوات مساعدة
@@ -1156,45 +1154,23 @@
     add(head, S(0.06, 14, 8, 0), M.hair, 0, 0.04, 0.035, 1.1, 0.42, 0.95);
     body.add(head); root.add(body);
     [armR, armL, head, body, root].forEach(mergeGroup);
-    const mouth = new THREE.Mesh(new THREE.SphereGeometry(0.016, 12, 8), MAT.lips.clone()); mouth.material.color.set(0x3a1d14); mouth.position.set(0, 0.05, 0.091); mouth.scale.set(1.25, 0.15, 0.5); head.add(mouth);
     // فقاعة الترحيب
     const bubble = new THREE.Sprite(new THREE.SpriteMaterial({ map: textTex(720, 230, (g, w, h) => {
       g.fillStyle = "rgba(255,255,255,.96)"; g.beginPath(); g.roundRect ? g.roundRect(6, 6, w - 12, h - 52, 34) : g.rect(6, 6, w - 12, h - 52); g.fill();
       g.beginPath(); g.moveTo(w / 2 - 22, h - 48); g.lineTo(w / 2, h - 8); g.lineTo(w / 2 + 22, h - 48); g.fill();
-      g.fillStyle = "#1d5b3f"; fitFont(g, GREET.text, 800, 50, w - 60); g.fillText(GREET.text, w / 2, 66);
+      g.fillStyle = "#1d5b3f"; fitFont(g, GREET_TEXT, 800, 50, w - 60); g.fillText(GREET_TEXT, w / 2, 66);
       g.fillStyle = "#555"; g.font = `600 36px ${FONT}`; g.fillText(OWNER, w / 2, 134);
     }), transparent: true, depthWrite: false }));
     bubble.scale.set(1.45, 0.46, 1); bubble.position.set(0, 2.22, 0); root.add(bubble);
     root.position.set(1.75, 0, 7.1); root.rotation.y = -0.15;
     const picked = new THREE.Group(); picked.add(root); picked.userData.device = "owner"; scene.add(picked); PICK.push(picked);
     solid(0, 1.5, 6.85, 2.0, 7.35);
-    avatar = { root, body, head, armR, armL, bubble, mouth, t: 0, wave: 0, armed: true };
+    avatar = { root, body, head, armR, armL, bubble, t: 0, wave: 0 };
   }
-  /* الصوت: يُهيّأ عند أول لمسة من الزائر (شرط المتصفحات)، ثم يُشغَّل عند الاقتراب من الشخصية */
-  function prepVoice() {
-    if (voice) return;
-    try {
-      voice = new Audio(GREET.url); voice.preload = "auto"; voice.muted = true;
-      const p = voice.play(); const done = () => { try { voice.pause(); voice.currentTime = 0; } catch (e) { /* */ } voice.muted = false; voiceReady = true; };
-      if (p && p.then) p.then(done).catch(() => { voice.muted = false; voiceReady = true; }); else done();
-    } catch (e) { voice = null; }
-  }
-  function speak() {
-    if (!voice || muted) return false;
-    try { voice.pause(); voice.currentTime = 0; voice.muted = false; const p = voice.play(); if (p && p.catch) p.catch(() => {}); } catch (e) { return false; }
-    return true;
-  }
-  function setMute(m) { muted = m; if (U.store) U.store.set("tourMute", m); if (m && voice) try { voice.pause(); } catch (e) { /* */ } const b = U.$("#tour-voice"); if (b) { b.classList.toggle("on", !m); b.querySelector("use").setAttribute("href", m ? "#i-mute" : "#i-volume"); b.title = m ? "تشغيل صوت الترحيب" : "كتم صوت الترحيب"; } }
   function animateAvatar(dt) {
     if (!avatar) return;
     const a = avatar; a.t += dt;
     const dx = P.x - a.root.position.x, dz = P.z - a.root.position.z, d = Math.hypot(dx, dz), near = P.lvl === 0 && d < 9;
-    if (P.lvl === 0 && d < 6.5 && a.armed && voiceReady) { if (speak()) a.armed = false; }
-    if (d > 11 || P.lvl) a.armed = true;
-    let open = 0;
-    if (voice && !voice.paused) { const k = Math.floor(voice.currentTime / 0.04); open = (GREET.env[k] || 0) / 9; }
-    a.mouth.scale.y += ((0.15 + open * 0.95) - a.mouth.scale.y) * Math.min(1, dt * 18);
-    a.head.rotation.x = open * 0.05;
     a.body.scale.y = 1 + Math.sin(a.t * 2.1) * 0.006;
     const want = near ? clamp(angLerp(0, Math.atan2(dx, dz) - a.root.rotation.y, 1), -0.9, 0.9) : 0;
     a.head.rotation.y += (want - a.head.rotation.y) * Math.min(1, dt * 4);
@@ -1462,7 +1438,7 @@
   function bindInput() {
     let down = null;
     canvas.addEventListener("pointerdown", e => {
-      focused = true; canvas.setPointerCapture(e.pointerId); prepVoice();
+      focused = true; canvas.setPointerCapture(e.pointerId);
       down = { x: e.clientX, y: e.clientY, t: performance.now(), moved: 0 };
       if (anim && anim.isTour) { anim = null; tour = false; caption(""); U.$("#tour-play").classList.remove("on"); }
       U.$("#tour-intro").hidden = true;
@@ -1478,7 +1454,7 @@
       if (!down) return; const d = down; down = null;
       if (d.moved < 7 && performance.now() - d.t < 450 && !anim) {
         const h = pick(e.clientX, e.clientY);
-        if (h && h.device) { openInfo(h.device); if (h.device === "owner") speak(); }
+        if (h && h.device) openInfo(h.device);
         else if (h && h.floor && Math.abs(h.point.y - groundY(h.point.x, h.point.z, P.lvl)) < 0.45) { const path = routeTo(h.point.x, h.point.z); if (path) { walkPath = path; stuck = 0; showMarker(h.point.x, h.point.y, h.point.z); closeInfo(); } }
       }
     };
@@ -1486,24 +1462,22 @@
     canvas.addEventListener("pointerleave", () => { U.$("#tour-tip").hidden = true; });
     window.addEventListener("keydown", e => {
       if (!active || !focused || /input|textarea|select/i.test(e.target.tagName)) return;
-      if (["KeyW", "KeyA", "KeyS", "KeyD", "KeyQ", "KeyE", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "ShiftLeft", "ShiftRight"].includes(e.code)) { keys[e.code] = true; prepVoice(); if (e.code.startsWith("Arrow")) e.preventDefault(); if (anim && anim.isTour) { anim = null; tour = false; caption(""); } U.$("#tour-intro").hidden = true; }
+      if (["KeyW", "KeyA", "KeyS", "KeyD", "KeyQ", "KeyE", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "ShiftLeft", "ShiftRight"].includes(e.code)) { keys[e.code] = true; if (e.code.startsWith("Arrow")) e.preventDefault(); if (anim && anim.isTour) { anim = null; tour = false; caption(""); } U.$("#tour-intro").hidden = true; }
       if (e.code === "Escape") { closeInfo(); exitFull(); }
     });
     window.addEventListener("keyup", e => { keys[e.code] = false; });
     window.addEventListener("blur", () => Object.keys(keys).forEach(k => (keys[k] = false)));
     document.addEventListener("pointerdown", e => { if (!stageEl.contains(e.target)) focused = false; });
     const jz = U.$("#tour-joy"), knob = jz.querySelector("span"); let jid = null, jc = null;
-    jz.addEventListener("pointerdown", e => { e.stopPropagation(); prepVoice(); jid = e.pointerId; jz.setPointerCapture(jid); const r = jz.getBoundingClientRect(); jc = { x: r.left + r.width / 2, y: r.top + r.height / 2, R: r.width / 2 }; moveJoy(e); U.$("#tour-intro").hidden = true; if (anim && anim.isTour) { anim = null; tour = false; caption(""); } });
+    jz.addEventListener("pointerdown", e => { e.stopPropagation(); jid = e.pointerId; jz.setPointerCapture(jid); const r = jz.getBoundingClientRect(); jc = { x: r.left + r.width / 2, y: r.top + r.height / 2, R: r.width / 2 }; moveJoy(e); U.$("#tour-intro").hidden = true; if (anim && anim.isTour) { anim = null; tour = false; caption(""); } });
     const moveJoy = e => { if (jid !== e.pointerId) return; let dx = e.clientX - jc.x, dy = e.clientY - jc.y; const d = Math.hypot(dx, dy), m = jc.R * 0.85; if (d > m) { dx *= m / d; dy *= m / d; } knob.style.transform = `translate(${dx}px,${dy}px)`; joy.x = dx / m; joy.y = dy / m; };
     jz.addEventListener("pointermove", moveJoy);
     const jend = () => { jid = null; joy.x = 0; joy.y = 0; knob.style.transform = ""; };
     jz.addEventListener("pointerup", jend); jz.addEventListener("pointercancel", jend);
-    U.$("#tour-play").onclick = () => { prepVoice(); if (anim && anim.isTour) { anim = null; tour = false; caption(""); U.$("#tour-play").classList.remove("on"); } else startTour(); };
+    U.$("#tour-play").onclick = () => { if (anim && anim.isTour) { anim = null; tour = false; caption(""); U.$("#tour-play").classList.remove("on"); } else startTour(); };
     const fit = () => { if (window.innerWidth <= 900 && !stageEl.classList.contains("full")) { const hh = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--header-h")) || 64; window.scrollTo({ top: stageEl.getBoundingClientRect().top + window.scrollY - hh - 8, behavior: "smooth" }); } };
-    U.$("#tour-self").onclick = () => { prepVoice(); U.$("#tour-intro").hidden = true; focused = true; fit(); };
-    U.$("#tour-start").onclick = () => { prepVoice(); fit(); startTour(); };
-    U.$("#tour-voice").onclick = () => { prepVoice(); setMute(!muted); if (!muted && avatar) avatar.armed = true; };
-    setMute(muted);
+    U.$("#tour-self").onclick = () => { U.$("#tour-intro").hidden = true; focused = true; fit(); };
+    U.$("#tour-start").onclick = () => { fit(); startTour(); };
     U.$("#tour-map-t").onclick = () => { const m = U.$("#tour-map"); m.hidden = !m.hidden; U.$("#tour-map-t").classList.toggle("on", !m.hidden); drawMap(); };
     U.$("#tour-map-c").addEventListener("click", mapClick);
     U.$("#tour-floors").onclick = e => { const b = e.target.closest("button"); if (!b) return; mapFloor = +b.dataset.f; U.$$("#tour-floors button").forEach(x => x.classList.toggle("on", x === b)); drawMap(); };
@@ -1566,7 +1540,7 @@
   ECO.views.campus = {
     init() { build(); },
     show() { active = true; if (st) { st.start(); setTimeout(() => { st.resize(); drawMap(); }, 50); } },
-    hide() { active = false; Object.keys(keys).forEach(k => (keys[k] = false)); if (voice) try { voice.pause(); } catch (e) { /* */ } if (st) st.stop(); exitFull(); }
+    hide() { active = false; Object.keys(keys).forEach(k => (keys[k] = false)); if (st) st.stop(); exitFull(); }
   };
-  ECO.campus = { state: () => ({ x: P.x, z: P.z, lvl: P.lvl, yaw: P.yaw, where: lastWhere, anim: !!anim }), teleport, startTour, openInfo, regions: () => REG, rooms: ROOMS, set: o => { walkPath = null; anim = null; hideMarker(); Object.assign(P, o); P.gy = groundY(P.x, P.z, P.lvl); applyCam(); where(true); }, climb, descend, keys, info: () => st && st.renderer.info.render, speed: 1, solids: () => SOLID, walkTo: (x, z) => { const p = routeTo(x, z); if (p) { walkPath = p; stuck = 0; } return p; }, walking: () => !!walkPath, voice: () => ({ ready: voiceReady, muted, playing: !!(voice && !voice.paused), t: voice ? voice.currentTime : 0, mouth: avatar ? avatar.mouth.scale.y : 0 }), speak };
+  ECO.campus = { state: () => ({ x: P.x, z: P.z, lvl: P.lvl, yaw: P.yaw, where: lastWhere, anim: !!anim }), teleport, startTour, openInfo, regions: () => REG, rooms: ROOMS, set: o => { walkPath = null; anim = null; hideMarker(); Object.assign(P, o); P.gy = groundY(P.x, P.z, P.lvl); applyCam(); where(true); }, climb, descend, keys, info: () => st && st.renderer.info.render, speed: 1, solids: () => SOLID, walkTo: (x, z) => { const p = routeTo(x, z); if (p) { walkPath = p; stuck = 0; } return p; }, walking: () => !!walkPath };
 })();
