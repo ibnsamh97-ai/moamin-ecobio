@@ -63,7 +63,7 @@
       Object.values(ovLayers).forEach(l => l.setOpacity(S.opacity));
     };
 
-    const cmpKeys = [["us_aqi", "AQI"], ["pm2_5", "PM2.5"], ["pm10", "PM10"], ["dust", "غبار"], ["nitrogen_dioxide", "NO₂"], ["sulphur_dioxide", "SO₂"]];
+    const cmpKeys = [["us_aqi_pm2_5", "AQI صحي"], ["us_aqi", "AQI عام"], ["pm2_5", "PM2.5"], ["pm10", "PM10"], ["dust", "غبار"], ["nitrogen_dioxide", "NO₂"]];
     U.$("#cmp-seg").innerHTML = cmpKeys.map(([k, l]) => `<button type="button" data-k="${k}" class="${k === S.cmp ? "on" : ""}">${l}</button>`).join("");
     U.$("#cmp-seg").onclick = e => {
       const btn = e.target.closest("button"); if (!btn) return;
@@ -82,12 +82,12 @@
   function renderStations() {
     const cur = S.cur || {};
     U.$("#station-list").innerHTML = ECO.STATIONS.map(s => {
-      const a = (cur[s.id] || {}).us_aqi, tone = U.toneFor("us_aqi", a);
+      const a = (cur[s.id] || {})[ECO.AQI_HEAD], tone = U.toneFor(ECO.AQI_HEAD, a);
       return `<button type="button" class="station ${s.id === ECO.state.station ? "on" : ""}" data-s="${s.id}"><span><span class="nm">${s.name}</span><span class="nt">${s.note}</span></span><span class="chip tone-${tone} aqi">${U.aqiText(a)}</span></button>`;
     }).join("");
     Object.entries(markers).forEach(([id, m]) => {
-      const a = (cur[id] || {}).us_aqi;
-      m.setStyle({ fillColor: ECO.TONES[U.toneFor("us_aqi", a)] || ECO.TONES.info, radius: id === ECO.state.station ? 12 : 8, weight: id === ECO.state.station ? 3 : 2 });
+      const a = (cur[id] || {})[ECO.AQI_HEAD];
+      m.setStyle({ fillColor: ECO.TONES[U.toneFor(ECO.AQI_HEAD, a)] || ECO.TONES.info, radius: id === ECO.state.station ? 12 : 8, weight: id === ECO.state.station ? 3 : 2 });
     });
   }
 
@@ -126,9 +126,12 @@
         <span class="faint" style="font-size:.7rem">${a.name}${a.who ? ` · حد WHO ${a.who}` : ""}</span>
       </button>`;
     }).join("");
-    const aqi = valueNow(d, "us_aqi"), band = U.isNum(aqi) ? U.aqiBand(aqi) : null;
+    const aqi = valueNow(d, ECO.AQI_HEAD), band = U.isNum(aqi) ? U.aqiBand(aqi) : null;
+    const overall = valueNow(d, "us_aqi"), dustV = valueNow(d, "dust");
     U.$("#gauge-station").textContent = st.name;
-    U.$("#aqi-gauge").innerHTML = U.gauge({ value: aqi, max: 300, big: U.isNum(aqi) ? U.aqiText(aqi) : null, tone: band ? band.tone : "none", label: band ? band.label : "لا بيانات", sub: "US AQI · تقدير نموذج CAMS وليس قياس محطة أرضية" });
+    U.$("#aqi-gauge").innerHTML = U.gauge({ value: aqi, max: 300, big: U.isNum(aqi) ? U.aqiText(aqi) : null, tone: band ? band.tone : "none", label: band ? band.label : "لا بيانات", sub: "مؤشر الهواء الصحي (PM2.5) · US AQI · تقدير نموذج CAMS" });
+    const ov = U.$("#aqi-overall");
+    if (ov) ov.innerHTML = U.isNum(overall) ? `المؤشر العام لكل الملوثات: <b class="tone-${U.toneFor("us_aqi", overall)}">${U.aqiText(overall)}</b>${U.isNum(dustV) && dustV > 100 ? ` — مرتفع بسبب الغبار (${U.fmt(dustV, 0)} µg/m³)` : ""}` : "";
     const t = (d.current && d.current.time) || d.time[d.nowIdx];
     U.$("#mon-updated").textContent = t ? `تقدير النموذج لساعة ${U.fmtTime(t)}` : "";
     U.$("#mon-notice").innerHTML = ECO.offlineNotice();

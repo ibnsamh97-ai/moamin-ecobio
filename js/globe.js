@@ -210,8 +210,8 @@
   function updateStations(cur) {
     if (!cur || !stationObjs.length) return;
     stationObjs.forEach(o => {
-      const c = cur[o.s.id] || {}, aqi = c.us_aqi;
-      const col = new THREE.Color(ECO.TONES[U.toneFor("us_aqi", aqi)] || ECO.TONES.info);
+      const c = cur[o.s.id] || {}, aqi = c[ECO.AQI_HEAD];
+      const col = new THREE.Color(ECO.TONES[U.toneFor(ECO.AQI_HEAD, aqi)] || ECO.TONES.info);
       [o.beam, o.ring, o.dot].forEach(m => m.material.color.copy(col));
       const hgt = U.isNum(aqi) ? 0.25 + Math.min(aqi, 300) / 300 * 1.1 : 0.5;
       o.beam.scale.y = hgt; o.beam.position.y = hgt / 2;
@@ -222,7 +222,7 @@
     const box = U.$("#hero-live"); if (!box) return;
     const c = (cur && cur[ECO.DEFAULT_STATION]) || {};
     const items = [
-      { k: "us_aqi", label: "مؤشر الهواء – تكريت", unit: "AQI" },
+      { k: ECO.AQI_HEAD, label: "مؤشر الهواء الصحي (PM2.5) – تكريت", unit: "AQI" },
       { k: "pm2_5", label: "PM2.5", unit: "µg/m³" },
       { k: "dust", label: "الغبار", unit: "µg/m³" },
       { k: "nitrogen_dioxide", label: "NO₂", unit: "µg/m³" }
@@ -231,7 +231,7 @@
     const v = ECO.ground ? ECO.ground.verdict(c) : { kind: "none" };
     const doubt = v.kind === "over";
     box.innerHTML = items.map(it => {
-      const val = c[it.k], tone = U.toneFor(it.k, val), isA = it.k === "us_aqi";
+      const val = c[it.k], tone = U.toneFor(it.k, val), isA = it.k === ECO.AQI_HEAD;
       const lab = isA && U.isNum(val) ? U.aqiBand(val).label : U.toneLabel[tone];
       const flag = doubt && it.k !== "nitrogen_dioxide" ? `<span class="lc-doubt">لا يؤكده الرصد الأرضي</span>` : "";
       return `<div class="live-card${flag ? " is-doubt" : ""}"><div class="k">${it.label}</div><div class="v">${isA ? U.aqiText(val) : U.fmt(val, 1)}<small>${it.unit}</small></div><span class="chip tone-${tone}">${lab}</span>${flag}</div>`;

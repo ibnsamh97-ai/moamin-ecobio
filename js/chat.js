@@ -14,7 +14,7 @@
     const parts = [];
     const cur = ECO._lastCurrent;
     if (cur) {
-      const rows = ECO.STATIONS.map(s => { const c = cur[s.id] || {}; return `${s.name}: AQI=${U.aqiText(c.us_aqi)}, PM2.5=${U.fmt(c.pm2_5, 1)}, PM10=${U.fmt(c.pm10, 0)}, Dust=${U.fmt(c.dust, 0)}, NO2=${U.fmt(c.nitrogen_dioxide, 1)}, SO2=${U.fmt(c.sulphur_dioxide, 1)}, O3=${U.fmt(c.ozone, 0)} µg/m³`; });
+      const rows = ECO.STATIONS.map(s => { const c = cur[s.id] || {}; return `${s.name}: AQI صحي(PM2.5)=${U.aqiText(c.us_aqi_pm2_5)}, AQI عام=${U.aqiText(c.us_aqi)}, PM2.5=${U.fmt(c.pm2_5, 1)}, PM10=${U.fmt(c.pm10, 0)}, Dust=${U.fmt(c.dust, 0)}, NO2=${U.fmt(c.nitrogen_dioxide, 1)}, SO2=${U.fmt(c.sulphur_dioxide, 1)}, O3=${U.fmt(c.ozone, 0)} µg/m³`; });
       const t = (cur[ECO.DEFAULT_STATION] || {}).time;
       parts.push(`تقديرات الهواء الحالية${t ? " (" + U.fmtTime(t) + " بتوقيت بغداد)" : ""} [نموذج Copernicus CAMS بدقة ≈45 كم، وليست قياسات محطات أرضية؛ قد يبالغ النموذج في الغبار، وAQI فوق 500 خارج المقياس الرسمي]:\n` + rows.join("\n"));
     }

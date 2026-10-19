@@ -83,7 +83,7 @@
   /* نغمة الخطورة لكل ملوث بالنسبة إلى حدّه */
   U.toneFor = (key, v) => {
     if (!U.isNum(v)) return "none";
-    if (key === "us_aqi") return U.aqiBand(v).tone;
+    if (key === "us_aqi" || key === "us_aqi_pm2_5") return U.aqiBand(v).tone;
     if (key === "aerosol_optical_depth") return v < 0.2 ? "good" : v < 0.4 ? "fair" : v < 0.7 ? "warn" : v < 1 ? "bad" : "severe";
     if (key === "uv_index") return v < 3 ? "good" : v < 6 ? "fair" : v < 8 ? "warn" : v < 11 ? "bad" : "hazard";
     if (key === "dust") return v < 50 ? "good" : v < 100 ? "fair" : v < 200 ? "warn" : v < 500 ? "bad" : "severe";

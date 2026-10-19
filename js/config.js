@@ -63,7 +63,11 @@ ECO.AIR = [
   { key: "uv_index", name: "مؤشر الأشعة فوق البنفسجية", short: "UV", unit: "", who: null, desc: "شدة الأشعة فوق البنفسجية؛ 8 فأكثر خطر مرتفع جداً." },
   { key: "methane", name: "الميثان", short: "CH₄", unit: "µg/m³", who: null, desc: "غاز دفيئة قوي ينبعث من حقول النفط والمطامر والأهوار." }
 ];
-ECO.AIR_VARS = ECO.AIR.map(a => a.key).concat(["us_aqi"]);
+/* المؤشر الرئيسي المعروض هو مؤشر PM2.5 الصحي (us_aqi_pm2_5): المقياس الأمريكي العام
+   (us_aqi) يأخذ أعلى ملوّث، وفي العراق يرفعه الغبار (PM10) فيبالغ في التقدير، بينما
+   مؤشر PM2.5 هو الأكثر دلالة على الصحة وهو ما تعرضه تطبيقات جودة الهواء عادةً. */
+ECO.AIR_VARS = ECO.AIR.map(a => a.key).concat(["us_aqi", "us_aqi_pm2_5"]);
+ECO.AQI_HEAD = "us_aqi_pm2_5";
 
 /* فئات مؤشر جودة الهواء الأمريكي US AQI */
 ECO.AQI_BANDS = [

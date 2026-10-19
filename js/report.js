@@ -148,9 +148,10 @@
   function airReport(mode) {
     const cur = ECO._lastCurrent;
     if (!cur || !Object.keys(cur).length) { U.toast("لا توجد قراءات حية الآن؛ تأكد من الاتصال"); return; }
-    const keys = ["us_aqi", "pm2_5", "pm10", "dust", "nitrogen_dioxide", "sulphur_dioxide", "ozone", "carbon_monoxide"];
-    const head = ["المحطة", "AQI", "PM2.5", "PM10", "الغبار", "NO₂", "SO₂", "O₃", "CO"];
-    const rows = ECO.STATIONS.map(s => { const c = cur[s.id] || {}; return [s.name, ...keys.map(k => k === "us_aqi" ? (c[k] > 500 ? "فوق 500" : U.aqiText(c[k])) : U.fmt(c[k], k === "carbon_monoxide" ? 0 : 1))]; });
+    const keys = ["us_aqi_pm2_5", "us_aqi", "pm2_5", "pm10", "dust", "nitrogen_dioxide", "sulphur_dioxide", "ozone", "carbon_monoxide"];
+    const head = ["المحطة", "AQI صحي", "AQI عام", "PM2.5", "PM10", "الغبار", "NO₂", "SO₂", "O₃", "CO"];
+    const isAqi = k => k === "us_aqi" || k === "us_aqi_pm2_5";
+    const rows = ECO.STATIONS.map(s => { const c = cur[s.id] || {}; return [s.name, ...keys.map(k => isAqi(k) ? (c[k] > 500 ? "فوق 500" : U.aqiText(c[k])) : U.fmt(c[k], k === "carbon_monoxide" ? 0 : 1))]; });
     const g = ECO.ground, gv = g && g.state === "ok" && g.stations.length ? g.message() : null;
     const t = (cur[ECO.DEFAULT_STATION] || {}).time;
     const over = ECO.STATIONS.map(s => { const c = cur[s.id] || {}; return [s.name, ...["pm2_5", "pm10", "nitrogen_dioxide", "sulphur_dioxide"].map(k => { const m = ECO.AIR.find(a => a.key === k); return U.isNum(c[k]) ? U.fmt(c[k] / m.who, 2) + "×" : "—"; })]; });

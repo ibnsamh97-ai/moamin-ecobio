@@ -194,6 +194,7 @@
         <div class="panel">
           <div class="panel-h"><h3>مؤشر جودة الهواء</h3><span class="sub" id="gauge-station"></span></div>
           <div class="gauge-wrap" id="aqi-gauge"></div>
+          <p class="faint" id="aqi-overall" style="text-align:center;font-size:.8rem;margin-top:-6px"></p>
         </div>
         <div class="panel" id="mon-ground"></div>
       </div>
@@ -876,9 +877,15 @@
         </div>
       </div>
       <div class="panel">
-        <div class="panel-h"><h3>2. الأجناس الموجودة في العينة</h3><span class="sub">20 جنساً · الدرجة بجانب كل جنس</span></div>
+        <div class="panel-h"><h3>2. أجناس مؤشر Palmer في العينة</h3><span class="sub">20 جنساً · الدرجة بجانب كل جنس</span></div>
         <div id="pm-list"></div>
         <div class="pm-float" id="pm-float" aria-live="polite"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-h"><h3>3. أجناس دلالة مسجّلة في دجلة والعراق</h3><span class="sub">للتعرّف والمقارنة — لا تُحتسب في مؤشر Palmer</span></div>
+        <p class="faint" style="font-size:.82rem;margin:-4px 0 10px">أجناس طحالب موثّقة في نهر دجلة وأنهار العراق من دراسات منشورة، مع دلالتها البيئية (حسّاس = مياه أنظف، متحمّل = تلوث عضوي). تساعد الطالب على التعرّف والمقارنة، ويشخّصها الذكاء الاصطناعي أيضاً.</p>
+        <div id="pm-ind"></div>
+        <div id="pm-ind-note" aria-live="polite"></div>
       </div>
     </div>
   </div>

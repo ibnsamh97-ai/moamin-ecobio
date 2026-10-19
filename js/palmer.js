@@ -40,7 +40,38 @@
   ];
   const GROUPS = { cyan: "الطحالب الخضراء المزرقة (البكتيريا الزرقاء)", green: "الطحالب الخضراء", eug: "اليوغلينيات", diat: "الدايتومات" };
   const MAX = GENERA.reduce((a, x) => a + x.s, 0);
-  const S = { on: {}, dens: {}, ai: {}, imgs: [], aiInfo: null, site: "", date: "", sample: "" };
+
+  /* أجناس Palmer المسجَّلة فعلاً في نهر دجلة وأنهار العراق (توضع عليها علامة «مسجَّل في دجلة») */
+  const IQ_PALMER = new Set(["Anacystis", "Oscillatoria", "Ankistrodesmus", "Chlamydomonas", "Chlorella", "Scenedesmus", "Euglena", "Phacus", "Cyclotella", "Gomphonema", "Melosira", "Navicula", "Nitzschia", "Synedra"]);
+  GENERA.forEach(x => { if (IQ_PALMER.has(x.g)) x.iq = true; });
+
+  /* أجناس دلالة إضافية موثّقة في دجلة/العراق — للتعرّف والمقارنة فقط، لا تدخل حساب Palmer.
+     tol: متحمّل للتلوث العضوي / معتدل / حسّاس (مياه أنظف).
+     المصادر: Hassan & Al-Bdulameer (2014) دجلة-بغداد؛ Yousif & Aldhamin (2015) الديوانية. */
+  const INDIC = [
+    { g: "Lyngbya", grp: "cyan", tol: "tol", hint: "خيوط زرقاء-خضراء داخل غلاف سميك واضح، تكوّن حصائر؛ تزدهر في المياه الدافئة المخصّبة.", alt: [] },
+    { g: "Anabaena", grp: "cyan", tol: "tol", hint: "خيط كخرز المسبحة فيه خلايا كبيرة مثبّتة للنيتروجين (هيتروسيست)؛ قد تسبّب أزهاراً سامة.", alt: ["Dolichospermum"] },
+    { g: "Merismopedia", grp: "cyan", tol: "mod", hint: "صفيحة مسطّحة منتظمة من خلايا كروية مرتّبة صفوفاً كالطابوق.", alt: [] },
+    { g: "Chroococcus", grp: "cyan", tol: "mod", hint: "خليتان إلى أربع خلايا كروية داخل غلاف هلامي مشترك.", alt: [] },
+    { g: "Spirogyra", grp: "green", tol: "mod", hint: "خيط أخضر غير متفرّع ببلاستيدات حلزونية شريطية؛ شائع في المياه الراكدة.", alt: [] },
+    { g: "Pediastrum", grp: "green", tol: "mod", hint: "مستعمرة قرصية مسطّحة من خلايا مرتّبة شعاعياً، الطرفية بقرنين.", alt: [] },
+    { g: "Cosmarium", grp: "green", tol: "sens", hint: "خلية من فصّين متناظرين بينهما خصر (ديزميد)؛ دلالة مياه نظيفة.", alt: [] },
+    { g: "Coelastrum", grp: "green", tol: "mod", hint: "مستعمرة كروية مجوّفة من خلايا متصلة بنتوءات.", alt: [] },
+    { g: "Actinastrum", grp: "green", tol: "mod", hint: "خلايا مغزلية مرتّبة شعاعياً من مركز كالنجمة.", alt: [] },
+    { g: "Cymbella", grp: "diat", tol: "sens", hint: "دايتوم هلالي غير متناظر، الظهر محدّب والبطن مستقيم؛ دلالة مياه نظيفة إلى معتدلة.", alt: [] },
+    { g: "Cocconeis", grp: "diat", tol: "sens", hint: "دايتوم بيضوي مفلطح يلتصق على النباتات والأسطح؛ شائع في المياه الجارية النظيفة.", alt: [] },
+    { g: "Achnanthes", grp: "diat", tol: "sens", hint: "دايتوم صغير على سويقة، صمام بشق وآخر بلا شق؛ مياه قليلة التلوث.", alt: ["Achnanthidium"] },
+    { g: "Diatoma", grp: "diat", tol: "mod", hint: "دايتوم عصوي يكوّن سلاسل متعرّجة (زقزاق)؛ مغذيات معتدلة.", alt: [] },
+    { g: "Fragilaria", grp: "diat", tol: "mod", hint: "دايتوم يكوّن أشرطة مستقيمة ملتصقة بالوجه؛ منتشر في المغذيات المعتدلة.", alt: [] },
+    { g: "Amphora", grp: "diat", tol: "mod", hint: "صمامه نصف هلالي، تبدو الخلية من الجنب كحبة قهوة.", alt: [] },
+    { g: "Pinnularia", grp: "diat", tol: "mod", hint: "دايتوم كبير بأضلاع عريضة متوازية؛ واسع التحمّل.", alt: [] },
+    { g: "Surirella", grp: "diat", tol: "tol", hint: "دايتوم كبير بيضوي/كمثري بحافة مموّجة؛ يتحمّل المياه الغنية بالمغذيات.", alt: [] },
+    { g: "Gyrosigma", grp: "diat", tol: "tol", hint: "دايتوم ملتوٍ على شكل S وشقّه سيني؛ يرتبط بالرواسب العضوية.", alt: ["Pleurosigma"] },
+    { g: "Cymatopleura", grp: "diat", tol: "tol", hint: "يشبه Surirella لكن سطحه مموّج عرضياً؛ مياه مخصّبة.", alt: [] }
+  ];
+  const TOL = { tol: { t: "متحمّل للتلوث", tone: "warn" }, mod: { t: "معتدل", tone: "fair" }, sens: { t: "حسّاس (مياه أنظف)", tone: "good" } };
+  const indAll = () => INDIC.filter(x => S.ind[x.g]);
+  const S = { on: {}, dens: {}, ai: {}, ind: {}, indAi: {}, imgs: [], aiInfo: null, site: "", date: "", sample: "" };
   const hist = () => U.store.get("palmer_hist", []);
 
   const band = sc => sc >= 20 ? { tone: "bad", label: "تلوث عضوي عالٍ" } : sc >= 15 ? { tone: "warn", label: "تلوث عضوي محتمل" } : { tone: "good", label: "تلوث عضوي قليل" };
@@ -52,7 +83,7 @@
     U.$("#pm-list").innerHTML = Object.entries(GROUPS).map(([k, name]) => `<div class="pm-grp"><h4>${name}</h4>${GENERA.filter(x => x.grp === k).map(x => {
       const ai = S.ai[x.g];
       return `<div class="pm-row${S.on[x.g] ? " on" : ""}${S.on[x.g] && !counted(x) ? " low" : ""}">
-        <label class="pm-chk"><input type="checkbox" data-g="${x.g}" ${S.on[x.g] ? "checked" : ""}><span class="pm-name"><i dir="ltr">${x.g}</i>${ai ? `<span class="chip tone-info pm-ai" title="${U.esc(ai.evidence || "")}">مقترح من الصورة${U.isNum(ai.confidence) ? " " + Math.round(ai.confidence * 100) + "%" : ""}</span>` : ""}</span><b class="pm-s">${x.s}</b></label>
+        <label class="pm-chk"><input type="checkbox" data-g="${x.g}" ${S.on[x.g] ? "checked" : ""}><span class="pm-name"><i dir="ltr">${x.g}</i>${x.iq ? `<span class="chip tone-good pm-iq" title="مسجّل فعلاً في نهر دجلة وأنهار العراق">مسجَّل في دجلة</span>` : ""}${ai ? `<span class="chip tone-info pm-ai" title="${U.esc(ai.evidence || "")}">مقترح من الصورة${U.isNum(ai.confidence) ? " " + Math.round(ai.confidence * 100) + "%" : ""}</span>` : ""}</span><b class="pm-s">${x.s}</b></label>
         <p class="pm-hint">${x.hint}</p>
         ${S.on[x.g] ? `<div class="pm-den"><label for="pm-d-${x.g}">الكثافة (خلية/مل) – اختياري</label><input id="pm-d-${x.g}" class="input" type="number" min="0" step="any" dir="ltr" data-d="${x.g}" value="${U.isNum(S.dens[x.g]) ? S.dens[x.g] : ""}" placeholder="&gt; 50"></div>` : ""}
       </div>`;
@@ -69,7 +100,30 @@
     if (fl) fl.innerHTML = `<span>المجموع <b>${sc}</b> من ${list.length} جنس</span><span class="chip tone-${b.tone}">${b.label}</span>`;
     ECO.lastPalmer = list.length ? { score: sc, class: b.label, genera: list.map(x => x.g), site: S.site, date: S.date } : null;
   }
-  const refresh = () => { renderList(); renderScore(); };
+  function renderInd() {
+    const box = U.$("#pm-ind"); if (!box) return;
+    box.innerHTML = Object.entries(GROUPS).map(([k, name]) => {
+      const rows = INDIC.filter(x => x.grp === k); if (!rows.length) return "";
+      return `<div class="pm-grp"><h4>${name}</h4>${rows.map(x => {
+        const ai = S.indAi[x.g], tl = TOL[x.tol];
+        return `<div class="pm-row${S.ind[x.g] ? " on" : ""}">
+          <label class="pm-chk"><input type="checkbox" data-i="${x.g}" ${S.ind[x.g] ? "checked" : ""}><span class="pm-name"><i dir="ltr">${x.g}</i><span class="chip tone-${tl.tone}" style="padding:0 7px">${tl.t}</span>${ai ? `<span class="chip tone-info pm-ai" title="${U.esc(ai.evidence || "")}">مقترح من الصورة</span>` : ""}</span></label>
+          <p class="pm-hint">${x.hint}</p>
+        </div>`;
+      }).join("")}</div>`;
+    }).join("");
+  }
+  function renderIndNote() {
+    const el = U.$("#pm-ind-note"); if (!el) return;
+    const sel = indAll();
+    if (!sel.length) { el.innerHTML = ""; return; }
+    const sens = sel.filter(x => x.tol === "sens").length, tol = sel.filter(x => x.tol === "tol").length;
+    let msg = `اختيرت ${sel.length} أجناس دلالة: <span dir="ltr">${sel.map(x => x.g).join(", ")}</span>.`;
+    if (sens > tol && sens) msg += " غلبة الأجناس الحسّاسة تدعم أن المياه أنظف نسبياً.";
+    else if (tol > sens && tol) msg += " وجود أجناس متحمّلة للتلوث يدعم إشارة التلوث العضوي في مؤشر Palmer.";
+    el.innerHTML = `<p class="faint pm-note" style="margin-top:8px">${msg} (تفسير نوعي مساند، لا يُجمع مع درجة Palmer.)</p>`;
+  }
+  const refresh = () => { renderList(); renderInd(); renderScore(); renderIndNote(); };
 
   /* ---------- الصور ---------- */
   function addFiles(files) {
@@ -95,28 +149,37 @@
     if (!S.imgs.length) { out.innerHTML = `<p class="warnc">ارفع صورة مجهرية أولاً.</p>`; return; }
     if (!ECO.gemini.ready()) { ECO.gemini.renderInto(out, ""); return; }
     const names = GENERA.map(x => x.g + (x.alt.length ? ` (ويشمل ${x.alt.join("/")})` : "")).join("، ");
-    const prompt = `الصور المرفقة (${S.imgs.length}) لشرائح مجهرية من عينة مياه عذبة من العراق. حدّد أجناس الطحالب التي تظهر بوضوح فقط.
-قائمة أجناس مؤشر Palmer (1969): ${names}.
+    const indNames = INDIC.map(x => x.g + (x.alt.length ? ` (ويشمل ${x.alt.join("/")})` : "")).join("، ");
+    const prompt = `الصور المرفقة (${S.imgs.length}) لشرائح مجهرية من عينة مياه عذبة من نهر دجلة/العراق. حدّد أجناس الطحالب التي تظهر بوضوح فقط.
+قائمة (أ) أجناس مؤشر Palmer (1969): ${names}.
+قائمة (ب) أجناس دلالة مسجّلة في دجلة/العراق: ${indNames}.
 أعد JSON فقط بالشكل:
-{"genera":[{"genus":"اسم الجنس اللاتيني من القائمة","confidence":0.0,"abundance":"قليل|متوسط|كثير","evidence":"الصفات الشكلية التي رأيتها بالعربية باختصار"}],
- "other":[{"genus":"جنس غير موجود في القائمة","evidence":""}],
+{"genera":[{"genus":"جنس لاتيني من قائمة (أ)","confidence":0.0,"abundance":"قليل|متوسط|كثير","evidence":"الصفات الشكلية بالعربية باختصار"}],
+ "indicators":[{"genus":"جنس لاتيني من قائمة (ب)","confidence":0.0,"evidence":""}],
+ "other":[{"genus":"جنس خارج القائمتين","evidence":""}],
  "image_quality":"جيدة|متوسطة|ضعيفة","magnification_note":"","notes":""}
-قواعد: لا تذكر جنساً لم تره بوضوح؛ القائمة الفارغة أفضل من التخمين. confidence بين 0 و1. اكتب أسماء الأجناس اللاتينية كما هي. إذا لم تكن الصورة مجهرية أو لا تظهر فيها طحالب فاذكر ذلك في notes وأعد قائمة فارغة.`;
+قواعد: لا تذكر جنساً لم تره بوضوح؛ القائمة الفارغة أفضل من التخمين. ضع الجنس في genera إذا كان من قائمة (أ)، وفي indicators إذا كان من قائمة (ب)، وفي other إن كان خارجهما. confidence بين 0 و1. اكتب الأسماء اللاتينية كما هي. إذا لم تكن الصورة مجهرية أو لا تظهر طحالب فاذكر ذلك في notes وأعد قوائم فارغة.`;
     out.innerHTML = `<p class="typing"><i></i><i></i><i></i></p>`;
     const parts = S.imgs.map(d => ({ inline_data: { mime_type: "image/jpeg", data: d.split(",")[1] } })).concat([{ text: prompt }]);
     ECO.gemini.generate({ json: true, temperature: 0.1, system: "أنت خبير في تصنيف طحالب المياه العذبة تحت المجهر الضوئي. دقيق ومتحفظ ولا تخمّن.", contents: [{ role: "user", parts }] })
       .then(txt => {
         const j = JSON.parse(txt.replace(/^```json|```$/g, "").trim());
-        S.aiInfo = j; S.ai = {};
+        S.aiInfo = j; S.ai = {}; S.indAi = {};
         const found = [];
         (j.genera || []).forEach(o => {
           const n = String(o.genus || "").trim().split(/\s+/)[0].toLowerCase();
           const x = GENERA.find(y => y.g.toLowerCase() === n || y.alt.some(a => a.toLowerCase() === n));
           if (x && (!U.isNum(+o.confidence) || +o.confidence >= 0.35)) { S.ai[x.g] = { confidence: +o.confidence, evidence: o.evidence, from: o.genus }; S.on[x.g] = true; found.push(x.g + (x.g.toLowerCase() !== n ? ` (${o.genus})` : "")); }
         });
+        const foundInd = [];
+        (j.indicators || []).forEach(o => {
+          const n = String(o.genus || "").trim().split(/\s+/)[0].toLowerCase();
+          const x = INDIC.find(y => y.g.toLowerCase() === n || y.alt.some(a => a.toLowerCase() === n));
+          if (x && (!U.isNum(+o.confidence) || +o.confidence >= 0.35)) { S.indAi[x.g] = { confidence: +o.confidence, evidence: o.evidence }; S.ind[x.g] = true; foundInd.push(x.g); }
+        });
         const other = (j.other || []).map(o => o.genus).filter(Boolean);
-        out.innerHTML = `<div class="notice ${found.length ? "ok" : "info"}"><span>${found.length ? `اقترح الذكاء الاصطناعي ${found.length} جنساً من قائمة Palmer وأشّرها لك: <b dir="ltr">${found.join(", ")}</b>. راجع كل جنس تحت المجهر قبل اعتماد النتيجة.` : "لم يتعرف الذكاء الاصطناعي بثقة على أي جنس من قائمة Palmer في الصور. اختر الأجناس يدوياً من القائمة."}</span></div>
-          ${other.length ? `<p class="faint pm-note">أجناس أخرى ظهرت (لا تدخل في المؤشر): <span dir="ltr">${U.esc(other.join(", "))}</span></p>` : ""}
+        out.innerHTML = `<div class="notice ${found.length || foundInd.length ? "ok" : "info"}"><span>${found.length ? `اقترح الذكاء الاصطناعي ${found.length} جنساً من قائمة Palmer: <b dir="ltr">${found.join(", ")}</b>. ` : "لم يُشخّص بثقة أي جنس من قائمة Palmer. "}${foundInd.length ? `وأجناس دلالة عراقية: <b dir="ltr">${foundInd.join(", ")}</b>. ` : ""}راجع كل جنس تحت المجهر قبل الاعتماد.</span></div>
+          ${other.length ? `<p class="faint pm-note">أجناس أخرى ظهرت (خارج القائمتين): <span dir="ltr">${U.esc(other.join(", "))}</span></p>` : ""}
           ${j.image_quality ? `<p class="faint pm-note">جودة الصور: ${U.esc(j.image_quality)}${j.notes ? " · " + U.esc(j.notes) : ""}</p>` : ""}`;
         refresh();
       })
@@ -127,7 +190,7 @@
   function save() {
     const list = GENERA.filter(counted);
     if (!list.length) { U.toast("اختر الأجناس الموجودة أولاً"); return; }
-    const rec = { at: Date.now(), site: U.$("#pm-site").value.trim(), date: U.$("#pm-date").value, sample: U.$("#pm-sample").value, score: score(), class: band(score()).label, genera: list.map(x => x.g), dens: Object.fromEntries(list.filter(x => U.isNum(S.dens[x.g])).map(x => [x.g, S.dens[x.g]])), ai: Object.keys(S.ai) };
+    const rec = { at: Date.now(), site: U.$("#pm-site").value.trim(), date: U.$("#pm-date").value, sample: U.$("#pm-sample").value, score: score(), class: band(score()).label, genera: list.map(x => x.g), indicators: indAll().map(x => x.g), dens: Object.fromEntries(list.filter(x => U.isNum(S.dens[x.g])).map(x => [x.g, S.dens[x.g]])), ai: Object.keys(S.ai) };
     const h = hist(); h.unshift(rec); U.store.set("palmer_hist", h.slice(0, 30));
     if (rec.sample && ECO.samples && ECO.samples.attach) ECO.samples.attach(rec.sample, { palmer: { score: rec.score, class: rec.class, genera: rec.genera, date: rec.date } });
     renderHist(); U.toast(rec.sample ? "حُفظت النتيجة وأُضيفت إلى العيّنة على الخريطة" : "حُفظت النتيجة");
@@ -137,8 +200,8 @@
     U.$("#pm-hist").innerHTML = h.length ? h.map((r, i) => `<div class="pm-h"><span><b>${U.esc(r.site || "بلا اسم")}</b><small>${U.esc(r.date || "")} · <span dir="ltr">${r.genera.join(", ")}</span></small></span><span class="chip tone-${band(r.score).tone}">${r.score} · ${r.class}</span><button type="button" class="btn btn-sm btn-ghost" data-load="${i}">فتح</button></div>`).join("") : `<p class="faint">لا توجد نتائج محفوظة بعد.</p>`;
   }
   function loadRec(r) {
-    S.on = {}; S.dens = {}; S.ai = {};
-    r.genera.forEach(g => { S.on[g] = true; }); Object.assign(S.dens, r.dens || {});
+    S.on = {}; S.dens = {}; S.ai = {}; S.ind = {}; S.indAi = {};
+    r.genera.forEach(g => { S.on[g] = true; }); (r.indicators || []).forEach(g => { S.ind[g] = true; }); Object.assign(S.dens, r.dens || {});
     U.$("#pm-site").value = r.site || ""; U.$("#pm-date").value = r.date || ""; U.$("#pm-sample").value = r.sample || "";
     refresh(); U.$("#pm-gauge").scrollIntoView({ behavior: "smooth", block: "center" });
   }
@@ -151,9 +214,10 @@
       blocks: [
         { type: "kv", items: [["الموقع", site || "—"], ["تاريخ العينة", date || "—"], ["مجموع المؤشر", `${sc} من ${MAX}`], ["التصنيف", b.label], ["عدد الأجناس المحتسبة", String(list.length)]] },
         { type: "table", caption: "الأجناس المحتسبة ودرجاتها (Palmer, 1969)", head: ["الجنس", "المجموعة", "الدرجة", "الكثافة (خلية/مل)", "المصدر"], rows: list.map(x => [x.g, GROUPS[x.grp], String(x.s), U.isNum(S.dens[x.g]) ? String(S.dens[x.g]) : "—", S.ai[x.g] ? "مقترح من الصورة ومؤكد يدوياً" : "تشخيص يدوي"]) },
+        ...(indAll().length ? [{ type: "table", caption: "أجناس دلالة مسجّلة في دجلة/العراق (لا تدخل في مؤشر Palmer)", head: ["الجنس", "المجموعة", "الدلالة البيئية"], rows: indAll().map(x => [x.g, GROUPS[x.grp], TOL[x.tol].t]) }] : []),
         ...S.imgs.slice(0, 2).map((d, i) => ({ type: "chart", src: d, caption: `صورة مجهرية ${i + 1}` })),
-        { type: "text", html: "التفسير: مجموع 20 فأكثر يدل على تلوث عضوي عالٍ، و15–19 تلوث عضوي محتمل، وأقل من 15 تلوث عضوي قليل. يُحتسب الجنس إذا تجاوزت كثافته 50 خلية/مل. المؤشر أداة فرز سريعة ويُدعم بفحوص BOD وCOD والمغذيات." },
-        { type: "refs", items: ["Palmer, C.M. (1969). A composite rating of algae tolerating organic pollution. Journal of Phycology, 5(1), 78–82.", "Jaffer, E.M., Abbas, A.F. & Al-Knaany, S.A. (2025). Assessment of organic pollution in East Al-Hammar Marsh using Palmer's Algal Index, Basrah, Southern of Iraq. Bulletin of the Iraq Natural History Museum, 18(4), 929–942."] },
+        { type: "text", html: "التفسير: مجموع 20 فأكثر يدل على تلوث عضوي عالٍ، و15–19 تلوث عضوي محتمل، وأقل من 15 تلوث عضوي قليل. يُحتسب الجنس إذا تجاوزت كثافته 50 خلية/مل. أجناس الدلالة المسجّلة في دجلة تُعرض للتعرّف والمقارنة فقط ولا تُجمع مع درجة Palmer. المؤشر أداة فرز سريعة ويُدعم بفحوص BOD وCOD والمغذيات." },
+        { type: "refs", items: ["Palmer, C.M. (1969). A composite rating of algae tolerating organic pollution. Journal of Phycology, 5(1), 78–82.", "Jaffer, E.M., Abbas, A.F. & Al-Knaany, S.A. (2025). Assessment of organic pollution in East Al-Hammar Marsh using Palmer's Algal Index, Basrah, Southern of Iraq. Bulletin of the Iraq Natural History Museum, 18(4), 929–942.", "Hassan, F.M. & Al-Bdulameer, S.H. (2014). Qualitative and Quantitative study of Epipelic algae in Tigris River within Baghdad City, Iraq. Baghdad Science Journal, 11(3), 1074–1082.", "Yousif, M.I. & Aldhamin, A.S.A. (2015). Seasonal Variation of Phytoplankton in Al-Diwaniya River. Iraqi Journal of Science, 56(2C), 1594–1599."] },
         { type: "sign" }
       ]
     }, mode);
@@ -174,12 +238,16 @@
       const c = e.target.closest("input[type=checkbox][data-g]");
       if (c) { S.on[c.dataset.g] = c.checked; if (!c.checked) { delete S.dens[c.dataset.g]; delete S.ai[c.dataset.g]; } refresh(); }
     });
+    U.$("#pm-ind").addEventListener("change", e => {
+      const c = e.target.closest("input[type=checkbox][data-i]");
+      if (c) { S.ind[c.dataset.i] = c.checked; if (!c.checked) delete S.indAi[c.dataset.i]; renderInd(); renderIndNote(); }
+    });
     U.$("#pm-list").addEventListener("input", e => {
       const d = e.target.closest("input[data-d]"); if (!d) return;
       const v = parseFloat(d.value); if (U.isNum(v)) S.dens[d.dataset.d] = v; else delete S.dens[d.dataset.d];
       renderScore(); d.closest(".pm-row").classList.toggle("low", U.isNum(v) && v <= 50);
     });
-    U.$("#pm-clear").onclick = () => { S.on = {}; S.dens = {}; S.ai = {}; U.$("#pm-ai-out").innerHTML = ""; refresh(); };
+    U.$("#pm-clear").onclick = () => { S.on = {}; S.dens = {}; S.ai = {}; S.ind = {}; S.indAi = {}; U.$("#pm-ai-out").innerHTML = ""; refresh(); };
     U.$("#pm-save").onclick = save;
     U.$("#pm-pdf").onclick = () => pdf();
     U.$("#pm-hist").onclick = e => { const b = e.target.closest("[data-load]"); if (b) loadRec(hist()[+b.dataset.load]); };

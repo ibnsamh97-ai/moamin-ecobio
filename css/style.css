@@ -999,6 +999,7 @@ body.tour-lock { overflow: hidden; }
 .pm-name { flex: 1; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .pm-name i { font-style: italic; font-weight: 600; }
 .pm-ai { font-size: .64rem; padding: 1px 7px; }
+.pm-iq { font-size: .62rem; padding: 1px 7px; }
 .pm-s { flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-family: var(--f-mono); font-size: .8rem; background: var(--ink-2); }
 .pm-hint { font-size: .74rem; color: var(--muted); line-height: 1.7; margin: 4px 28px 0 0; }
 .pm-den { margin: 6px 28px 0 0; max-width: 240px; }
