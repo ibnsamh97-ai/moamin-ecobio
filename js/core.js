@@ -71,6 +71,15 @@
   U.aqiText = v => !U.isNum(v) ? "—" : v > 500 ? "500+\u200E" : String(Math.round(v));
   U.aqiCap = v => U.isNum(v) ? Math.min(v, 500) : v;
 
+  /* روابط Google Maps الرسمية: فتح النقطة، أو الملاحة إليها من موقعك (تفتح تطبيق الخرائط في الهاتف) */
+  U.gmaps = (lat, lon) => `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
+  U.gdir = (lat, lon) => `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`;
+  /* أسماء الطرق والمدن فوق صور الأقمار الصناعية (مثل العرض المختلط في Google) */
+  U.labelLayers = () => window.L ? L.layerGroup([
+    L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}", { maxZoom: 19, opacity: 0.9, crossOrigin: true }),
+    L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", { maxZoom: 19, opacity: 0.9, crossOrigin: true, attribution: "Labels © Esri" })
+  ]) : null;
+
   /* نغمة الخطورة لكل ملوث بالنسبة إلى حدّه */
   U.toneFor = (key, v) => {
     if (!U.isNum(v)) return "none";

@@ -138,7 +138,7 @@ ECO.FU_COLORS = ["#2158bc", "#316dc5", "#327cbb", "#4b80a0", "#568f96", "#6d9298
 
 /* خرائط الأساس */
 ECO.BASEMAPS = [
-  { id: "esri", name: "صور فضائية عالية الدقة", url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", max: 19, attr: "Imagery © Esri, Maxar, Earthstar Geographics" },
+  { id: "esri", name: "قمر صناعي مع الأسماء", url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", max: 19, attr: "Imagery © Esri, Maxar, Earthstar Geographics" },
   { id: "s2", name: "Sentinel-2 (2023)", url: "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2023_3857/default/g/{z}/{y}/{x}.jpg", max: 15, attr: "Sentinel-2 cloudless 2023 by EOX (Copernicus Sentinel data 2023)" },
   { id: "osm", name: "خريطة الشوارع", url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png", max: 19, attr: "© OpenStreetMap contributors" },
   { id: "gibs", name: "قمر صناعي يومي (VIIRS)", gibs: true, max: 9, attr: "NASA GIBS" }

@@ -8,7 +8,7 @@
   const PARAMS = () => [{ key: "ec", name: "التوصيلية الكهربائية", sym: "EC", unit: "µS/cm" }, ...ECO.WATER_PARAMS, ...ECO.METALS.map(m => ({ ...m, unit: "mg/L" }))];
   const save = () => U.store.set("samples", S.list);
   const isWater = t => /مياه|ماء/.test(t || "");
-  const gmaps = (lat, lon) => `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
+  const gmaps = U.gmaps;
   const yesterday = () => { const d = new Date(); d.setDate(d.getDate() - 1); return U.isoDate(d); };
 
   function nextCode() {
@@ -40,7 +40,7 @@
       S.base = L.tileLayer(`https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_SNPP_CorrectedReflectance_TrueColor/default/${d}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`, { maxNativeZoom: 9, maxZoom: 18, attribution: b.attr });
     } else S.base = L.tileLayer(b.url, { maxNativeZoom: b.max, maxZoom: 19, attribution: b.attr, crossOrigin: true });
     S.base.addTo(S.map); S.base.bringToBack();
-    if (id !== "osm") S.labels = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", { maxZoom: 19, opacity: 0.85, crossOrigin: true }).addTo(S.map);
+    if (id !== "osm") S.labels = U.labelLayers().addTo(S.map);
     U.$("#smp-date-f").hidden = !b.gibs;
     U.$$("#smp-base button").forEach(x => x.classList.toggle("on", x.dataset.b === id));
   }
@@ -88,6 +88,7 @@
       ${vals ? `<table>${vals}</table>` : ""}
       <div class="pop-act">
         <a class="btn btn-sm" href="${gmaps(s.lat, s.lon)}" target="_blank" rel="noopener">Google Maps</a>
+        <a class="btn btn-sm" href="${U.gdir(s.lat, s.lon)}" target="_blank" rel="noopener">الطريق إليه</a>
         <button class="btn btn-sm" type="button" data-act="edit" data-id="${s.id}">تعديل</button>
         ${isWater(s.type) ? `<button class="btn btn-sm" type="button" data-act="lab" data-id="${s.id}">المختبر</button>` : ""}
         <button class="btn btn-sm" type="button" data-act="pdf" data-id="${s.id}">PDF</button>

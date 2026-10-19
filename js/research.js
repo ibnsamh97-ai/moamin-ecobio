@@ -19,6 +19,7 @@
     S.map = L.map("rs-map", { center: [34.6, 43.8], zoom: 7, zoomControl: false, attributionControl: true, scrollWheelZoom: false });
     S.map.attributionControl.setPrefix(false);
     L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", { maxZoom: 18, attribution: "Esri" }).addTo(S.map);
+    U.labelLayers().addTo(S.map);
     L.polyline(ECO.TIGRIS, { color: "#4fc8dc", weight: 2, opacity: 0.8 }).addTo(S.map);
     ECO.RESEARCH.filter(r => r.lat != null).forEach(r => {
       const m = L.marker([r.lat, r.lon], { icon: L.divIcon({ className: "rs-pin" + (r.supervisor ? " sup" : ""), html: "<span></span>", iconSize: [22, 22], iconAnchor: [11, 11] }) }).addTo(S.map);

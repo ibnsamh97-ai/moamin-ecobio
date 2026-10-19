@@ -11,7 +11,7 @@
   const FIELD_NAMES = { coords: "الإحداثيات (يجب أن تكون داخل العراق)", researcher: "اسم الباحث", institution: "الجامعة أو الكلية", research: "عنوان البحث", place: "اسم الموقع", year: "سنة النشر", link: "رابط البحث (يجب أن يبدأ بـ https://)" };
   const C = { list: U.store.get("ct_cache", []), layer: null, markers: {}, picking: false, state: "loading", err: "" };
   const PARAMS = () => (ECO.samples && ECO.samples.params ? ECO.samples.params() : [...ECO.WATER_PARAMS, ...ECO.METALS.map(m => ({ ...m, unit: "mg/L" }))]);
-  const gmaps = (lat, lon) => `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
+  const gmaps = U.gmaps;
   const isWater = t => /مياه|ماء/.test(t || "");
   const safeLink = u => (/^https?:\/\//i.test(u || "") ? u : "");
 
@@ -58,6 +58,7 @@
       ${s.notes ? `<small>${U.esc(s.notes)}</small>` : ""}
       <div class="pop-act">
         <a class="btn btn-sm" href="${gmaps(s.lat, s.lon)}" target="_blank" rel="noopener">Google Maps</a>
+        <a class="btn btn-sm" href="${U.gdir(s.lat, s.lon)}" target="_blank" rel="noopener">الطريق إليه</a>
         ${link ? `<a class="btn btn-sm" href="${U.esc(link)}" target="_blank" rel="noopener">البحث</a>` : ""}
         ${isWater(s.type) && rows ? `<button class="btn btn-sm" type="button" data-ctlab="${U.esc(s.id)}">المختبر</button>` : ""}
       </div></div>`;
