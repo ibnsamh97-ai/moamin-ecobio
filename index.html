@@ -35,6 +35,7 @@
   <symbol id="i-play" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M8 5.5v13l10.5-6.5Z"/></symbol>
   <symbol id="i-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></symbol>
   <symbol id="i-map" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M9 4 3.5 6v14L9 18l6 2 5.5-2V4L15 6Z"/><path d="M9 4v14M15 6v14"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 5v14M15 5v14"/></symbol>
   <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
   <symbol id="i-clip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 11.2 12.2 19.5a5.2 5.2 0 0 1-7.4-7.4l8.6-8.6a3.4 3.4 0 0 1 4.9 4.9l-8.5 8.5a1.7 1.7 0 0 1-2.4-2.4l7.8-7.8"/></symbol>
   <symbol id="i-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></symbol>
@@ -106,7 +107,8 @@
         <h1><span class="en">EcoBio <em>AI</em></span><br>نرصد التلوث من الفضاء، ونعالجه بالحياة</h1>
         <p class="lead">منصة تجمع بيانات الأقمار الصناعية عن أجواء <b>نهر دجلة</b> في محافظة صلاح الدين وتحدّثها باستمرار، ثم تحللها بخوارزميات التعلم الآلي وتقترح حلول <b>المعالجة الحيوية</b> المناسبة لكل حالة.</p>
         <div class="hero-cta">
-          <a class="btn btn-primary btn-lg" href="#samples"><svg><use href="#i-pin"/></svg>حدد عينة على الخريطة</a>
+          <a class="btn btn-primary btn-lg tw-cta" href="#twin"><svg><use href="#i-cube"/></svg>توأم دجلة الرقمي 3D</a>
+          <a class="btn btn-lg" href="#samples"><svg><use href="#i-pin"/></svg>حدد عينة على الخريطة</a>
           <a class="btn btn-bio btn-lg" href="#vision"><svg><use href="#i-camera"/></svg>صوّر الماء واقرأ تلوثه</a>
           <a class="btn btn-lg" href="#monitor"><svg><use href="#i-sat"/></svg>الرصد الفضائي الحي</a>
         </div>
@@ -123,6 +125,7 @@
   <div class="wrap">
     <div class="section-title"><h2>وحدات المنصة</h2><span class="muted">اثنتا عشرة أداة للرصد والتحليل والمعالجة</span></div>
     <div class="modules">
+      <a class="module is-new tw-module" href="#twin"><span class="ic"><svg><use href="#i-cube"/></svg></span><span class="new-tag">جديد</span><h3>توأم دجلة الرقمي</h3><p>دجلة الحقيقي ثلاثي الأبعاد، وآلة زمن من 1984 تحسب مساحة الماء من الفضاء، ومحاكاة تسرب تحسب متى يصل التلوث إلى كل مدينة.</p><span class="meta">CesiumJS · Landsat · GloFAS</span></a>
       <a class="module is-new" href="#space"><span class="ic"><svg><use href="#i-layers"/></svg></span><span class="new-tag">جديد</span><h3>دجلة من الفضاء</h3><p>عكورة النهر وطحالبه من صور القمر الأوروبي Sentinel-2 بدقة 10 م، لأي نقطة وأي تاريخ منذ 2017.</p><span class="meta">Sentinel-2 · NDTI · NDCI</span></a>
       <a class="module bio is-new" href="#palmer"><span class="ic"><svg><use href="#i-scan"/></svg></span><span class="new-tag">جديد</span><h3>المجهر الذكي</h3><p>صوّر شريحة الطحالب بالهاتف، والذكاء الاصطناعي يقترح الأجناس ويُحسب مؤشر Palmer للتلوث العضوي.</p><span class="meta">Palmer 1969 · Gemini Vision</span></a>
       <a class="module is-new" href="#gaps"><span class="ic"><svg><use href="#i-map"/></svg></span><span class="new-tag">جديد</span><h3>الفجوات البحثية</h3><p>ماذا دُرس وأين ومتى في صلاح الدين، واقتراح عناوين رسائل للخانات الفارغة بأجهزة القسم.</p><span class="meta">Research gaps · AI</span></a>
@@ -684,6 +687,95 @@
   </div>
 </section>
 
+<!-- ======================= توأم دجلة الرقمي ======================= -->
+<section class="view" id="view-twin" data-title="توأم دجلة الرقمي">
+  <div class="tw-stage" id="tw-stage">
+    <div id="tw-globe" class="tw-globe"></div>
+    <div class="tw-intro" id="tw-intro">
+      <div class="tw-intro-in">
+        <span class="eyebrow">Digital Twin · Tigris River · Salah al-Din</span>
+        <h2>توأم دجلة الرقمي</h2>
+        <p>نهر دجلة الحقيقي في صلاح الدين بثلاثة أبعاد: تضاريس وصور أقمار حقيقية، وآلة زمن تعود إلى عام 1984 وتحسب مساحة الماء من الفضاء، ومحاكاة تسرب ملوث تحسب متى يصل إلى كل مدينة بتصريف النهر الحقيقي.</p>
+        <div class="tw-feats"><span>تضاريس SRTM</span><span>Landsat 1984–2026</span><span>Sentinel-2</span><span>تصريف GloFAS</span><span>OpenStreetMap</span></div>
+        <button class="btn btn-primary btn-lg" id="tw-start" type="button"><svg><use href="#i-play"/></svg>ابدأ الرحلة</button>
+        <small class="faint">يحمّل نحو 5 ميغابايت عند أول تشغيل · يعمل على الحاسبة والهاتف</small>
+      </div>
+    </div>
+    <div class="tw-load" id="tw-load" hidden></div>
+    <div id="tw-ui" hidden>
+      <div class="seg tw-tabs" id="tw-tabs">
+        <button type="button" data-m="explore" class="on">استكشاف</button>
+        <button type="button" data-m="time">آلة الزمن</button>
+        <button type="button" data-m="spill">محاكاة تسرب</button>
+      </div>
+      <div class="tw-ctrl">
+        <button class="btn icon-btn" id="tw-panelbtn" type="button" aria-label="إظهار أو إخفاء اللوحة"><svg><use href="#i-layers"/></svg></button>
+        <button class="btn icon-btn" id="tw-full" type="button" aria-label="ملء الشاشة"><svg><use href="#i-expand"/></svg></button>
+      </div>
+      <div class="tw-cap" id="tw-cap" hidden></div>
+      <div class="tw-probe" id="tw-probe" hidden></div>
+      <aside class="tw-panel" id="tw-panel">
+        <div id="tw-panel-explore">
+          <h3>استكشاف دجلة</h3>
+          <button class="btn btn-primary tw-tour" id="tw-tour" type="button"><svg><use href="#i-play"/></svg><span>جولة على النهر</span></button>
+          <div class="tw-jump" id="tw-jump">
+            <button type="button" data-j="shirqat">الشرقاط</button><button type="button" data-j="baiji">بيجي</button><button type="button" data-j="tikrit">تكريت</button><button type="button" data-j="dour">الدور</button><button type="button" data-j="samarra">سامراء</button><button type="button" data-j="balad">بلد</button><button type="button" data-j="tharthar">بحيرة الثرثار</button>
+          </div>
+          <div class="field"><label>طبقة القمر الصناعي</label><div class="seg" id="tw-ov"><button type="button" data-ov="none" class="on">عالية الدقة</button><button type="button" data-ov="s2">Sentinel-2 الأحدث</button><button type="button" data-ov="ndti">العكورة</button></div></div>
+          <p class="faint tw-small" id="tw-ovnote">صور Esri عالية الدقة (مركّبة من سنوات حديثة).</p>
+          <div class="field"><label for="tw-ex"><span>تضخيم الارتفاعات</span><span class="u" id="tw-exv">×3</span></label><input type="range" id="tw-ex" min="1" max="8" step="1" value="3"></div>
+          <label class="toggle"><input type="checkbox" id="tw-lab" checked><span class="sw"></span>أسماء المدن والطرق</label>
+          <label class="toggle"><input type="checkbox" id="tw-riv" checked><span class="sw"></span>مسار النهر</label>
+          <p class="faint tw-small">اضغط على أي نقطة لترى ارتفاعها الحقيقي وبُعدها عن النهر. على الهاتف: إصبعان للتكبير والإمالة.</p>
+        </div>
+        <div id="tw-panel-time" hidden>
+          <h3>آلة الزمن 1984–2026</h3>
+          <div class="seg" id="tw-aoi"><button type="button" data-a="tharthar" class="on">بحيرة الثرثار</button><button type="button" data-a="tigris">مجرى دجلة (بيجي–سامراء)</button></div>
+          <div class="field"><label for="tw-season">الموسم</label><select id="tw-season" class="input"><option value="low">أواخر الصيف والخريف (آب–تشرين الأول)</option><option value="high">الربيع (آذار–أيار)</option></select></div>
+          <div id="tw-yinfo"></div>
+          <div class="chart-box tw-chartbox"><canvas id="tw-chart"></canvas></div>
+          <button class="btn btn-sm" id="tw-all" type="button"><svg><use href="#i-sat"/></svg>احسب مساحة الماء لكل السنوات</button>
+          <p class="faint tw-small" id="tw-tmprog"></p>
+          <label class="toggle"><input type="checkbox" id="tw-cmp"><span class="sw"></span>قارن سنتين بخط فاصل</label>
+          <div class="field" id="tw-cmpbox" hidden><label for="tw-yb">سنة الجهة اليمنى</label><select id="tw-yb" class="input"></select></div>
+          <p class="faint tw-small">صورة واحدة صافية لكل سنة من أقمار Landsat (المسار 169/الصف 036 الذي يغطي المحافظة كلها). مساحة الماء = البكسلات التي فيها مؤشر MNDWI ≥ 0 (Xu، 2006) داخل المنطقة، محسوبة على خوادم Planetary Computer. التصريف من نموذج GloFAS v4 وليس قياساً.</p>
+        </div>
+        <div id="tw-panel-spill" hidden>
+          <h3>محاكاة تسرب ملوث</h3>
+          <div class="tw-src"><span>المصدر:</span> <b id="tw-srclbl">لم يُحدَّد</b></div>
+          <button class="btn btn-sm" id="tw-pick" type="button"><svg><use href="#i-pin"/></svg>اختر المصدر من المجسم</button>
+          <div class="field"><label for="tw-type">نوع الملوث</label><select id="tw-type" class="input"></select></div>
+          <div class="grid g-2 tw-f">
+            <div class="field"><label for="tw-m"><span>الكمية</span><span class="u" id="tw-munit"></span></label><input id="tw-m" type="number" min="0" step="any" class="input" dir="ltr"></div>
+            <div class="field"><label for="tw-q"><span>التصريف</span><span class="u">م³/ث</span></label><input id="tw-q" type="number" min="0" step="any" class="input" dir="ltr" placeholder="يُجلب تلقائياً"></div>
+            <div class="field"><label for="tw-w"><span>عرض المجرى</span><span class="u">م</span></label><input id="tw-w" type="number" min="20" step="10" value="300" class="input" dir="ltr"></div>
+            <div class="field"><label for="tw-n"><span>معامل Manning</span></label><input id="tw-n" type="number" min="0.015" max="0.08" step="0.005" value="0.03" class="input" dir="ltr"></div>
+          </div>
+          <div id="tw-inputs"></div>
+          <button class="btn btn-primary" id="tw-run" type="button"><svg><use href="#i-play"/></svg>شغّل المحاكاة</button>
+          <div id="tw-res"></div>
+        </div>
+      </aside>
+      <div class="tw-tbar" id="tw-tbar" hidden>
+        <button class="btn icon-btn btn-primary" id="tw-play" type="button" aria-label="تشغيل"><svg><use href="#i-play"/></svg></button>
+        <span class="tw-ylbl" id="tw-yfirst"></span>
+        <input type="range" id="tw-year" min="0" max="1" value="0" aria-label="السنة" dir="ltr">
+        <span class="tw-ylbl" id="tw-ylast"></span>
+        <b class="tw-ycur" id="tw-yearlbl"></b>
+      </div>
+      <div class="tw-clock" id="tw-clock" hidden>
+        <button class="btn icon-btn btn-primary" id="tw-simplay" type="button" aria-label="تشغيل أو إيقاف"><svg><use href="#i-play"/></svg></button>
+        <input type="range" id="tw-simt" min="0" max="1" value="0" aria-label="زمن المحاكاة" dir="ltr">
+        <select id="tw-speed" class="input" aria-label="سرعة العرض"><option value="0.5">½ ساعة/ث</option><option value="1" selected>1 ساعة/ث</option><option value="3">3 ساعات/ث</option></select>
+        <label class="toggle tw-fol"><input type="checkbox" id="tw-follow"><span class="sw"></span>تتبّع</label>
+        <div class="tw-clockt" id="tw-clockt"></div>
+      </div>
+      <div class="tw-split" id="tw-split" hidden><span></span></div>
+    </div>
+    <div class="tw-credits" id="tw-credits"></div>
+  </div>
+</section>
+
 <!-- ======================= دجلة من الفضاء ======================= -->
 <section class="view" id="view-space" data-title="دجلة من الفضاء">
   <div class="wrap">
@@ -993,6 +1085,8 @@
 <script src="js/space.js"></script>
 <script src="js/gaps.js"></script>
 <script src="js/palmer.js"></script>
+<script src="js/data-twin.js"></script>
+<script src="js/twin.js"></script>
 <script src="js/research.js"></script>
 <script src="js/calc.js"></script>
 <script src="js/vision.js"></script>

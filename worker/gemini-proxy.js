@@ -7,8 +7,10 @@
       مع مراجعة المشرف قبل ظهور أي موقع للعموم.
    3) يجلب أرصاد المطارات الرسمية (METAR) من aviationweather.gov للتحقق
       الأرضي من تقديرات الغبار، لأن تلك الخدمة لا تسمح للمتصفح بطلبها مباشرة.
-   4) ممر احتياطي لبيانات القمر الصناعي Sentinel-2 من Microsoft Planetary
-      Computer (بحث الصور وقراءة قيم البكسل) إذا رفض المتصفح طلبها مباشرة.
+   4) ممر احتياطي لبيانات الأقمار Sentinel-2 وLandsat من Microsoft Planetary
+      Computer (بحث الصور، قيم البكسل، مساحة الماء، البلاطات) إذا رفض المتصفح
+      طلبها مباشرة، وصور احتياطية للمجسم ثلاثي الأبعاد، ومسار نهر دجلة من
+      OpenStreetMap محفوظاً لكل الزوار.
 
    المتغيرات (Worker → Settings → Variables and Secrets):
      GEMINI_KEY       نوعه Secret  — مفتاح Gemini من Google AI Studio (إلزامي)
@@ -198,32 +200,84 @@ async function metar(url, reply, fail) {
   return reply(200, body);
 }
 
-/* ---------- ممر Sentinel-2 من Microsoft Planetary Computer ----------
-   GET /v1/pc/stac/search?...            ← /api/stac/v1/search
-   GET /v1/pc/data/item/point/lon,lat?... ← /api/data/v1/item/point/lon,lat
-   GET /v1/pc/data/item/tilejson.json?... ← /api/data/v1/item/tilejson.json
-   بيانات عامة مجانية لا تحتاج مفتاحاً؛ نمرّر فقط هذه المسارات الثلاثة. */
+/* ---------- ممر بيانات الأقمار من Microsoft Planetary Computer ----------
+   GET  /v1/pc/stac/search?...                ← /api/stac/v1/search
+   GET  /v1/pc/data/item/point/lon,lat?...     ← قيم البكسل
+   GET  /v1/pc/data/item/tilejson.json?...     ← قالب البلاطات
+   POST /v1/pc/data/item/statistics?...        ← إحصاءات منطقة (مساحة الماء)
+   GET  /v1/pc/data/item/tiles/WebMercatorQuad/z/x/y@1x.png?... ← بلاطة صورة
+   بيانات عامة مجانية لا تحتاج مفتاحاً؛ نمرّر هذه المسارات فقط. */
 const PC_API = "https://planetarycomputer.microsoft.com/api";
-const PC_RE = /^\/v1\/pc\/(stac\/search|data\/item\/point\/-?\d{1,3}(\.\d{1,8})?,-?\d{1,2}(\.\d{1,8})?|data\/item\/tilejson\.json)$/;
+const PC_RE = /^\/v1\/pc\/(stac\/search|data\/item\/point\/-?\d{1,3}(\.\d{1,8})?,-?\d{1,2}(\.\d{1,8})?|data\/item\/tilejson\.json|data\/item\/statistics|data\/item\/tiles\/WebMercatorQuad\/\d{1,2}\/\d{1,7}\/\d{1,7}@1x(\.png)?)$/;
 const pcCache = new Map();
+const UA = { "User-Agent": "EcoBioAI/1.0 (Tikrit University environmental education project)" };
+function remember(key, text) {
+  if (text.length > 400000) return;
+  pcCache.set(key, { at: Date.now(), text });
+  if (pcCache.size > 400) pcCache.delete(pcCache.keys().next().value);
+}
 
-async function pc(url, path, raw, fail) {
+async function pc(req, url, path, raw, bin, fail) {
   if (!PC_RE.test(path)) return fail(404, "NOT_ALLOWED", "Unknown satellite endpoint.");
   if (url.search.length > 4000) return fail(414, "TOO_LONG", "Query is too long.");
   const target = PC_API + path.replace(/^\/v1\/pc\/(stac|data)\//, (m, a) => `/${a}/v1/`) + url.search;
-  // قيم البكسل لا تتغير لصورة معينة، فنخزنها أطول؛ نتائج البحث تتغير بوصول صور جديدة
-  const ttl = path.includes("/point/") ? 86400000 : path.endsWith("tilejson.json") ? 3600000 : 900000;
-  const now = Date.now(), hit = pcCache.get(target);
-  if (hit && now - hit.at < ttl) return raw(200, hit.text);
+  const isTile = path.includes("/item/tiles/"), isStats = path.endsWith("/item/statistics");
+  if (isTile) {
+    if (req.method !== "GET") return fail(405, "METHOD", "GET only.");
+    let r; try { r = await fetch(target, { headers: UA }); } catch (e) { return fail(502, "PC_UPSTREAM", "Planetary Computer did not answer."); }
+    return bin(r);
+  }
+  if (isStats ? req.method !== "POST" : req.method !== "GET") return fail(405, "METHOD", "Wrong method.");
+  let body = null, key = target;
+  if (isStats) {
+    body = await req.text();
+    if (body.length > 65536) return fail(413, "TOO_LARGE", "Area is too large.");
+    key += "|" + body;
+  }
+  // قيم البكسل والإحصاءات لا تتغير لصورة معينة، فنخزنها أطول؛ نتائج البحث تتغير بوصول صور جديدة
+  const ttl = isStats || path.includes("/point/") ? 86400000 : path.endsWith("tilejson.json") ? 3600000 : 900000;
+  const hit = pcCache.get(key);
+  if (hit && Date.now() - hit.at < ttl) return raw(200, hit.text);
   let r;
-  try { r = await fetch(target, { headers: { "User-Agent": "EcoBioAI/1.0 (Tikrit University environmental education project)", "Accept": "application/json" } }); }
+  try { r = await fetch(target, isStats ? { method: "POST", headers: { ...UA, "Content-Type": "application/json", "Accept": "application/json" }, body } : { headers: { ...UA, "Accept": "application/json" } }); }
   catch (e) { return fail(502, "PC_UPSTREAM", "Planetary Computer did not answer."); }
   const text = await r.text();
   if (!r.ok) return raw(r.status, text.slice(0, 2000));
-  if (text.length < 400000) {
-    pcCache.set(target, { at: now, text });
-    if (pcCache.size > 400) pcCache.delete(pcCache.keys().next().value);
-  }
+  remember(key, text);
+  return raw(200, text);
+}
+
+/* ---------- صور احتياطية للمجسم ثلاثي الأبعاد ----------
+   إذا رفض المتصفح تحميل بلاطات التضاريس أو صور Esri داخل WebGL نمررها من هنا. */
+const IMG_RE = /^\/v1\/img\/(terrarium\/\d{1,2}\/\d{1,7}\/\d{1,7}\.png|esri\/(World_Imagery|Reference\/World_Boundaries_and_Places|Reference\/World_Transportation)\/\d{1,2}\/\d{1,7}\/\d{1,7})$/;
+async function img(path, bin, fail) {
+  if (!IMG_RE.test(path)) return fail(404, "NOT_ALLOWED", "Unknown image endpoint.");
+  const rest = path.replace(/^\/v1\/img\//, "");
+  const target = rest.startsWith("terrarium/")
+    ? "https://s3.amazonaws.com/elevation-tiles-prod/" + rest
+    : "https://server.arcgisonline.com/ArcGIS/rest/services/" + rest.replace(/^esri\//, "").replace(/\/(\d+)\/(\d+)\/(\d+)$/, "/MapServer/tile/$1/$2/$3");
+  let r; try { r = await fetch(target, { headers: UA }); } catch (e) { return fail(502, "IMG_UPSTREAM", "Image host did not answer."); }
+  return bin(r);
+}
+
+/* ---------- مسار نهر دجلة الدقيق من OpenStreetMap ----------
+   GET /v1/river ← يُجلب مرة واحدة من Overpass ويُحفظ في KV (إن وُجد) لكل الزوار. */
+const RIVER_KEY = "river:tigris:v1";
+const RIVER_Q = '[out:json][timeout:90];(way["waterway"="river"]["name:en"="Tigris"](33.9,43.0,35.8,44.6);way["waterway"="river"]["name"~"دجلة|Tigris"](33.9,43.0,35.8,44.6);way["waterway"="river"]["name:ar"~"دجلة"](33.9,43.0,35.8,44.6););out geom;';
+let riverMem = null;
+async function river(env, raw, fail) {
+  if (riverMem) return raw(200, riverMem);
+  if (env.SITES) { const v = await env.SITES.get(RIVER_KEY); if (v) { riverMem = v; return raw(200, v); } }
+  let r;
+  try { r = await fetch("https://overpass-api.de/api/interpreter", { method: "POST", headers: { ...UA, "Content-Type": "application/x-www-form-urlencoded" }, body: "data=" + encodeURIComponent(RIVER_Q) }); }
+  catch (e) { return fail(502, "OSM_UPSTREAM", "OpenStreetMap Overpass did not answer."); }
+  if (!r.ok) return fail(502, "OSM_UPSTREAM", "Overpass status " + r.status);
+  const j = await r.json().catch(() => null);
+  if (!j || !Array.isArray(j.elements)) return fail(502, "OSM_UPSTREAM", "Bad Overpass response.");
+  // نحتفظ بالإحداثيات فقط لتصغير الحجم
+  const ways = j.elements.filter(e => e.type === "way" && Array.isArray(e.geometry)).map(e => ({ id: e.id, t: { name: e.tags && e.tags.name, side: e.tags && e.tags.side_channel }, g: e.geometry.map(p => [+p.lon.toFixed(5), +p.lat.toFixed(5)]) }));
+  const text = JSON.stringify({ source: "OpenStreetMap contributors (ODbL)", fetched: Date.now(), ways });
+  if (ways.length) { riverMem = text; if (env.SITES) await env.SITES.put(RIVER_KEY, text); }
   return raw(200, text);
 }
 
@@ -248,6 +302,10 @@ export default {
     const raw = (status, text) => new Response(text, {
       status, headers: { ...cors, "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" }
     });
+    // تمرير صورة كما هي مع رؤوس CORS حتى تعمل داخل WebGL
+    const bin = up => new Response(up.body, {
+      status: up.status, headers: { ...cors, "Content-Type": up.headers.get("Content-Type") || "application/octet-stream", "Cache-Control": up.ok ? "public, max-age=86400" : "no-store" }
+    });
 
     const url = new URL(req.url);
     const path = url.pathname.replace(/\/+$/, "") || "/";
@@ -263,6 +321,7 @@ export default {
         admin_configured: Boolean(env.ADMIN_KEY),
         metar: true,
         satellite: true,
+        twin: true,
         allowed_origins: allowed,
         ok: Boolean(env.GEMINI_KEY) && allowed.length > 0
       });
@@ -278,7 +337,9 @@ export default {
     if (req.method === "GET" && path === "/v1/metar") return metar(url, reply, fail);
 
     /* بيانات Sentinel-2 (ممر احتياطي، لا يحتاج مفتاحاً) */
-    if (req.method === "GET" && path.startsWith("/v1/pc/")) return pc(url, path, raw, fail);
+    if (path.startsWith("/v1/pc/")) return pc(req, url, path, raw, bin, fail);
+    if (req.method === "GET" && path.startsWith("/v1/img/")) return img(path, bin, fail);
+    if (req.method === "GET" && path === "/v1/river") return river(env, raw, fail);
 
     if (!env.GEMINI_KEY) return fail(500, "GEMINI_KEY_MISSING", "GEMINI_KEY secret is not set on the Worker.");
 

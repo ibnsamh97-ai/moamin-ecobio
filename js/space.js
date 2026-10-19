@@ -411,7 +411,7 @@
     if (!o || Math.abs(c.lat - o.lat) > 0.3 || Math.abs(c.lng - o.lng) > 0.3) { S.lastLayerCenter = c; showLayers(); }
   }
 
-  ECO.space = { state: S, compute, offsetOf, inspect, track, pixel };
+  ECO.space = { state: S, compute, offsetOf, inspect, track, pixel, pcGet, search, perDay, tileQuery: (it, mode) => { const m = S.mode; S.mode = mode; const q = tileQuery(it); S.mode = m; return q; }, CMAP, errText };
   ECO.views.space = {
     async init() {
       build(); S.inited = true;
