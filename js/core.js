@@ -66,6 +66,10 @@
   ECO.COL = { river: "#4fc8dc", chloro: "#93dd8a", silt: "#e6ae4f", rust: "#ee7a4f", crimson: "#ef5a64", violet: "#b493ff", muted: "#8eaea7", faint: "#5f7d77", text: "#e4f1ed", grid: "rgba(150,214,204,0.08)" };
 
   U.aqiBand = v => ECO.AQI_BANDS.find(b => v <= b.max) || ECO.AQI_BANDS[ECO.AQI_BANDS.length - 1];
+  /* نص AQI للعرض: المقياس الأمريكي ينتهي عند 500، فما فوقه يُكتب «500+» */
+  //  (علامة LRM غير المرئية تُبقي «+» بعد الرقم داخل النص العربي)
+  U.aqiText = v => !U.isNum(v) ? "—" : v > 500 ? "500+\u200E" : String(Math.round(v));
+  U.aqiCap = v => U.isNum(v) ? Math.min(v, 500) : v;
 
   /* نغمة الخطورة لكل ملوث بالنسبة إلى حدّه */
   U.toneFor = (key, v) => {

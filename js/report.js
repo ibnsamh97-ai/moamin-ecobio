@@ -150,18 +150,21 @@
     if (!cur || !Object.keys(cur).length) { U.toast("لا توجد قراءات حية الآن؛ تأكد من الاتصال"); return; }
     const keys = ["us_aqi", "pm2_5", "pm10", "dust", "nitrogen_dioxide", "sulphur_dioxide", "ozone", "carbon_monoxide"];
     const head = ["المحطة", "AQI", "PM2.5", "PM10", "الغبار", "NO₂", "SO₂", "O₃", "CO"];
-    const rows = ECO.STATIONS.map(s => { const c = cur[s.id] || {}; return [s.name, ...keys.map(k => U.fmt(c[k], k === "us_aqi" || k === "carbon_monoxide" ? 0 : 1))]; });
+    const rows = ECO.STATIONS.map(s => { const c = cur[s.id] || {}; return [s.name, ...keys.map(k => k === "us_aqi" ? (c[k] > 500 ? "فوق 500" : U.aqiText(c[k])) : U.fmt(c[k], k === "carbon_monoxide" ? 0 : 1))]; });
+    const g = ECO.ground, gv = g && g.state === "ok" && g.stations.length ? g.message() : null;
     const t = (cur[ECO.DEFAULT_STATION] || {}).time;
     const over = ECO.STATIONS.map(s => { const c = cur[s.id] || {}; return [s.name, ...["pm2_5", "pm10", "nitrogen_dioxide", "sulphur_dioxide"].map(k => { const m = ECO.AIR.find(a => a.key === k); return U.isNum(c[k]) ? U.fmt(c[k] / m.who, 2) + "×" : "—"; })]; });
     ECO.report.run({
       title: "تقرير جودة الهواء فوق نهر دجلة", subtitle: t ? "قراءة " + U.fmtTime(t) + " بتوقيت بغداد" : "", file: "تقرير-جودة-الهواء",
       blocks: [
-        { type: "text", html: "قراءات ساعية من نموذج Copernicus Atmosphere Monitoring Service (CAMS) العالمي الذي يدمج أرصاد الأقمار الصناعية، بدقة مكانية نحو 45 كم، عبر خدمة Open-Meteo. الوحدات µg/m³ ما عدا AQI." },
-        { type: "table", caption: "القراءات الحالية لمحطات الرصد", head, rows },
+        { type: "text", html: "تقديرات ساعية من النموذج العالمي Copernicus Atmosphere Monitoring Service – CAMS الذي يدمج أرصاد الأقمار الصناعية، بدقة مكانية نحو 45 كم، عبر خدمة Open-Meteo. هذه تقديرات نموذج لخلايا الشبكة وليست قياسات محطات أرضية، وقد تبالغ في الغبار. الوحدات µg/m³ ما عدا AQI، وقيمة AQI الأعلى من 500 تُكتب «فوق 500» لأنها خارج المقياس الرسمي." },
+        { type: "table", caption: "تقديرات النموذج الحالية لنقاط الرصد", head, rows },
+        gv ? { type: "table", caption: "التحقق الأرضي: أرصاد المطارات الرسمية القريبة (METAR)", head: ["المحطة", "البعد عن تكريت", "وقت الرصد", "الرؤية الأفقية", "الظواهر الجوية", "الحالة"], rows: g.rows() } : null,
+        gv ? { type: "text", html: "المقارنة بين النموذج والرصد الأرضي: " + gv.html.replace(/<[^>]+>/g, "") } : null,
         { type: "table", caption: "النسبة إلى حدود منظمة الصحة العالمية 2021 (24 ساعة)", head: ["المحطة", "PM2.5", "PM10", "NO₂", "SO₂"], rows: over },
         ECO.report.chartFrom(U.$("#chart-cmp")) ? { type: "chart", src: ECO.report.chartFrom(U.$("#chart-cmp"), 640, 280), caption: "مقارنة المحطات" } : null,
         ECO.report.chartFrom(U.$("#chart-ts")) ? { type: "chart", src: ECO.report.chartFrom(U.$("#chart-ts"), 680, 280), caption: "السلسلة الزمنية للمحطة المختارة" } : null,
-        { type: "refs", items: ["Copernicus Atmosphere Monitoring Service (CAMS) global atmospheric composition forecasts.", "Open-Meteo Air Quality API.", "WHO (2021). WHO global air quality guidelines."] },
+        { type: "refs", items: ["Copernicus Atmosphere Monitoring Service (CAMS) global atmospheric composition forecasts.", "Open-Meteo Air Quality API.", "NOAA Aviation Weather Center – METAR observations (aviationweather.gov).", "WHO (2021). WHO global air quality guidelines."] },
         { type: "sign" }
       ]
     }, mode);

@@ -5,6 +5,8 @@
       المساعد الذكي عند كل من يفتح الموقع دون أن يظهر المفتاح لأحد.
    2) يحفظ «مواقع بحوث الأساتذة» في قاعدة بيانات مشتركة (Workers KV)،
       مع مراجعة المشرف قبل ظهور أي موقع للعموم.
+   3) يجلب أرصاد المطارات الرسمية (METAR) من aviationweather.gov للتحقق
+      الأرضي من تقديرات الغبار، لأن تلك الخدمة لا تسمح للمتصفح بطلبها مباشرة.
 
    المتغيرات (Worker → Settings → Variables and Secrets):
      GEMINI_KEY       نوعه Secret  — مفتاح Gemini من Google AI Studio (إلزامي)
@@ -161,6 +163,39 @@ async function sites(req, env, path, ip, reply, fail) {
   return fail(404, "NOT_ALLOWED", "Unknown sites endpoint.");
 }
 
+/* ---------- أرصاد المطارات (METAR) من مركز الطقس الجوي الأمريكي NOAA ----------
+   GET /v1/metar?ids=ORBI,ORKK,ORER&hours=3
+   تُخزَّن النتيجة 10 دقائق حتى لا نُثقل على الخدمة (حدها 100 طلب في الدقيقة). */
+const METAR_IDS = "ORKK,ORBI,ORER,ORSU,ORBM";
+const METAR_TTL = 10 * 60 * 1000;
+const metarCache = new Map();
+
+async function metar(url, reply, fail) {
+  const ids = String(url.searchParams.get("ids") || METAR_IDS).toUpperCase().replace(/\s+/g, "");
+  if (!/^[A-Z]{4}(,[A-Z]{4}){0,9}$/.test(ids)) return fail(400, "BAD_IDS", "ids must be up to 10 ICAO codes separated by commas.");
+  const hours = Math.min(12, Math.max(1, parseInt(url.searchParams.get("hours"), 10) || 3));
+  const key = ids + "|" + hours, now = Date.now(), hit = metarCache.get(key);
+  if (hit && now - hit.at < METAR_TTL) return reply(200, hit.body);
+  let r = null;
+  try {
+    r = await fetch(`https://aviationweather.gov/api/data/metar?ids=${ids}&format=raw&hours=${hours}`, {
+      headers: { "User-Agent": "EcoBioAI/1.0 (Tikrit University environmental education project)", "Accept": "text/plain" },
+      cf: { cacheTtl: 600, cacheEverything: true }
+    });
+  } catch (e) { r = null; }
+  if (!r || (!r.ok && r.status !== 204)) {
+    if (hit) return reply(200, { ...hit.body, stale: true });
+    return fail(502, "METAR_UPSTREAM", "aviationweather.gov did not answer. Try again later.");
+  }
+  const text = r.status === 204 ? "" : await r.text();
+  const obs = text.split(/\r?\n/).map(x => x.trim())
+    .filter(x => /^(METAR |SPECI )?[A-Z]{4} \d{6}Z /.test(x) && x.length < 400).slice(0, 150);
+  const body = { source: "aviationweather.gov (NOAA Aviation Weather Center)", fetched: now, ids: ids.split(","), hours, obs };
+  metarCache.set(key, { at: now, body });
+  if (metarCache.size > 50) metarCache.delete(metarCache.keys().next().value);
+  return reply(200, body);
+}
+
 export default {
   async fetch(req, env) {
     const origin = req.headers.get("Origin") || "";
@@ -192,6 +227,7 @@ export default {
         key_configured: Boolean(env.GEMINI_KEY),
         sites_configured: Boolean(env.SITES),
         admin_configured: Boolean(env.ADMIN_KEY),
+        metar: true,
         allowed_origins: allowed,
         ok: Boolean(env.GEMINI_KEY) && allowed.length > 0
       });
@@ -202,6 +238,9 @@ export default {
 
     /* مواقع بحوث الأساتذة */
     if (path === "/v1/sites" || path.startsWith("/v1/sites/")) return sites(req, env, path, ip, reply, fail);
+
+    /* أرصاد المطارات للتحقق الأرضي (لا تحتاج مفتاحاً) */
+    if (req.method === "GET" && path === "/v1/metar") return metar(url, reply, fail);
 
     if (!env.GEMINI_KEY) return fail(500, "GEMINI_KEY_MISSING", "GEMINI_KEY secret is not set on the Worker.");
 

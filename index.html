@@ -114,6 +114,7 @@
       <div class="hero-data">
         <div class="hero-live" id="hero-live"></div>
         <p class="updated" id="hero-updated" style="margin-top:8px"></p>
+        <div id="hero-ground" class="hero-ground"></div>
       </div>
     </div>
     <div class="hero-legend">ORBITS: SUOMI-NPP · TERRA · AURA (schematic)<br>STATIONS: 7 · RIVER: TIGRIS 1,850 km</div>
@@ -168,7 +169,7 @@
       <div>
         <span class="eyebrow">Live satellite monitoring</span>
         <h2>الرصد الفضائي الحي</h2>
-        <p>قراءات ساعية لملوثات الهواء من نموذج Copernicus CAMS الذي يدمج أرصاد الأقمار الصناعية، مع صور يومية من أقمار NASA فوق صلاح الدين.</p>
+        <p>تقديرات ساعية لملوثات الهواء من نموذج Copernicus CAMS (يدمج أرصاد الأقمار الصناعية بدقة ≈45 كم، وليس قياس محطة أرضية)، مع صور يومية من أقمار NASA فوق صلاح الدين، وتحقق أرضي من أرصاد المطارات القريبة.</p>
       </div>
       <div class="row">
         <span class="updated" id="mon-updated"></span>
@@ -181,13 +182,14 @@
     <div class="grid g-side">
       <div class="grid" style="align-content:start">
         <div class="panel">
-          <div class="panel-h"><h3>محطات الرصد على دجلة</h3><span class="sub">US AQI</span></div>
+          <div class="panel-h"><h3>محطات الرصد على دجلة</h3><span class="sub">US AQI · تقدير النموذج</span></div>
           <div class="station-list" id="station-list"></div>
         </div>
         <div class="panel">
           <div class="panel-h"><h3>مؤشر جودة الهواء</h3><span class="sub" id="gauge-station"></span></div>
           <div class="gauge-wrap" id="aqi-gauge"></div>
         </div>
+        <div class="panel" id="mon-ground"></div>
       </div>
       <div class="panel map-panel">
         <div class="map-tools">
@@ -865,6 +867,7 @@
 <script src="js/landmask.js"></script>
 <script src="js/data-research.js"></script>
 <script src="js/core.js"></script>
+<script src="js/ground.js"></script>
 <script src="js/globe.js"></script>
 <script src="js/monitor.js"></script>
 <script src="js/analysis.js"></script>

@@ -71,9 +71,21 @@ ECO.AQI_BANDS = [
   { max: 100, label: "مقبول",                   tone: "fair" },
   { max: 150, label: "غير صحي للفئات الحساسة", tone: "warn" },
   { max: 200, label: "غير صحي",                 tone: "bad" },
-  { max: 300, label: "غير صحي جداً",            tone: "severe" },
-  { max: 9999, label: "خطر",                    tone: "hazard" }
+  { max: 300, label: "غير صحي جداً",           tone: "severe" },
+  { max: 500, label: "خطر",                     tone: "hazard" },
+  /* المقياس الرسمي ينتهي عند 500؛ ما فوقه يظهر «500+» ولا يُعرض الرقم الخام */
+  { max: Infinity, label: "فوق المقياس",        tone: "hazard" }
 ];
+
+/* محطات الرصد الجوي في المطارات القريبة من تكريت (تقارير METAR الرسمية)
+   تُستخدم للتحقق الأرضي من تقديرات نموذج CAMS للغبار */
+ECO.AIRPORTS = {
+  ORKK: { name: "مطار كركوك",     lat: 35.4695, lon: 44.3489 },
+  ORBI: { name: "مطار بغداد",     lat: 33.2625, lon: 44.2346 },
+  ORER: { name: "مطار أربيل",     lat: 36.2376, lon: 43.9632 },
+  ORSU: { name: "مطار السليمانية", lat: 35.5608, lon: 45.3147 },
+  ORBM: { name: "مطار الموصل",    lat: 36.3058, lon: 43.1474 }
+};
 
 /* ---------- طبقات الأقمار الصناعية NASA GIBS ---------- */
 ECO.GIBS = {

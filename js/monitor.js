@@ -83,7 +83,7 @@
     const cur = S.cur || {};
     U.$("#station-list").innerHTML = ECO.STATIONS.map(s => {
       const a = (cur[s.id] || {}).us_aqi, tone = U.toneFor("us_aqi", a);
-      return `<button type="button" class="station ${s.id === ECO.state.station ? "on" : ""}" data-s="${s.id}"><span><span class="nm">${s.name}</span><span class="nt">${s.note}</span></span><span class="chip tone-${tone} aqi">${U.fmt(a, 0)}</span></button>`;
+      return `<button type="button" class="station ${s.id === ECO.state.station ? "on" : ""}" data-s="${s.id}"><span><span class="nm">${s.name}</span><span class="nt">${s.note}</span></span><span class="chip tone-${tone} aqi">${U.aqiText(a)}</span></button>`;
     }).join("");
     Object.entries(markers).forEach(([id, m]) => {
       const a = (cur[id] || {}).us_aqi;
@@ -128,9 +128,9 @@
     }).join("");
     const aqi = valueNow(d, "us_aqi"), band = U.isNum(aqi) ? U.aqiBand(aqi) : null;
     U.$("#gauge-station").textContent = st.name;
-    U.$("#aqi-gauge").innerHTML = U.gauge({ value: aqi, max: 300, tone: band ? band.tone : "none", label: band ? band.label : "لا بيانات", sub: "مؤشر جودة الهواء الأمريكي (US AQI)" });
+    U.$("#aqi-gauge").innerHTML = U.gauge({ value: aqi, max: 300, big: U.isNum(aqi) ? U.aqiText(aqi) : null, tone: band ? band.tone : "none", label: band ? band.label : "لا بيانات", sub: "US AQI · تقدير نموذج CAMS وليس قياس محطة أرضية" });
     const t = (d.current && d.current.time) || d.time[d.nowIdx];
-    U.$("#mon-updated").textContent = t ? `آخر قراءة ${U.fmtTime(t)}` : "";
+    U.$("#mon-updated").textContent = t ? `تقدير النموذج لساعة ${U.fmtTime(t)}` : "";
     U.$("#mon-notice").innerHTML = ECO.offlineNotice();
   }
 
@@ -142,7 +142,7 @@
     const past = arr.map((v, i) => (i <= d.nowIdx ? v : null));
     const fut = arr.map((v, i) => (i >= d.nowIdx ? v : null));
     const ds = [
-      { label: "مرصود", data: past, borderColor: ECO.COL.river, backgroundColor: "rgba(79,200,220,0.12)", fill: true, borderWidth: 2 },
+      { label: "سابق (تقدير CAMS)", data: past, borderColor: ECO.COL.river, backgroundColor: "rgba(79,200,220,0.12)", fill: true, borderWidth: 2 },
       { label: "توقعات CAMS", data: fut, borderColor: ECO.COL.silt, borderDash: [5, 4], borderWidth: 2, fill: false }
     ];
     if (a.who) ds.push({ label: `حد WHO (${a.who})`, data: arr.map(() => a.who), borderColor: ECO.COL.crimson, borderDash: [3, 3], borderWidth: 1, fill: false, pointRadius: 0 });
@@ -161,7 +161,8 @@
 
   function renderCmp() {
     const cur = S.cur; if (!cur) return;
-    const vals = ECO.STATIONS.map(s => (cur[s.id] || {})[S.cmp]);
+    // AQI يُقطع عند 500 (نهاية المقياس الرسمي) حتى لا يظهر رقم خارج المقياس
+    const vals = ECO.STATIONS.map(s => { const v = (cur[s.id] || {})[S.cmp]; return S.cmp === "us_aqi" ? U.aqiCap(v) : v; });
     U.chart(U.$("#chart-cmp"), {
       type: "bar",
       data: { labels: ECO.STATIONS.map(s => s.name), datasets: [{ data: vals, backgroundColor: vals.map(v => ECO.TONES[U.toneFor(S.cmp, v)] + "cc"), borderRadius: 6, maxBarThickness: 34 }] },

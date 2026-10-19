@@ -227,16 +227,22 @@
       { k: "dust", label: "الغبار", unit: "µg/m³" },
       { k: "nitrogen_dioxide", label: "NO₂", unit: "µg/m³" }
     ];
+    // إذا خالفت أرصاد المطارات تقدير النموذج نضع تنبيهاً على بطاقات الغبار
+    const v = ECO.ground ? ECO.ground.verdict(c) : { kind: "none" };
+    const doubt = v.kind === "over";
     box.innerHTML = items.map(it => {
-      const v = c[it.k], tone = U.toneFor(it.k, v);
-      const lab = it.k === "us_aqi" && U.isNum(v) ? U.aqiBand(v).label : U.toneLabel[tone];
-      return `<div class="live-card"><div class="k">${it.label}</div><div class="v">${U.fmt(v, it.k === "us_aqi" ? 0 : 1)}<small>${it.unit}</small></div><span class="chip tone-${tone}">${lab}</span></div>`;
+      const val = c[it.k], tone = U.toneFor(it.k, val), isA = it.k === "us_aqi";
+      const lab = isA && U.isNum(val) ? U.aqiBand(val).label : U.toneLabel[tone];
+      const flag = doubt && it.k !== "nitrogen_dioxide" ? `<span class="lc-doubt">لا يؤكده الرصد الأرضي</span>` : "";
+      return `<div class="live-card${flag ? " is-doubt" : ""}"><div class="k">${it.label}</div><div class="v">${isA ? U.aqiText(val) : U.fmt(val, 1)}<small>${it.unit}</small></div><span class="chip tone-${tone}">${lab}</span>${flag}</div>`;
     }).join("");
     const up = U.$("#hero-updated");
-    if (up) up.textContent = c.time ? `آخر قراءة: ${U.fmtTime(c.time)} بتوقيت بغداد · المصدر Copernicus CAMS` : (ECO.state.mode === "offline" ? "تعذّر الاتصال بخدمة البيانات الآن؛ ستظهر القراءات الحقيقية عند عودة الاتصال." : "");
+    if (up) up.textContent = c.time ? `تقدير نموذج Copernicus CAMS لساعة ${U.fmtTime(c.time)} بتوقيت بغداد · دقة ≈45 كم · ليس قياس محطة أرضية في تكريت` : (ECO.state.mode === "offline" ? "تعذّر الاتصال بخدمة البيانات الآن؛ ستظهر القراءات الحقيقية عند عودة الاتصال." : "");
+    if (ECO.ground) ECO.ground.render();
   }
 
   ECO.bus.on("current", cur => { ECO._lastCurrent = cur; updateStations(cur); renderLive(cur); });
+  ECO.bus.on("ground", () => { if (ECO._lastCurrent) renderLive(ECO._lastCurrent); });
 
   ECO.views.home = {
     init() { build(); },
