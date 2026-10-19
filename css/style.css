@@ -823,7 +823,7 @@ body.tour-lock { overflow: hidden; }
 .tour-map { position: absolute; left: 10px; top: 58px; z-index: 3; display: grid; gap: 6px; padding: 6px; border-radius: 12px; background: rgba(4, 16, 20, .62); backdrop-filter: blur(6px); border: 1px solid rgba(255,255,255,.1); }
 .tour-map .seg { display: flex; }
 .tour-map .seg button { flex: 1; padding: 4px 6px; font-size: .72rem; }
-.tour-map canvas { width: 118px; height: 240px; border-radius: 8px; cursor: pointer; display: block; }
+.tour-map canvas { width: 236px; height: 97px; border-radius: 8px; cursor: pointer; display: block; }
 .tour-joy { position: absolute; left: 22px; bottom: 22px; z-index: 4; width: 116px; height: 116px; border-radius: 50%; background: rgba(4, 16, 20, .38); border: 2px solid rgba(255,255,255,.35); touch-action: none; }
 .tour-joy span { position: absolute; left: 50%; top: 50%; width: 48px; height: 48px; margin: -24px 0 0 -24px; border-radius: 50%; background: rgba(147, 221, 138, .92); box-shadow: 0 4px 0 #4f8f47, 0 8px 18px rgba(0,0,0,.4); pointer-events: none; transition: transform .05s; }
 .tour-stairs { position: absolute; bottom: 22px; left: 50%; transform: translateX(-50%); z-index: 4; white-space: nowrap; }
@@ -848,14 +848,14 @@ body.tour-lock { overflow: hidden; }
 .tour-list button { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px; background: var(--ink-0); border: 1px solid var(--line); color: var(--text); text-align: right; cursor: pointer; font-size: .86rem; }
 .tour-list button:hover { border-color: var(--river); }
 .tour-list i { width: 10px; height: 10px; border-radius: 3px; flex: none; background: #2c5d43; }
-.tour-list i.k-corridor { background: #4fc8dc; } .tour-list i.k-class { background: #3f6aa0; } .tour-list i.k-env { background: #e6ae4f; } .tour-list i.k-head, .tour-list i.k-rapp, .tour-list i.k-staff { background: #9a5a6a; } .tour-list i.k-stair { background: #888; }
+.tour-list i.k-corridor { background: #4fc8dc; } .tour-list i.k-class { background: #3f6aa0; } .tour-list i.k-lab { background: #3f9a63; } .tour-list i.k-office { background: #9a5a6a; } .tour-list i.k-lobby { background: #e6ae4f; } .tour-list i.k-outside { background: #93dd8a; } .tour-list i.k-stair { background: #888; }
 .tour-how { padding-inline-start: 18px; display: grid; gap: 6px; font-size: .86rem; color: var(--muted); line-height: 1.8; }
 @media (max-width: 900px) {
   /* يملأ المسافة بين الشريط العلوي والسفلي حتى لا يغطي الشريط السفلي عصا التحكم */
   .tour-stage { height: calc(100svh - var(--header-h) - 92px); min-height: 380px; }
 }
 @media (max-width: 760px) {
-  .tour-map canvas { width: 84px; height: 170px; }
+  .tour-map canvas { width: 168px; height: 69px; }
   .tour-where { font-size: .76rem; top: 10px; right: 10px; max-width: calc(100% - 170px); }
   .tour-info { top: auto; bottom: 10px; right: 10px; left: 10px; width: auto; max-height: 55%; }
   .tour-cap { bottom: 150px; font-size: .84rem; }
