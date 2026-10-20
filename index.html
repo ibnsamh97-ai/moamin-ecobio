@@ -14,6 +14,7 @@
 <link rel="stylesheet" href="vendor/leaflet.css">
 <link rel="stylesheet" href="css/style.css">
 <link rel="stylesheet" href="css/shell.css">
+<link rel="stylesheet" href="css/tools.css">
 <!--/ECO:CSS-->
 </head>
 <body>
@@ -980,6 +981,51 @@
   </div>
 </section>
 
+<!-- ======================= محاكي محطة المعالجة ======================= -->
+<section class="view" id="view-plant" data-title="محاكي محطة المعالجة">
+  <div class="wrap">
+    <div class="view-head">
+      <div>
+        <h2>محاكي محطة المعالجة</h2>
+        <p>صِف مياهك الداخلة وفعّل مراحل المعالجة، فيحسب المحاكي نوعية المياه بعد كل مرحلة، وحجوم الأحواض والجرعات والأكسجين والحمأة، ويقارن الناتج بحدود التصريف العراقية والدولية. كل رقم مبني على معادلة منشورة، وما لا يملك نموذجاً موثقاً يظهر «غير محسوب».</p>
+      </div>
+      <div class="row"><button type="button" class="btn btn-ghost btn-sm" id="pl-reset"><svg aria-hidden="true"><use href="#i-refresh"/></svg>إعادة الضبط</button><button type="button" class="btn btn-bio" id="pl-pdf"><svg aria-hidden="true"><use href="#i-file"/></svg>تقرير التصميم PDF</button></div>
+    </div>
+    <div class="plant-grid">
+      <div class="pl-col">
+        <section class="panel" aria-labelledby="pl-in-h">
+          <div class="panel-h"><h3 id="pl-in-h"><span class="pl-step">1</span>المياه الداخلة</h3></div>
+          <div class="seg" id="pl-presets" role="group" aria-label="مصدر بيانات المياه الداخلة"></div>
+          <p class="faint pl-src" id="pl-src"></p>
+          <div class="param-grid" id="pl-inputs"></div>
+        </section>
+        <section class="panel" aria-labelledby="pl-tr-h">
+          <div class="panel-h"><h3 id="pl-tr-h"><span class="pl-step">2</span>مراحل المعالجة</h3><span class="sub">بترتيبها في المحطة</span></div>
+          <div class="st-list" id="pl-stages"></div>
+        </section>
+      </div>
+      <div class="pl-col">
+        <section class="panel pl-res" aria-labelledby="pl-res-h">
+          <div class="panel-h"><h3 id="pl-res-h"><span class="pl-step">3</span>المياه الخارجة</h3></div>
+          <div class="pl-flow" id="pl-flow" aria-label="مخطط مراحل المحطة وقيمة BOD بعد كل مرحلة"></div>
+          <div id="pl-verdict" aria-live="polite"></div>
+          <div class="chart-box" id="pl-chart-box"><canvas id="pl-chart" aria-label="النسبة المتبقية من كل ملوث بعد كل مرحلة"></canvas></div>
+          <div class="tbl-wrap"><table class="tbl pl-table" id="pl-table"></table></div>
+          <p class="faint pl-mini" id="pl-table-note">القيم الباهتة: المرحلة لا تملك نموذجاً موثقاً لهذا المعيار فنُقلت قيمته كما هي (تقدير متحفظ).</p>
+          <p class="notice info" id="pl-alk" hidden></p>
+        </section>
+        <section class="panel" aria-labelledby="pl-dz-h">
+          <div class="panel-h"><h3 id="pl-dz-h"><span class="pl-step">4</span>تصميم المراحل</h3><span class="sub">للتصريف المُدخَل</span></div>
+          <div class="dz-list" id="pl-design"></div>
+        </section>
+        <section class="panel" id="pl-valid" hidden></section>
+        <details class="panel pl-method" id="pl-method"></details>
+      </div>
+    </div>
+  </div>
+  <button type="button" class="pl-sticky" id="pl-sticky" data-scroll="#pl-res-h" hidden></button>
+</section>
+
 <!-- ======================= عن المشروع ======================= -->
 <section class="view" id="view-about" data-title="عن المشروع">
   <div class="wrap">
@@ -1090,6 +1136,7 @@
 <script src="js/twin.js"></script>
 <script src="js/research.js"></script>
 <script src="js/calc.js"></script>
+<script src="js/plant.js"></script>
 <script src="js/vision.js"></script>
 <script src="js/app.js"></script>
 <!--/ECO:JS-->

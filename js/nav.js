@@ -223,14 +223,14 @@
   }
 
   function riverPathHTML() {
-    return PATH.map(s => `<li class="rp-stop" style="--hue:${s.hue}">
-      <a class="rp-node" href="#${s.id}" aria-label="المرحلة ${s.n}: ${s.label}">${ico(s.icon)}</a>
-      <div class="rp-body">
-        <span class="rp-n">المرحلة ${s.n}</span>
+    return PATH.map(s => `<li class="rv-stop" style="--hue:${s.hue}">
+      <a class="rv-node" href="#${s.id}" aria-label="المرحلة ${s.n}: ${s.label}">${ico(s.icon)}</a>
+      <div class="rv-body">
+        <span class="rv-n">المرحلة ${s.n}</span>
         <h3><a href="#${s.id}">${s.label}</a></h3>
-        <p class="rp-q">${esc(s.q)}</p>
-        <ul class="rp-tools">${s.tools.slice(0, 3).map(t => `<li><a href="#${t}">${ico(TOOLS[t].icon)}<span>${esc(TOOLS[t].label)}</span>${TOOLS[t].isNew ? `<i class="tag-new">جديد</i>` : ""}</a></li>`).join("")}</ul>
-        <a class="rp-all" href="#${s.id}">${s.tools.length > 3 ? `كل أدوات ${s.label} (${s.tools.length})` : `ادخل قسم ${s.label}`}${ico("i-chev")}</a>
+        <p class="rv-q">${esc(s.q)}</p>
+        <ul class="rv-tools">${s.tools.slice(0, 3).map(t => `<li><a href="#${t}">${ico(TOOLS[t].icon)}<span>${esc(TOOLS[t].label)}</span>${TOOLS[t].isNew ? `<i class="tag-new">جديد</i>` : ""}</a></li>`).join("")}</ul>
+        <a class="rv-all" href="#${s.id}">${s.tools.length > 3 ? `كل أدوات ${s.label} (${s.tools.length})` : `ادخل قسم ${s.label}`}${ico("i-chev")}</a>
       </div>
     </li>`).join("");
   }
