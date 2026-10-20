@@ -128,7 +128,7 @@
     const r = ECO.RESEARCH.find(x => x.supervisor); const box = U.$("#home-study"); if (!r || !box) return;
     const bod = r.ranges.find(x => x.k === "bod"), po4 = r.ranges.find(x => x.k === "po4"), bact = r.tables[0];
     box.innerHTML = `<div class="fs-in">
-      <div class="fs-copy"><span class="eyebrow">From our department</span><h2>من بحوث قسمنا: بكتيريا دجلة في تكريت</h2>
+      <div class="fs-copy"><p class="kicker">من بحوث القسم</p><h2>بكتيريا نهر دجلة في مدينة تكريت</h2>
         <p>دراسة فصلية لخمس محطات على نهر دجلة داخل مدينة تكريت (2022–2023) بإشراف ${U.esc(ECO.PROJECT.supervisor)}، رصدت المتغيرات الفيزيوكيميائية وعزلت أنواعاً بكتيرية منها الإشريكية القولونية والسالمونيلا.</p>
         <a class="btn btn-primary" href="#research" data-rs="${r.id}"><svg><use href="#i-book"/></svg>اعرض البحث والجداول</a></div>
       <div class="fs-nums">

@@ -7,6 +7,10 @@
 
   function splash() {
     const el = U.$("#splash"), msg = U.$("#splash-status");
+    // شاشة الترحيب مرة واحدة في الجلسة، وفقط عند فتح الرئيسية؛ الروابط المباشرة لأداة تفتح فوراً
+    const hash = (location.hash || "#home").slice(1).split("=")[0];
+    let seen = false; try { seen = sessionStorage.getItem("ecobio:splashed") === "1"; sessionStorage.setItem("ecobio:splashed", "1"); } catch (e) { /* التخزين غير متاح */ }
+    if (seen || (hash && hash !== "home")) { el.remove(); return; }
     const steps = ["الاتصال بالأقمار الصناعية…", "جلب بيانات Copernicus CAMS…", "تهيئة نموذج التعلم الآلي…", "تجهيز المشاهد ثلاثية الأبعاد…"];
     let i = 0; msg.textContent = steps[0];
     const iv = setInterval(() => { i = Math.min(i + 1, steps.length - 1); msg.textContent = steps[i]; }, 720);

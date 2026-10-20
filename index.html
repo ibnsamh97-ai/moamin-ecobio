@@ -13,6 +13,7 @@
 <!--ECO:CSS-->
 <link rel="stylesheet" href="vendor/leaflet.css">
 <link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/shell.css">
 <!--/ECO:CSS-->
 </head>
 <body>
@@ -58,6 +59,12 @@
   <symbol id="i-ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></symbol>
   <symbol id="i-layers" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2.5 8 12 13l9.5-5Z"/><path d="m2.5 12.5 9.5 5 9.5-5M2.5 16.5l9.5 5 9.5-5"/></symbol>
   <symbol id="i-scan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3M7 12h10"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m14.5 6-6 6 6 6"/></symbol>
+  <symbol id="i-chevd" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="i-table" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4" width="17" height="16" rx="2"/><path d="M3.5 9h17M3.5 14.5h17M10 9v11"/><path d="m14 18 1.8-2 1.5 1 2-2.5" /></symbol>
+  <symbol id="i-plant" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 20.5h19"/><path d="M4 20.5V12h5.5v8.5M14.5 20.5V8.5H20v12"/><path d="M9.5 15h5M6.75 12V9.5a3 3 0 0 1 3-3H12"/><path d="M17.25 8.5V5.5"/><path d="M15.5 4.5c.6-.9 2.9-.9 3.5 0"/></symbol>
+  <symbol id="i-logo" viewBox="0 0 132 132"><ellipse cx="66" cy="66" rx="60" ry="60" fill="none" stroke="#4fc8dc" stroke-width="5" stroke-dasharray="10 12" opacity=".7"/><path d="M66 108C42 96 34 72 42 50c8-20 26-28 46-30 4 22 2 46-10 64-4 6-8 12-12 24Z" fill="none" stroke="#93dd8a" stroke-width="8" stroke-linejoin="round"/><path d="M66 108c2-20 6-38 18-62" fill="none" stroke="#4fc8dc" stroke-width="6" stroke-linecap="round"/><circle cx="66" cy="6" r="8" fill="#e6ae4f"/></symbol>
 </svg>
 
 <!-- شاشة الترحيب (3 ثوانٍ) -->
@@ -80,21 +87,24 @@
 </div>
 
 <!-- الشريط العلوي -->
+<a class="skip" href="#home" data-skip>تخطَّ إلى المحتوى</a>
 <header class="topbar">
   <div class="topbar-in">
     <a class="brand" href="#home" aria-label="EcoBio AI – الرئيسية">
-      <svg viewBox="0 0 132 132" aria-hidden="true"><ellipse cx="66" cy="66" rx="60" ry="60" fill="none" stroke="#4fc8dc" stroke-width="5" stroke-dasharray="10 12" opacity=".7"/><path d="M66 108C42 96 34 72 42 50c8-20 26-28 46-30 4 22 2 46-10 64-4 6-8 12-12 24Z" fill="none" stroke="#93dd8a" stroke-width="8" stroke-linejoin="round"/><path d="M66 108c2-20 6-38 18-62" fill="none" stroke="#4fc8dc" stroke-width="6" stroke-linecap="round"/><circle cx="66" cy="6" r="8" fill="#e6ae4f"/></svg>
+      <svg viewBox="0 0 132 132" aria-hidden="true"><use href="#i-logo"/></svg>
       <b>EcoBio <em>AI</em></b>
     </a>
     <nav class="nav" id="nav" aria-label="أقسام المنصة"></nav>
     <div class="top-actions">
+      <button type="button" class="search-btn" data-open-search aria-label="ابحث عن أداة"><svg aria-hidden="true"><use href="#i-search"/></svg><span>ابحث عن أداة</span><kbd>/</kbd></button>
       <span class="live-dot" id="live-dot" title="حالة البيانات"><i></i><span id="live-text">جارٍ الاتصال</span></span>
-      <button class="btn icon-btn btn-ghost" id="open-settings" aria-label="إعدادات Gemini"><svg><use href="#i-gear"/></svg></button>
-      <button class="btn icon-btn btn-ghost menu-btn" id="open-menu" aria-label="القائمة"><svg><use href="#i-menu"/></svg></button>
+      <a class="btn btn-sm ask-btn" href="#assistant" data-v="assistant"><svg aria-hidden="true"><use href="#i-chat"/></svg><span>اسأل المساعد</span></a>
+      <button type="button" class="btn icon-btn btn-ghost" id="open-settings" aria-label="إعدادات المساعد الذكي"><svg aria-hidden="true"><use href="#i-gear"/></svg></button>
+      <button type="button" class="btn icon-btn btn-ghost menu-btn" id="open-menu" aria-label="القائمة الكاملة"><svg aria-hidden="true"><use href="#i-menu"/></svg></button>
     </div>
   </div>
 </header>
-<div class="drawer" id="drawer" hidden><div class="drawer-panel" id="drawer-panel"></div></div>
+<div class="drawer" id="drawer" hidden><nav class="drawer-panel" id="drawer-panel" aria-label="كل الأقسام والأدوات"></nav></div>
 
 <main>
 <!-- ======================= الرئيسية ======================= -->
@@ -103,69 +113,68 @@
     <canvas class="globe" id="globe-canvas" aria-label="كرة أرضية ثلاثية الأبعاد تُظهر العراق ونهر دجلة ومحطات الرصد والأقمار الصناعية"></canvas>
     <div class="hero-in">
       <div class="hero-copy">
-        <span class="eyebrow">Satellite · Biology · AI</span>
-        <h1><span class="en">EcoBio <em>AI</em></span><br>نرصد التلوث من الفضاء، ونعالجه بالحياة</h1>
-        <p class="lead">منصة تجمع بيانات الأقمار الصناعية عن أجواء <b>نهر دجلة</b> في محافظة صلاح الدين وتحدّثها باستمرار، ثم تحللها بخوارزميات التعلم الآلي وتقترح حلول <b>المعالجة الحيوية</b> المناسبة لكل حالة.</p>
+        <p class="kicker">منصة بحثية مفتوحة · قسم علوم الحياة – جامعة تكريت</p>
+        <h1>نرصد التلوث من الفضاء، ونعالجه بالحياة</h1>
+        <p class="lead">أدوات مجانية لطلبة البيئة وباحثيها: تابِع هواء صلاح الدين ونهر <b>دجلة</b> من الأقمار الصناعية، وحلّل نتائج عيّناتك، وصمّم طريقة <b>معالجتها</b> من المتصفح مباشرة.</p>
         <div class="hero-cta">
-          <a class="btn btn-primary btn-lg tw-cta" href="#twin"><svg><use href="#i-cube"/></svg>توأم دجلة الرقمي 3D</a>
-          <a class="btn btn-lg" href="#samples"><svg><use href="#i-pin"/></svg>حدد عينة على الخريطة</a>
-          <a class="btn btn-bio btn-lg" href="#vision"><svg><use href="#i-camera"/></svg>صوّر الماء واقرأ تلوثه</a>
-          <a class="btn btn-lg" href="#monitor"><svg><use href="#i-sat"/></svg>الرصد الفضائي الحي</a>
+          <button type="button" class="btn btn-primary btn-lg" data-scroll="#paths"><svg aria-hidden="true"><use href="#i-chevd"/></svg>اختر ما تريد فعله</button>
+          <a class="btn btn-lg" href="#twin"><svg aria-hidden="true"><use href="#i-cube"/></svg>توأم دجلة الرقمي 3D</a>
         </div>
       </div>
       <div class="hero-data">
-        <div class="hero-live" id="hero-live"></div>
-        <p class="updated" id="hero-updated" style="margin-top:8px"></p>
+        <div class="hero-live" id="hero-live" aria-live="polite"></div>
+        <p class="updated" id="hero-updated"></p>
         <div id="hero-ground" class="hero-ground"></div>
       </div>
     </div>
-    <div class="hero-legend">ORBITS: SUOMI-NPP · TERRA · AURA (schematic)<br>STATIONS: 7 · RIVER: TIGRIS 1,850 km</div>
   </div>
 
-  <div class="wrap">
-    <div class="section-title"><h2>وحدات المنصة</h2><span class="muted">اثنتا عشرة أداة للرصد والتحليل والمعالجة</span></div>
-    <div class="modules">
-      <a class="module is-new tw-module" href="#twin"><span class="ic"><svg><use href="#i-cube"/></svg></span><span class="new-tag">جديد</span><h3>توأم دجلة الرقمي</h3><p>دجلة الحقيقي ثلاثي الأبعاد، وآلة زمن من 1984 تحسب مساحة الماء من الفضاء، ومحاكاة تسرب تحسب متى يصل التلوث إلى كل مدينة.</p><span class="meta">CesiumJS · Landsat · GloFAS</span></a>
-      <a class="module is-new" href="#space"><span class="ic"><svg><use href="#i-layers"/></svg></span><span class="new-tag">جديد</span><h3>دجلة من الفضاء</h3><p>عكورة النهر وطحالبه من صور القمر الأوروبي Sentinel-2 بدقة 10 م، لأي نقطة وأي تاريخ منذ 2017.</p><span class="meta">Sentinel-2 · NDTI · NDCI</span></a>
-      <a class="module bio is-new" href="#palmer"><span class="ic"><svg><use href="#i-scan"/></svg></span><span class="new-tag">جديد</span><h3>المجهر الذكي</h3><p>صوّر شريحة الطحالب بالهاتف، والذكاء الاصطناعي يقترح الأجناس ويُحسب مؤشر Palmer للتلوث العضوي.</p><span class="meta">Palmer 1969 · Gemini Vision</span></a>
-      <a class="module is-new" href="#gaps"><span class="ic"><svg><use href="#i-map"/></svg></span><span class="new-tag">جديد</span><h3>الفجوات البحثية</h3><p>ماذا دُرس وأين ومتى في صلاح الدين، واقتراح عناوين رسائل للخانات الفارغة بأجهزة القسم.</p><span class="meta">Research gaps · AI</span></a>
-      <a class="module " href="#samples"><span class="ic"><svg><use href="#i-pin"/></svg></span><h3>خريطة العينات</h3><p>حدد مواقع عيناتك على صور فضائية عالية الدقة وافتحها في خرائط Google، وشاركها برابط.</p><span class="meta">Esri · Sentinel-2 · GPS</span></a>
-      <a class="module bio" href="#research"><span class="ic"><svg><use href="#i-book"/></svg></span><h3>بحوث جامعة تكريت</h3><p>نتائج منشورة حقيقية لباحثي الجامعة على الخريطة، ومنها بحث المشرفة عن بكتيريا دجلة في تكريت.</p><span class="meta">5 بحوث · مصادر موثقة</span></a>
-      <a class="module " href="#calc"><span class="ic"><svg><use href="#i-calc"/></svg></span><h3>الحاسبات العلمية</h3><p>أكثر من 20 حاسبة: SAR، Igeo، RI، HQ، BOD، COD، لانكماير، BCF وغيرها، بمعادلاتها ومراجعها.</p><span class="meta">Water · Sediment · Risk</span></a>
-      <a class="module bio" href="#vision"><span class="ic"><svg><use href="#i-camera"/></svg></span><h3>قراءة الصور</h3><p>مؤشر لون الماء Forel-Ule من صورة الهاتف، وقراءة أوراق نتائج المختبر آلياً.</p><span class="meta">Forel-Ule · Gemini Vision</span></a>
-      <a class="module " href="#monitor"><span class="ic"><svg><use href="#i-sat"/></svg></span><h3>الرصد الفضائي الحي</h3><p>قراءات 10 ملوثات لسبع محطات على دجلة مع صور أقمار NASA اليومية، تُحدَّث كل 30 دقيقة.</p><span class="meta">CAMS · NASA GIBS</span></a>
-      <a class="module " href="#water"><span class="ic"><svg><use href="#i-drop"/></svg></span><h3>مختبر جودة المياه</h3><p>WQI وHPI ومطابقة المواصفة العراقية 417 ونظام خبير يقترح المعالجة الحيوية.</p><span class="meta">WQI · HPI · IQS 417</span></a>
-      <a class="module " href="#analysis"><span class="ic"><svg><use href="#i-brain"/></svg></span><h3>التحليل الذكي</h3><p>نموذج تعلم آلي يتدرّب داخل المتصفح، وكشف الأيام الشاذة، واتجاه مصادر التلوث.</p><span class="meta">Ridge · Z-score</span></a>
-      <a class="module " href="#reports"><span class="ic"><svg><use href="#i-file"/></svg></span><h3>التقارير PDF</h3><p>تقارير رسمية باسم المختبر فيها الجداول والرسوم والصور، جاهزة للمشرف.</p><span class="meta">PDF</span></a>
-      <a class="module bio" href="#campus"><span class="ic"><svg><use href="#i-building"/></svg></span><h3>جولة في القسم 3D</h3><p>تجوّل داخل قسم علوم الحياة بطابقيه، وادخل المختبرات واضغط على الأجهزة لتعرف ما تقيسه.</p><span class="meta">جولة تلقائية · خريطة</span></a>
-      <a class="module bio" href="#river"><span class="ic"><svg><use href="#i-river"/></svg></span><h3>محاكاة دجلة 3D</h3><p>شغّل مصادر التلوث وطبّق المعالجة النباتية والحيوية وراقب صحة النهر.</p><span class="meta">WebGL</span></a>
-      <a class="module bio" href="#micro"><span class="ic"><svg><use href="#i-microbe"/></svg></span><h3>العالم المجهري 3D</h3><p>بكتيريا تفكك النفط أو تمتص العناصر الثقيلة حسب الحرارة وpH والمغذيات.</p><span class="meta">Pseudomonas · Biosorption</span></a>
-      <a class="module pol" href="#molecules"><span class="ic"><svg><use href="#i-atom"/></svg></span><h3>مكتبة الملوثات 3D</h3><p>نماذج جزيئية لعشرة ملوثات مع مصادرها وحدودها ومعالجتها.</p><span class="meta">BTEX · PAHs</span></a>
-      <a class="module " href="#assistant"><span class="ic"><svg><use href="#i-chat"/></svg></span><h3>المساعد الذكي</h3><p>Gemini متخصص بالتلوث والمعالجة، يقرأ بيانات المنصة وعيناتك.</p><span class="meta">Gemini API</span></a>
+  <section class="home-sec paths" id="paths" aria-labelledby="paths-h">
+    <div class="wrap">
+      <header class="sec-head">
+        <h2 id="paths-h" tabindex="-1">ماذا تريد أن تفعل اليوم؟</h2>
+        <p>المنصة مرتبة على مراحل البحث البيئي، من رصد الهواء والنهر إلى نشر النتائج. ابدأ من المرحلة التي تناسبك.</p>
+      </header>
+      <ol class="river-path" id="river-path"></ol>
+      <p class="paths-alt">تبحث عن أداة بعينها؟ <button type="button" class="link-btn" data-open-search><svg aria-hidden="true"><use href="#i-search"/></svg>ابحث باسم المؤشر أو الملوث</button></p>
     </div>
+  </section>
 
-    <div class="feature-study" id="home-study"></div>
-
-    <div class="section-title"><h2>مسار البيانات داخل المنصة</h2><span class="muted">من القمر الصناعي إلى قرار المعالجة</span></div>
-    <div class="panel pipeline">
-      <div class="step"><span class="n">01</span><h4>الأقمار الصناعية</h4><p>MODIS وVIIRS وOMI ترصد الهباء والغبار وNO₂ يومياً.</p></div>
-      <div class="step"><span class="n">02</span><h4>الاستيعاب والنمذجة</h4><p>نموذج Copernicus CAMS يدمج الأرصاد ويعطي تراكيز ساعية.</p></div>
-      <div class="step"><span class="n">03</span><h4>الرصد الحي</h4><p>المنصة تسحب القراءات لسبع محطات وتحدّثها كل 30 دقيقة.</p></div>
-      <div class="step"><span class="n">04</span><h4>التعلم الآلي</h4><p>نموذج انحدار يتدرّب على 30 يوماً ويكشف الشذوذ والاتجاهات.</p></div>
-      <div class="step"><span class="n">05</span><h4>النظام الخبير</h4><p>مقارنة بالحدود القياسية واختيار طريقة المعالجة الحيوية الأنسب.</p></div>
-      <div class="step"><span class="n">06</span><h4>التقرير الذكي</h4><p>Gemini يكتب تقريراً علمياً بالعربية مع التوصيات.</p></div>
+  <section class="home-sec spot" aria-labelledby="spot-h">
+    <div class="wrap">
+      <header class="sec-head"><h2 id="spot-h">جديد في المنصة</h2><p>أداتان تختصران عليك أيام عمل: تصمّم المعالجة قبل التجربة، وتحلّل جدول نتائجك كاملاً دون برنامج إحصائي.</p></header>
+      <div class="spot-list">
+        <a class="spot-card" href="#plant">
+          <figure><img src="assets/photos/plant-preview.jpg" alt="محاكي محطة المعالجة: سلسلة مراحل المعالجة ونسبة الإزالة لكل مرحلة" width="1280" height="800" loading="lazy" decoding="async"></figure>
+          <div class="spot-copy"><span class="tag-new">جديد</span><h3>محاكي محطة المعالجة</h3>
+            <p>اختر نوعية مياهك وركّب مراحل المعالجة (تخثير، ترسيب، ترشيح، امتزاز، معالجة حيوية، تعقيم). المنصة تحسب نوعية المياه الخارجة بعد كل مرحلة، والجرعات والحجوم اللازمة، بمعادلات منشورة.</p>
+            <span class="spot-go">صمّم معالجتك<svg aria-hidden="true"><use href="#i-chev"/></svg></span></div>
+        </a>
+        <a class="spot-card" href="#analyzer">
+          <figure><img src="assets/photos/analyzer-preview.jpg" alt="محلّل بيانات البيئة: جدول نتائج ومقارنة بالمواصفة ورسم بياني" width="1280" height="800" loading="lazy" decoding="async"></figure>
+          <div class="spot-copy"><span class="tag-new">جديد</span><h3>محلّل بيانات البيئة</h3>
+            <p>ارفع ملف Excel أو CSV بنتائج محطاتك. تحصل على المتوسطات والانحراف المعياري، وتحليل التباين ANOVA مع اختبار دنكن، ومصفوفة الارتباط، ومؤشرات التلوث، ومقارنة بالمواصفات، ورسوم جاهزة للرسالة.</p>
+            <span class="spot-go">حلّل بياناتك<svg aria-hidden="true"><use href="#i-chev"/></svg></span></div>
+        </a>
+      </div>
     </div>
+  </section>
 
-    <div class="section-title"><h2>مصادر البيانات</h2></div>
-    <div class="sources">
-      <a class="chip tone-info" href="https://atmosphere.copernicus.eu/" target="_blank" rel="noopener">Copernicus CAMS</a>
-      <a class="chip tone-info" href="https://open-meteo.com/en/docs/air-quality-api" target="_blank" rel="noopener">Open-Meteo Air Quality API</a>
-      <a class="chip tone-info" href="https://www.earthdata.nasa.gov/engage/open-data-services-software/earthdata-developer-portal/gibs-api" target="_blank" rel="noopener">NASA GIBS</a>
-      <a class="chip tone-info" href="https://ai.google.dev/" target="_blank" rel="noopener">Google Gemini API</a>
-      <span class="chip tone-none">WHO Air Quality Guidelines 2021</span>
-      <span class="chip tone-none">المواصفة العراقية 417</span>
+  <div class="wrap"><div class="feature-study" id="home-study"></div></div>
+
+  <section class="home-sec dept" aria-labelledby="dept-h">
+    <div class="wrap">
+      <div class="dept-card">
+        <div class="dept-in">
+          <p class="kicker">من داخل القسم</p>
+          <h2 id="dept-h">قسم علوم الحياة – كلية التربية للعلوم الصرفة</h2>
+          <p>تجوّل في طابقَي القسم بثلاثة أبعاد، وادخل مختبر البيئة والتلوث، واضغط على أي جهاز لتعرف ما يقيسه وأي أداة في المنصة تكمّل عمله.</p>
+          <div class="hero-cta"><a class="btn btn-lg" href="#campus"><svg aria-hidden="true"><use href="#i-building"/></svg>ادخل الجولة ثلاثية الأبعاد</a><a class="btn btn-ghost btn-lg" href="#about">عن المشروع</a></div>
+        </div>
+        <figure class="dept-photo"><img src="assets/photos/corridor.jpg" alt="ممر قسم علوم الحياة ولافتة تشير إلى مختبر البيئة والتلوث وقاعة الدكتوراه" width="1200" height="900" loading="lazy" decoding="async"></figure>
+      </div>
     </div>
-  </div>
+  </section>
 </section>
 
 <!-- ======================= الرصد الفضائي ======================= -->
@@ -173,7 +182,6 @@
   <div class="wrap">
     <div class="view-head">
       <div>
-        <span class="eyebrow">Live satellite monitoring</span>
         <h2>الرصد الفضائي الحي</h2>
         <p>تقديرات ساعية لملوثات الهواء من نموذج Copernicus CAMS (يدمج أرصاد الأقمار الصناعية بدقة ≈45 كم، وليس قياس محطة أرضية)، مع صور يومية من أقمار NASA فوق صلاح الدين، وتحقق أرضي من أرصاد المطارات القريبة.</p>
       </div>
@@ -232,7 +240,6 @@
   <div class="wrap">
     <div class="view-head">
       <div>
-        <span class="eyebrow">Machine learning · Anomaly detection</span>
         <h2>التحليل الذكي والتعلم الآلي</h2>
         <p>تحليل آخر 30 يوماً من القراءات الساعية مع الأحوال الجوية: نموذج تعلم آلي يتدرّب أمامك، وكشف الأيام الشاذة، ومؤشر مخاطر مركّب، واتجاه وصول التلوث.</p>
       </div>
@@ -295,7 +302,6 @@
   <div class="wrap">
     <div class="view-head">
       <div>
-        <span class="eyebrow">Water quality lab</span>
         <h2>مختبر جودة المياه الذكي</h2>
         <p>أدخل نتائج تحليل عيّنتك المختبرية ليحسب الموقع مؤشر جودة المياه WQI (طريقة المتوسط الحسابي الموزون) ومؤشر تلوث العناصر الثقيلة HPI، ثم يقترح النظام الخبير طرق المعالجة.</p>
       </div>
@@ -349,7 +355,6 @@
   <div class="wrap">
     <div class="view-head">
       <div>
-        <span class="eyebrow">Virtual department tour · 3D</span>
         <h2>جولة ثلاثية الأبعاد في قسم علوم الحياة</h2>
         <p>نسخة مطابقة للقسم الحقيقي: مبنية على المخططين الهندسيين المعلّقين في القسم بأبعادهما (51.11 × 15.90 م)، والأسماء ولوحات الأبواب واللوحات الجدارية مأخوذة من صور القسم نفسه. ادخل من الباب، وتنقّل بين المختبرات والقاعات في الطابقين، واضغط على أي جهاز لتعرف ما يقيسه.</p>
       </div>
@@ -394,7 +399,6 @@
   <div class="wrap">
     <div class="view-head">
       <div>
-        <span class="eyebrow">3D river simulation</span>
         <h2>محاكاة دجلة ثلاثية الأبعاد: التلوث والمعالجة</h2>
         <p>قطاع من النهر فيه مصفى نفط ومصب صرف صحي وأراضٍ زراعية. شغّل مصادر التلوث، ثم طبّق المعالجات الحيوية وراقب الأكسجين والأسماك وصحة النهر.</p>
       </div>
@@ -427,7 +431,6 @@
   <div class="wrap">
     <div class="view-head">
       <div>
-        <span class="eyebrow">Microscopic bioremediation</span>
         <h2>العالم المجهري: المعالجة الحيوية ثلاثية الأبعاد</h2>
         <p>داخل قطرة ماء ملوثة: البكتيريا تبحث عن جزيئات النفط وتفككها إلى CO₂ وماء، أو تلتقط أيونات العناصر الثقيلة على جدارها الخلوي. غيّر الحرارة والمغذيات وراقب سرعة المعالجة.</p>
       </div>
@@ -465,7 +468,6 @@
   <div class="wrap">
     <div class="view-head">
       <div>
-        <span class="eyebrow">Pollutant molecule library</span>
         <h2>مكتبة الملوثات ثلاثية الأبعاد</h2>
         <p>نماذج الكرة والعصا بأطوال روابط وزوايا حقيقية تقريبية. اختر ملوثاً لتعرف مصدره وأثره وحده المسموح وطريقة معالجته.</p>
       </div>
@@ -488,7 +490,6 @@
   <div class="wrap">
     <div class="view-head">
       <div>
-        <span class="eyebrow">Gemini · domain-tuned assistant</span>
         <h2>المساعد الذكي للتلوث والمعالجة</h2>
         <p>مساعد يعمل بنموذج Gemini من Google، موجَّه بتعليمات نظام وقاعدة معرفة متخصصة في المعالجة الحيوية وتلوث دجلة، ويستطيع قراءة بيانات المنصة الحية.</p>
       </div>
@@ -533,7 +534,6 @@
   <div class="wrap">
     <div class="view-head">
       <div>
-        <span class="eyebrow">Field sampling map</span>
         <h2>خريطة العينات الحقلية</h2>
         <p>حدد مواقع عيناتك على صور فضائية عالية الدقة، وسجّل نتائجها، وافتح أي موقع في خرائط Google. العينات تُحفظ في جهازك ويمكن مشاركتها برابط أو ملف.</p>
       </div>
@@ -650,7 +650,6 @@
   <div class="wrap">
     <div class="view-head">
       <div>
-        <span class="eyebrow">Supervisor review</span>
         <h2>مراجعة مساهمات الباحثين</h2>
         <p>المواقع التي يضيفها الأساتذة لا تظهر للعموم إلا بعد موافقتك هنا. كلمة السر تُحفظ في هذه الجلسة فقط.</p>
       </div>
@@ -673,7 +672,6 @@
   <div class="wrap">
     <div class="view-head">
       <div>
-        <span class="eyebrow">Tikrit University research data</span>
         <h2>بحوث جامعة تكريت</h2>
         <p>نتائج منشورة فعلاً لباحثي جامعة تكريت عن تلوث المياه والرواسب في صلاح الدين. كل رقم منقول من مصدره مع رابطه، ويمكن إرساله مباشرة إلى المختبر والحاسبات.</p>
       </div>
@@ -695,7 +693,7 @@
     <div id="tw-globe" class="tw-globe"></div>
     <div class="tw-intro" id="tw-intro">
       <div class="tw-intro-in">
-        <span class="eyebrow">Digital Twin · Tigris River · Salah al-Din</span>
+        <p class="kicker">توأم رقمي · نهر دجلة · صلاح الدين</p>
         <h2>توأم دجلة الرقمي</h2>
         <p>نهر دجلة الحقيقي في صلاح الدين بثلاثة أبعاد: تضاريس وصور أقمار حقيقية، وآلة زمن تعود إلى عام 1984 وتحسب مساحة الماء من الفضاء، ومحاكاة تسرب ملوث تحسب متى يصل إلى كل مدينة بتصريف النهر الحقيقي.</p>
         <div class="tw-feats"><span>تضاريس SRTM</span><span>Landsat 1984–2026</span><span>Sentinel-2</span><span>تصريف GloFAS</span><span>OpenStreetMap</span></div>
@@ -783,7 +781,6 @@
   <div class="wrap">
     <div class="view-head">
       <div>
-        <span class="eyebrow">Sentinel-2 · 10 m · since 2017</span>
         <h2>دجلة من الفضاء</h2>
         <p>صور حقيقية من القمر الأوروبي Sentinel-2 لنهر دجلة بدقة 10 أمتار، تصل صورة جديدة كل يومين إلى خمسة أيام. اختر تاريخاً واضغط على مجرى النهر لتقرأ مؤشري العكورة والكلوروفيل، ثم تتبّع النقطة عبر الأشهر والسنين وقارنها بعيناتك الحقلية.</p>
       </div>
@@ -816,7 +813,6 @@
   <div class="wrap">
     <div class="view-head">
       <div>
-        <span class="eyebrow">Research gap map</span>
         <h2>خريطة الفجوات البحثية</h2>
         <p>ماذا دُرس، وأين، ومتى في محافظة صلاح الدين؟ الجدول يجمع بحوث جامعة تكريت المنشورة في المنصة ومواقع البحوث التي يضيفها الأساتذة، ويُظهر الخانات الفارغة التي تصلح موضوعات لرسائل جديدة.</p>
       </div>
@@ -840,7 +836,6 @@
   <div class="wrap">
     <div class="view-head">
       <div>
-        <span class="eyebrow">Palmer algal pollution index</span>
         <h2>المجهر الذكي – مؤشر Palmer</h2>
         <p>صوّر شريحة الطحالب من عدسة المجهر بالهاتف فيقترح الذكاء الاصطناعي الأجناس الظاهرة، ثم تؤكدها أنت ويحسب الموقع مؤشر Palmer (1969) للتلوث العضوي: 20 فأكثر تلوث عالٍ، و15–19 تلوث محتمل، وأقل من 15 تلوث قليل.</p>
       </div>
@@ -896,7 +891,6 @@
   <div class="wrap">
     <div class="view-head">
       <div>
-        <span class="eyebrow">Scientific calculators</span>
         <h2>الحاسبات العلمية للتلوث والمعالجة</h2>
         <p>حاسبات بمعادلات منشورة ومراجع مذكورة: مؤشرات المياه والري، تلوث الرواسب، المخاطر الصحية، حسابات المختبر، حركية المعالجة الحيوية، الامتصاص الحيوي، والمعالجة النباتية.</p>
       </div>
@@ -913,7 +907,6 @@
   <div class="wrap">
     <div class="view-head">
       <div>
-        <span class="eyebrow">Image reading</span>
         <h2>قراءة الصور: لون الماء وأوراق النتائج</h2>
         <p>صوّر الماء فيحسب الموقع مؤشر لون الماء Forel-Ule بالطريقة العلمية نفسها المستخدمة مع صور الأقمار الصناعية، مع مؤشرات تقريبية للعكورة والطحالب والزيت. ويمكنه أيضاً قراءة ورقة نتائج مختبر من صورة.</p>
       </div>
@@ -972,7 +965,6 @@
   <div class="wrap">
     <div class="view-head">
       <div>
-        <span class="eyebrow">PDF reports</span>
         <h2>مركز التقارير</h2>
         <p>تقارير PDF رسمية باسم المختبر تتضمن الجداول والرسوم والصور، جاهزة للمشرف أو للبحث. عدّل بيانات الترويسة مرة واحدة فتُستخدم في كل التقارير.</p>
       </div>
@@ -991,7 +983,7 @@
 <!-- ======================= عن المشروع ======================= -->
 <section class="view" id="view-about" data-title="عن المشروع">
   <div class="wrap">
-    <div class="view-head"><div><span class="eyebrow">About the project</span><h2>عن المشروع</h2></div></div>
+    <div class="view-head"><div><h2>عن المشروع</h2></div></div>
     <div class="about-hero">
       <div class="panel">
         <h3 id="ab-title" style="font-size:1.2rem;line-height:1.6"></h3>
@@ -1042,7 +1034,7 @@
 
 <nav class="bottombar" id="bottombar" aria-label="تنقل سريع"></nav>
 <div id="report-stage" aria-hidden="true"></div>
-<footer class="foot"><div class="wrap"><span id="foot-l"></span><span>البيانات: Copernicus CAMS · Open-Meteo · NASA GIBS</span></div></footer>
+<footer class="foot" id="foot"></footer>
 
 <!-- إعدادات Gemini -->
 <div class="modal" id="settings" hidden>
@@ -1077,6 +1069,7 @@
 <script src="js/landmask.js"></script>
 <script src="js/data-research.js"></script>
 <script src="js/core.js"></script>
+<script src="js/nav.js"></script>
 <script src="js/ground.js"></script>
 <script src="js/globe.js"></script>
 <script src="js/monitor.js"></script>

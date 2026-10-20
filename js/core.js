@@ -512,100 +512,15 @@
     return st;
   };
 
-  /* ------------------------------------------------------------------
-     التنقل بين الأقسام
-  ------------------------------------------------------------------ */
+  /* التنقل والموجّه في js/nav.js */
   ECO.views = {};
-  const GROUPS = [
-    { id: "home", label: "الرئيسية", icon: "i-home" },
-    { label: "الرصد", icon: "i-sat", items: [
-      { id: "monitor", label: "الرصد الفضائي الحي", icon: "i-sat", desc: "قراءات الأقمار الصناعية لسبع محطات على دجلة" },
-      { id: "samples", label: "خريطة العينات", icon: "i-pin", desc: "حدد عيناتك على خريطة فضائية عالية الدقة" },
-      { id: "research", label: "بحوث جامعة تكريت", icon: "i-book", desc: "نتائج منشورة حقيقية على الخريطة والجداول" },
-      { id: "space", label: "دجلة من الفضاء", icon: "i-layers", desc: "عكورة النهر وطحالبه من صور Sentinel-2 بدقة 10 م" },
-      { id: "gaps", label: "الفجوات البحثية", icon: "i-map", desc: "ماذا دُرس وأين ومتى، واقتراح عناوين رسائل" }
-    ] },
-    { label: "المختبر", icon: "i-flask", items: [
-      { id: "water", label: "مختبر جودة المياه", icon: "i-drop", desc: "WQI و HPI والمطابقة للمواصفة العراقية" },
-      { id: "calc", label: "الحاسبات العلمية", icon: "i-calc", desc: "أكثر من 20 حاسبة للتلوث والمعالجة" },
-      { id: "vision", label: "قراءة الصور", icon: "i-camera", desc: "مؤشر لون الماء Forel-Ule وقراءة أوراق النتائج" },
-      { id: "palmer", label: "المجهر الذكي", icon: "i-scan", desc: "مؤشر Palmer للتلوث العضوي من صور الطحالب" },
-      { id: "analysis", label: "التحليل الذكي", icon: "i-brain", desc: "تعلم آلي وكشف الشذوذ لبيانات الهواء" }
-    ] },
-    { label: "ثلاثي الأبعاد", icon: "i-cube", items: [
-      { id: "twin", label: "توأم دجلة الرقمي", icon: "i-cube", desc: "دجلة الحقيقي 3D، آلة زمن 1984–2026، ومحاكاة تسرب" },
-      { id: "campus", label: "جولة في القسم", icon: "i-building", desc: "تجوّل ثلاثي الأبعاد داخل قسم علوم الحياة ومختبراته" },
-      { id: "river", label: "محاكاة دجلة", icon: "i-river", desc: "مصادر التلوث والمعالجة الحيوية" },
-      { id: "micro", label: "العالم المجهري", icon: "i-microbe", desc: "بكتيريا تفكك النفط وتمتص المعادن" },
-      { id: "molecules", label: "مكتبة الملوثات", icon: "i-atom", desc: "نماذج جزيئية لعشرة ملوثات" }
-    ] },
-    { id: "assistant", label: "المساعد", icon: "i-chat" },
-    { id: "reports", label: "التقارير", icon: "i-file" },
-    { id: "about", label: "عن المشروع", icon: "i-info" }
-  ];
-  const NAV = [];
-  GROUPS.forEach(g => (g.items ? g.items.forEach(i => NAV.push({ ...i, group: g.label })) : NAV.push(g)));
-  NAV.push({ id: "review", label: "مراجعة مساهمات الباحثين", icon: "i-check", hidden: true }); // صفحة المشرف، لا تظهر في القائمة
-  ECO.NAV = NAV;
-  const ico = id => `<svg aria-hidden="true"><use href="#${id}"/></svg>`;
-  let current = null;
-  function buildNav() {
-    const nav = U.$("#nav");
-    nav.innerHTML = GROUPS.map((g, gi) => g.items
-      ? `<div class="nav-group"><button type="button" class="nav-btn" data-g="${gi}" aria-expanded="false">${ico(g.icon)}<span>${g.label}</span><svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2"/></svg></button>
-          <div class="mega" data-g="${gi}" hidden>${g.items.map(i => `<a href="#${i.id}" data-v="${i.id}" class="mega-item"><span class="mi-ic">${ico(i.icon)}</span><span><b>${i.label}</b><small>${i.desc}</small></span></a>`).join("")}</div></div>`
-      : `<a href="#${g.id}" data-v="${g.id}" class="nav-btn">${ico(g.icon)}<span>${g.label}</span></a>`).join("");
-    const closeAll = () => U.$$(".mega").forEach(m => { m.hidden = true; m.previousElementSibling.setAttribute("aria-expanded", "false"); });
-    nav.addEventListener("click", e => {
-      const b = e.target.closest("button.nav-btn");
-      if (b) { const m = b.nextElementSibling, open = m.hidden; closeAll(); m.hidden = !open; b.setAttribute("aria-expanded", String(open)); e.stopPropagation(); return; }
-      if (e.target.closest("a")) closeAll();
-    });
-    document.addEventListener("click", e => { if (!e.target.closest(".nav-group")) closeAll(); });
-    document.addEventListener("keydown", e => { if (e.key === "Escape") closeAll(); });
-
-    U.$("#drawer-panel").innerHTML = `<div class="drawer-head"><b>EcoBio <em>AI</em></b><button class="btn icon-btn btn-ghost" type="button" aria-label="إغلاق">${ico("i-close")}</button></div>` +
-      GROUPS.map(g => g.items
-        ? `<div class="dr-group"><span class="dr-title">${g.label}</span>${g.items.map(i => `<a href="#${i.id}" data-v="${i.id}">${ico(i.icon)}<span>${i.label}<small>${i.desc}</small></span></a>`).join("")}</div>`
-        : `<a href="#${g.id}" data-v="${g.id}">${ico(g.icon)}<span>${g.label}</span></a>`).join("");
-    const dr = U.$("#drawer");
-    const openDr = () => { dr.hidden = false; };
-    U.$("#open-menu").onclick = openDr;
-    dr.addEventListener("click", e => { if (e.target === dr || e.target.closest("a") || e.target.closest(".drawer-head button")) dr.hidden = true; });
-
-    const bb = U.$("#bottombar");
-    if (bb) {
-      const items = [["home", "الرئيسية", "i-home"], ["samples", "الخريطة", "i-pin"], ["calc", "الحاسبات", "i-calc"], ["vision", "الصور", "i-camera"]];
-      bb.innerHTML = items.map(([id, l, ic]) => `<a href="#${id}" data-v="${id}">${ico(ic)}<span>${l}</span></a>`).join("") + `<button type="button" id="bb-more">${ico("i-menu")}<span>المزيد</span></button>`;
-      U.$("#bb-more").onclick = openDr;
-    }
-  }
-  function route() {
-    const id = (location.hash || "#home").slice(1).split("=")[0].split("&")[0];
-    const v = NAV.find(n => n.id === id) ? id : "home";
-    if (v === current) return;
-    if (current && ECO.views[current] && ECO.views[current].hide) ECO.views[current].hide();
-    U.$$(".view").forEach(s => s.classList.toggle("active", s.id === "view-" + v));
-    U.$$("[data-v]").forEach(a => a.classList.toggle("active", a.dataset.v === v));
-    const grp = NAV.find(n => n.id === v).group;
-    U.$$("button.nav-btn").forEach(b => b.classList.toggle("active", !!grp && b.querySelector("span").textContent === grp));
-    const mod = ECO.views[v];
-    if (mod) {
-      if (!mod._inited && mod.init) { try { mod.init(); } catch (e) { console.error(e); } mod._inited = true; }
-      if (mod.show) { try { mod.show(); } catch (e) { console.error(e); } }
-    }
-    current = v;
-    document.title = v === "home" ? "EcoBio AI" : `${NAV.find(n => n.id === v).label} · EcoBio AI`;
-    if (window.scrollY > 0) window.scrollTo({ top: 0, behavior: "instant" in window ? "instant" : "auto" });
-  }
-  ECO.go = id => { if (location.hash === "#" + id) route(); else location.hash = id; };
 
   /* ------------------------------------------------------------------
      أزرار وبطاقات ثلاثية الأبعاد: ميلان مع المؤشر + تموّج عند الضغط
   ------------------------------------------------------------------ */
   function init3DButtons() {
     const fine = window.matchMedia && matchMedia("(pointer: fine)").matches && !U.reduced;
-    const SEL = ".btn, .module, .tile3d, .nav-btn, .mega-item, .reading, .station, .calc-card, .study-card";
+    const SEL = ".btn, .tile3d, .reading, .station, .calc-card, .study-card";
     if (fine) {
       document.addEventListener("pointermove", e => {
         const el = e.target.closest && e.target.closest(SEL); if (!el) return;
@@ -630,7 +545,6 @@
   /* الملف التعريفي (اسم المختبر والطالب والمشرف) قابل للتعديل من صفحة التقارير */
   ECO.profile = () => Object.assign({}, ECO.PROJECT, U.store.get("profile", {}));
 
-  ECO.router = { start() { buildNav(); window.addEventListener("hashchange", route); route(); }, current: () => current };
 
   /* حالة البيانات في الشريط العلوي */
   ECO.bus.on("mode", mode => {

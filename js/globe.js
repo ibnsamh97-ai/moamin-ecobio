@@ -230,23 +230,35 @@
     // إذا خالفت أرصاد المطارات تقدير النموذج نضع تنبيهاً على بطاقات الغبار
     const v = ECO.ground ? ECO.ground.verdict(c) : { kind: "none" };
     const doubt = v.kind === "over";
-    box.innerHTML = items.map(it => {
-      const val = c[it.k], tone = U.toneFor(it.k, val), isA = it.k === ECO.AQI_HEAD;
-      const lab = isA && U.isNum(val) ? U.aqiBand(val).label : U.toneLabel[tone];
-      const flag = doubt && it.k !== "nitrogen_dioxide" ? `<span class="lc-doubt">لا يؤكده الرصد الأرضي</span>` : "";
-      return `<div class="live-card${flag ? " is-doubt" : ""}"><div class="k">${it.label}</div><div class="v">${isA ? U.aqiText(val) : U.fmt(val, 1)}<small>${it.unit}</small></div><span class="chip tone-${tone}">${lab}</span>${flag}</div>`;
-    }).join("");
+    const head = `<div class="hl-head"><span>الهواء في تكريت الآن</span><a href="#monitor">كل المحطات<svg aria-hidden="true"><use href="#i-chev"/></svg></a></div>`;
+    if (!c.time) {
+      // لا نعرض أرقاماً بديلة: إما انتظار أول جلب، أو رسالة واضحة عند انقطاع الاتصال
+      box.innerHTML = head + (ECO.state.mode === "offline"
+        ? `<p class="hl-empty">القراءات الحية غير متاحة الآن، ولا تعرض المنصة أرقاماً تقديرية بدلها.</p><button type="button" class="btn btn-sm" onclick="ECO.data.refreshAll()"><svg aria-hidden="true"><use href="#i-refresh"/></svg>إعادة المحاولة</button>`
+        : `<div class="hl-skel" aria-hidden="true"><i></i><i></i><i></i></div><p class="hl-empty">جارٍ جلب القراءات من Copernicus CAMS…</p>`);
+      box.classList.toggle("is-empty", true);
+    } else {
+      const a = items[0], av = c[a.k], at = U.toneFor(a.k, av);
+      const rest = items.slice(1).map(it => {
+        const val = c[it.k], tone = U.toneFor(it.k, val);
+        const flag = doubt && it.k !== "nitrogen_dioxide";
+        return `<div class="hl-stat${flag ? " is-doubt" : ""}"><span class="k">${it.label}</span><b class="num tone-t-${tone}">${U.fmt(val, 1)}</b><small>${it.unit}</small>${flag ? `<em>لا يؤكده الرصد الأرضي</em>` : ""}</div>`;
+      }).join("");
+      box.innerHTML = head + `<div class="hl-main"><b class="num">${U.aqiText(av)}</b><span><span class="chip tone-${at}">${U.isNum(av) ? U.aqiBand(av).label : U.toneLabel[at]}</span><small>مؤشر الهواء الصحي (PM2.5)</small></span></div><div class="hl-row">${rest}</div>`;
+      box.classList.toggle("is-empty", false);
+    }
     const up = U.$("#hero-updated");
-    if (up) up.textContent = c.time ? `تقدير نموذج Copernicus CAMS لساعة ${U.fmtTime(c.time)} بتوقيت بغداد · دقة ≈45 كم · ليس قياس محطة أرضية في تكريت` : (ECO.state.mode === "offline" ? "تعذّر الاتصال بخدمة البيانات الآن؛ ستظهر القراءات الحقيقية عند عودة الاتصال." : "");
+    if (up) up.textContent = c.time ? `تقدير نموذج Copernicus CAMS لساعة ${U.fmtTime(c.time)} بتوقيت بغداد، بدقة نحو 45 كم، وليس قياس محطة أرضية في تكريت.` : "";
     if (ECO.ground) ECO.ground.render();
   }
 
   ECO.bus.on("current", cur => { ECO._lastCurrent = cur; updateStations(cur); renderLive(cur); });
   ECO.bus.on("ground", () => { if (ECO._lastCurrent) renderLive(ECO._lastCurrent); });
+  ECO.bus.on("mode", () => renderLive(ECO._lastCurrent));
 
   ECO.views.home = {
     init() { build(); },
-    show() { if (st) st.start(); if (ECO._lastCurrent) renderLive(ECO._lastCurrent); },
+    show() { if (st) st.start(); renderLive(ECO._lastCurrent); },
     hide() { if (st) st.stop(); }
   };
 })();
