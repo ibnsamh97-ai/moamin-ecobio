@@ -318,7 +318,7 @@
     const box = U.el("div", { style: `position:fixed;left:-99999px;top:0;width:${w}px;height:${h}px` }); box.appendChild(c); document.body.appendChild(box);
     const cfg = chartCfg(p, true); cfg.options.responsive = false; cfg.options.animation = false; cfg.options.devicePixelRatio = 2; cfg.options.maintainAspectRatio = false;
     c.style.width = w + "px"; c.style.height = h + "px";
-    let url = null; try { const ch = new Chart(c, cfg); url = c.toDataURL("image/png"); ch.destroy(); } catch (e) { console.warn(e); }
+    let url = null; try { const ch = new Chart(c, cfg); url = c.toDataURL("image/png"); ch.destroy(); } catch (e) { url = null; /* الرسم غير متاح: يُحذف من التقرير */ }
     box.remove(); return url;
   }
   function renderChart() {

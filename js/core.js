@@ -525,7 +525,7 @@
       document.addEventListener("pointermove", e => {
         const el = e.target.closest && e.target.closest(SEL); if (!el) return;
         const r = el.getBoundingClientRect(), x = (e.clientX - r.left) / r.width - 0.5, y = (e.clientY - r.top) / r.height - 0.5;
-        const k = el.classList.contains("btn") || el.classList.contains("nav-btn") ? 10 : 6;
+        const k = el.classList.contains("btn") ? 5 : 4;
         el.style.setProperty("--ry", (x * k).toFixed(2) + "deg"); el.style.setProperty("--rx", (-y * k).toFixed(2) + "deg");
         el.style.setProperty("--mx", ((x + 0.5) * 100).toFixed(1) + "%"); el.style.setProperty("--my", ((y + 0.5) * 100).toFixed(1) + "%");
       }, { passive: true });
