@@ -135,6 +135,7 @@
   });
 
   const SEDBG = { Pb: [20, 5], Cu: [45, 5], Cd: [0.3, 30], Ni: [68, 5], Zn: [95, 1], Cr: [90, 2], Co: [19, 5], As: [13, 10], Hg: [0.4, 40], Mn: [850, 1] };
+  ECO.SEDBG = SEDBG; ECO.SEDBG_REF = REF.tw;
   const sedRows = st => { const t = ECO.RESEARCH.find(r => r.id === "baiji-2025").tables.find(x => x.id === "sed"); return ["Pb", "Cu", "Cd", "Ni"].map(m => { const row = t.rows.find(r => r[0].startsWith(m)); return [m, String(row[st]), String(SEDBG[m][0]), String(SEDBG[m][1])]; }); };
   C.push({
     id: "sediment", cat: "sed", title: "مؤشرات تلوث الرواسب والتربة", en: "CF · Igeo · EF · PLI · Er · RI",

@@ -121,3 +121,17 @@
 .an-sample { font-size: .82rem; }
 .an-interp { margin-top: 12px; font-size: .9rem; line-height: 1.8; color: #cfe0dc; }
 .an-interp b { color: var(--text); }
+
+.an-paste-box { margin-top: 12px; }
+.an-paste-box .field { margin-top: 10px; }
+.an-paste-box textarea { font-family: var(--f-mono); font-size: .82rem; resize: vertical; min-height: 110px; }
+.an-demo { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 14px; font-size: .88rem; }
+.an-lbl { font-size: var(--fs-xs); color: var(--muted); }
+#an-work { display: grid; gap: 16px; margin-top: 16px; }
+#an-work[hidden] { display: none; }
+.an-h { font-size: 1rem; margin: 18px 0 10px; }
+.an-tbl td, .an-tbl th { white-space: normal; vertical-align: middle; }
+.an-tbl td { line-height: 1.6; }
+.an-tbl small.faint { font-size: .72rem; }
+.an-tbl .link-btn { padding: 0; text-align: start; }
+.an-heat th { font-size: .75rem; max-width: 120px; }

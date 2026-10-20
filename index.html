@@ -1026,6 +1026,69 @@
   <button type="button" class="pl-sticky" id="pl-sticky" data-scroll="#pl-res-h" hidden></button>
 </section>
 
+<!-- ======================= محلّل بيانات البيئة ======================= -->
+<section class="view" id="view-analyzer" data-title="محلّل بيانات البيئة">
+  <div class="wrap">
+    <div class="view-head">
+      <div>
+        <h2>محلّل بيانات البيئة</h2>
+        <p>ارفع جدول نتائج محطاتك من Excel أو CSV، أو الصقه مباشرة، فتحصل على جدول المتوسطات والانحراف المعياري بحروف اختبار دنكن، وتحليل التباين، ومصفوفة الارتباط، والمقارنة بالمواصفات، ومؤشرات التلوث، ورسوم جاهزة للرسالة. الحساب كله يجري في متصفحك ولا تُرفع بياناتك لأي خادم.</p>
+      </div>
+    </div>
+
+    <section class="panel" aria-labelledby="an-in-h">
+      <div class="panel-h"><h3 id="an-in-h"><span class="pl-step">1</span>بياناتك</h3><button type="button" class="btn btn-ghost btn-sm" id="an-template"><svg aria-hidden="true"><use href="#i-down"/></svg>قالب Excel فارغ</button></div>
+      <div class="an-drop" id="an-drop">
+        <svg aria-hidden="true"><use href="#i-upload"/></svg>
+        <b>اسحب ملف Excel أو CSV إلى هنا</b>
+        <p>الصف الأول عناوين الأعمدة، وكل صف بعده قياس واحد: عمود للمحطة (وعمود للفصل أو الشهر إن وُجد) ثم عمود لكل معيار.</p>
+        <div class="row"><button type="button" class="btn btn-primary" id="an-pick"><svg aria-hidden="true"><use href="#i-upload"/></svg>اختر ملفاً</button></div>
+        <input type="file" id="an-file" accept=".xlsx,.csv,.tsv,.txt" hidden>
+      </div>
+      <details class="adv an-paste-box"><summary>أو الصق الجدول من Excel</summary>
+        <div class="field"><label for="an-paste">انسخ الخلايا من Excel (مع صف العناوين) والصقها هنا</label><textarea id="an-paste" class="input" rows="5" dir="auto" spellcheck="false"></textarea></div>
+        <div class="row"><button type="button" class="btn btn-sm" id="an-paste-go">حلّل الجدول الملصوق</button></div>
+      </details>
+      <div class="an-demo">
+        <span class="muted">جرّب ببيانات منشورة من جامعة تكريت:</span>
+        <button type="button" class="btn btn-sm" data-demo="bact">بكتيريا دجلة في تكريت حسب المحطة والفصل</button>
+        <button type="button" class="btn btn-sm" data-demo="baiji">مياه صرف مصافي بيجي</button>
+      </div>
+    </section>
+
+    <div id="an-work" hidden>
+      <section class="panel an-map" aria-labelledby="an-map-h">
+        <div class="panel-h"><h3 id="an-map-h"><span class="pl-step">2</span>ما معنى كل عمود؟</h3><button type="button" class="btn btn-ghost btn-sm" id="an-reset">بيانات جديدة</button></div>
+        <p class="faint pl-src" id="an-src"></p>
+        <div class="param-grid">
+          <div class="field"><label for="an-ga">عمود المجموعات التي تُقارَن (مثل المحطة)</label><select id="an-ga" class="input"></select></div>
+          <div class="field"><label for="an-gb">عامل ثانٍ اختياري (مثل الفصل أو الشهر)</label><select id="an-gb" class="input"></select></div>
+          <div class="field"><span class="an-lbl">نوع العيّنات</span><div class="seg" id="an-kind" role="group" aria-label="نوع العيّنات"><button type="button" data-k="water">مياه</button><button type="button" data-k="sed">تربة / رواسب</button></div></div>
+        </div>
+        <div class="field"><span class="an-lbl">المعايير التي تُحلَّل</span><div class="an-cols" id="an-params"></div></div>
+      </section>
+
+      <section class="panel" aria-labelledby="an-res-h">
+        <div class="panel-h"><h3 id="an-res-h"><span class="pl-step">3</span>النتائج</h3>
+          <div class="an-actions"><button type="button" class="btn btn-sm" id="an-copy"><svg aria-hidden="true"><use href="#i-clip"/></svg>نسخ الجدول لـ Word</button><button type="button" class="btn btn-sm" id="an-xlsx"><svg aria-hidden="true"><use href="#i-table"/></svg>تنزيل Excel</button><button type="button" class="btn btn-bio btn-sm" id="an-pdf"><svg aria-hidden="true"><use href="#i-file"/></svg>تقرير PDF</button></div>
+        </div>
+        <div class="an-tabs" id="an-tabs" role="tablist" aria-label="أقسام النتائج">
+          <button type="button" role="tab" data-tab="table" aria-selected="true" aria-controls="an-p-table">جدول للنشر</button>
+          <button type="button" role="tab" data-tab="anova" aria-selected="false" aria-controls="an-p-anova">تحليل التباين ودنكن</button>
+          <button type="button" role="tab" data-tab="corr" aria-selected="false" aria-controls="an-p-corr">الارتباط</button>
+          <button type="button" role="tab" data-tab="std" aria-selected="false" aria-controls="an-p-std">المواصفات والمؤشرات</button>
+          <button type="button" role="tab" data-tab="chart" aria-selected="false" aria-controls="an-p-chart">الرسم</button>
+        </div>
+        <div class="an-panel" id="an-p-table" role="tabpanel"></div>
+        <div class="an-panel" id="an-p-anova" role="tabpanel" hidden></div>
+        <div class="an-panel" id="an-p-corr" role="tabpanel" hidden></div>
+        <div class="an-panel" id="an-p-std" role="tabpanel" hidden></div>
+        <div class="an-panel" id="an-p-chart" role="tabpanel" hidden></div>
+      </section>
+    </div>
+  </div>
+</section>
+
 <!-- ======================= عن المشروع ======================= -->
 <section class="view" id="view-about" data-title="عن المشروع">
   <div class="wrap">
@@ -1137,6 +1200,9 @@
 <script src="js/research.js"></script>
 <script src="js/calc.js"></script>
 <script src="js/plant.js"></script>
+<script src="js/stats.js"></script>
+<script src="js/xlsx-lite.js"></script>
+<script src="js/analyzer.js"></script>
 <script src="js/vision.js"></script>
 <script src="js/app.js"></script>
 <!--/ECO:JS-->

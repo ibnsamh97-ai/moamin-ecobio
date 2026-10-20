@@ -79,6 +79,7 @@
     if (!rows.length) return null;
     return { hpi: rows.reduce((s, r) => s + r.W * r.Q, 0) / rows.reduce((s, r) => s + r.W, 0), rows };
   }
+  ECO.waterIndex = { wqi: v => computeWQI(v), hpi: v => computeHPI(v), wqiClass: w => wqiClass(w) };
   const wqiClass = w => w <= 25 ? ["ممتازة", "good"] : w <= 50 ? ["جيدة", "good"] : w <= 75 ? ["رديئة", "warn"] : w <= 100 ? ["رديئة جداً", "bad"] : ["غير صالحة للشرب", "severe"];
 
   function calc() {

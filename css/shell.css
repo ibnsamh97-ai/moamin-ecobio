@@ -27,8 +27,8 @@ body { font-size: 16px; }
 .link-btn svg { width: 16px; height: 16px; }
 .link-btn:hover { text-decoration: underline; }
 kbd { font-family: var(--f-mono); font-size: .72rem; line-height: 1; padding: 3px 6px; border-radius: 6px; border: 1px solid var(--line-2); background: var(--ink-0); color: var(--muted); }
-.skip { position: fixed; top: 8px; right: 8px; z-index: 90; padding: 10px 16px; border-radius: 10px; background: var(--river); color: #03222a; font-weight: 600; transform: translateY(-160%); transition: transform var(--t-fast) var(--ease); }
-.skip:focus-visible { transform: none; outline-offset: 3px; }
+.skip { position: fixed; top: 8px; right: 8px; z-index: 90; padding: 10px 16px; border-radius: 10px; background: var(--river); color: #03222a; font-weight: 600; transform: translateY(-300%); opacity: 0; transition: transform var(--t-fast) var(--ease), opacity var(--t-fast) var(--ease); }
+.skip:focus { transform: none; opacity: 1; outline-offset: 3px; }
 
 /* ---------- الشريط العلوي ---------- */
 .topbar-in { gap: 12px; }
