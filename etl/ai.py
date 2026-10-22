@@ -280,3 +280,113 @@ def relationships(con, districts, log):
     con.commit()
     log.write("ai.relationships", "ok", n, 0, "سبيرمان شهري")
     return n
+
+
+# ---------------------------------------------------------------------------
+# 5) أحداث الغبار: احتمال أن يُرصد غبار فعلاً، متعلَّم من أرصاد المطارات
+# ---------------------------------------------------------------------------
+DUST_F = ["log_cams_dust", "log_cams_pm10", "wind_max", "rh_mean", "t_max", "doy_sin", "doy_cos", "obs_lag1", "log_cams_dust_lag1"]
+
+
+def _dust_frame(df):
+    """df: date, cams_dust, cams_pm10, wind_max, rh_mean, t_max, obs (0/1/NaN) مرتبة زمنياً لموقع واحد."""
+    df = df.sort_values("date").copy()
+    for c in ("cams_dust", "cams_pm10", "wind_max", "rh_mean", "t_max", "obs"):
+        df[c] = pd.to_numeric(df[c], errors="coerce").astype(float)
+    doy = df["date"].dt.dayofyear
+    df["doy_sin"] = np.sin(2 * np.pi * doy / 365.25); df["doy_cos"] = np.cos(2 * np.pi * doy / 365.25)
+    df["log_cams_dust"] = np.log1p(df["cams_dust"]); df["log_cams_pm10"] = np.log1p(df["cams_pm10"])
+    df["obs_lag1"] = df["obs"].shift(1); df["log_cams_dust_lag1"] = df["log_cams_dust"].shift(1)
+    return df
+
+
+def _scores(y, p, thr):
+    from sklearn.metrics import brier_score_loss, roc_auc_score
+    yh = p >= thr
+    hit = int((yh & (y == 1)).sum()); fa = int((yh & (y == 0)).sum()); miss = int((~yh & (y == 1)).sum())
+    return {"pod": round(hit / max(1, hit + miss), 3), "far": round(fa / max(1, hit + fa), 3), "csi": round(hit / max(1, hit + miss + fa), 3),
+            "auc": round(float(roc_auc_score(y, p)), 3) if 0 < y.sum() < len(y) else None, "brier": round(float(brier_score_loss(y, np.clip(p, 0, 1))), 4)}
+
+
+def dust_events(con, D, run_at, today: dt.date):
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.pipeline import make_pipeline
+    from sklearn.preprocessing import StandardScaler
+    st = pd.read_sql_query("""SELECT station_id, date, n_hours, dust_hours, cams_dust, cams_pm10, era5_wind_max AS wind_max, era5_rh_mean AS rh_mean, era5_t_max AS t_max
+                              FROM station_daily s JOIN stations x ON x.id = s.station_id
+                              WHERE x.kind = 'current' AND cams_dust IS NOT NULL AND era5_wind_max IS NOT NULL ORDER BY station_id, date""", con, parse_dates=["date"])
+    if st.empty:
+        return 0
+    st["obs"] = np.where(st["n_hours"] >= 12, (st["dust_hours"] > 0).astype(float), np.nan)
+    frames = [_dust_frame(g) for _, g in st.groupby("station_id")]
+    data = pd.concat(frames).dropna(subset=DUST_F + ["obs"])
+    cut = data["date"].max() - pd.Timedelta(days=365)
+    tr, te = data[data["date"] <= cut], data[data["date"] > cut]
+    if len(tr) < 300 or te["obs"].sum() < 10:
+        return 0
+    model = make_pipeline(StandardScaler(), LogisticRegression(max_iter=2000, C=0.5))
+    model.fit(tr[DUST_F], tr["obs"])
+    p = model.predict_proba(te[DUST_F])[:, 1]
+    # العتبة: الأفضل في مؤشر CSI على بيانات التدريب (لا الاختبار) حتى لا نغش
+    ptr = model.predict_proba(tr[DUST_F])[:, 1]
+    thr = max(np.arange(0.1, 0.71, 0.05), key=lambda t: _scores(tr["obs"].values, ptr, t)["csi"])
+    y = te["obs"].values
+    rows = [{"model": "logistic", "threshold": round(float(thr), 2), **_scores(y, p, thr)},
+            {"model": "cams_100", "threshold": 100, **_scores(y, te["cams_dust"].values, 100)},
+            {"model": "persistence", "threshold": 1, **_scores(y, te["obs_lag1"].values, 1)},
+            {"model": "climatology", "threshold": None, "pod": None, "far": None, "csi": None, "auc": 0.5,
+             "brier": round(float(np.mean((y - tr["obs"].mean()) ** 2)), 4)}]
+    # تقييم CAMS بالاحتمال: الترتيب فقط (AUC) لأن قيمه ليست احتمالات
+    con.execute("DELETE FROM dust_eval")
+    for r in rows:
+        con.execute("""INSERT INTO dust_eval(model, run_at, test_from, test_to, n_train, n_test, n_events, threshold, pod, far, csi, auc, brier)
+                       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                    (r["model"], run_at, te["date"].min().date().isoformat(), te["date"].max().date().isoformat(), len(tr), len(te), int(y.sum()),
+                     r["threshold"], r["pod"], r["far"], r["csi"], r["auc"], r["brier"]))
+    # النموذج النهائي على كل البيانات
+    model.fit(data[DUST_F], data["obs"])
+    coef = model.named_steps["logisticregression"].coef_[0]
+    con.execute("DELETE FROM dust_coef")
+    con.executemany("INSERT INTO dust_coef VALUES (?,?)", [(f, round(float(c), 4)) for f, c in zip(DUST_F, coef)])
+
+    # تطبيقه على الأقضية: آخر 400 يوم + اليومان القادمان من توقعات CAMS والطقس
+    out = []
+    since = (today - dt.timedelta(days=400)).isoformat()
+    for d in D:
+        sid = con.execute("SELECT station_id FROM district_stations WHERE district_id = ? AND role = 'now'", (d["id"],)).fetchone()
+        sid = sid[0] if sid else None
+        df = pd.read_sql_query("""SELECT a.date, a.dust AS cams_dust, a.pm10 AS cams_pm10, w.wind_max, w.rh_mean, w.t_max
+                                  FROM air_daily a LEFT JOIN weather_daily w ON w.district_id = a.district_id AND w.date = a.date
+                                  WHERE a.district_id = ? AND a.date >= ? ORDER BY a.date""", con, params=(d["id"], since), parse_dates=["date"])
+        fc = pd.read_sql_query("""SELECT f.for_date AS date, MAX(CASE WHEN f.target='dust' THEN f.value END) AS cams_dust, MAX(CASE WHEN f.target='pm10' THEN f.value END) AS cams_pm10,
+                                         w.wind_max, w.rh_mean, w.t_max
+                                  FROM forecasts f LEFT JOIN weather_daily w ON w.district_id = f.district_id AND w.date = f.for_date
+                                  WHERE f.district_id = ? AND f.model = 'cams' AND f.target IN ('dust','pm10') AND f.for_date > ? GROUP BY f.for_date ORDER BY f.for_date""",
+                               con, params=(d["id"], df["date"].max().date().isoformat() if not df.empty else "0000"), parse_dates=["date"])
+        fc["kind"] = "forecast"; df["kind"] = "past"
+        df = pd.concat([x for x in (df, fc) if not x.empty], ignore_index=True) if not (df.empty and fc.empty) else df
+        if df.empty:
+            continue
+        obs = {}
+        if sid:
+            for date, n, dh in con.execute("SELECT date, n_hours, dust_hours FROM station_daily WHERE station_id = ? AND date >= ?", (sid, since)):
+                if n is not None and n >= 12:
+                    obs[date] = 1.0 if (dh or 0) > 0 else 0.0
+        df["obs"] = df["date"].dt.strftime("%Y-%m-%d").map(obs)
+        df = _dust_frame(df)
+        # يوم بلا رصد سابق معروف: نعوّض الاحتمال المتوقّع لليوم السابق (يحدث لليوم الثاني من التوقع)
+        prev = None
+        for i, r in df.iterrows():
+            x = r[DUST_F].copy()
+            if pd.isna(x["obs_lag1"]):
+                x["obs_lag1"] = prev if prev is not None else float(np.nanmean(list(obs.values()))) if obs else 0.1
+            if x.drop("obs_lag1").isna().any():
+                prev = None; continue
+            pr = float(model.predict_proba(pd.DataFrame([x.values], columns=DUST_F))[:, 1][0])
+            prev = pr
+            out.append((d["id"], r["date"].date().isoformat(), round(pr, 3), r["kind"], None if pd.isna(r["cams_dust"]) else round(float(r["cams_dust"]), 1),
+                        None if pd.isna(r["obs"]) else int(r["obs"]), run_at))
+    con.execute("DELETE FROM dust_prob")
+    con.executemany("INSERT OR REPLACE INTO dust_prob VALUES (?,?,?,?,?,?,?)", out)
+    con.commit()
+    return len(out)

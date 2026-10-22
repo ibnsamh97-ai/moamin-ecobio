@@ -338,3 +338,6 @@
 .db-st-list li { display: grid; gap: 2px; padding: 10px 0; border-bottom: 1px solid var(--line); }
 .db-st-list li span { font-size: var(--fs-sm); color: var(--muted); }
 .db-live { font-style: normal; color: var(--chloro); }
+.db-health { margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--line-2); }
+.db-health h5 { margin: 0 0 6px; font-size: var(--fs-sm); color: var(--silt); }
+.db-health .bad { color: var(--crimson); } .db-health .ok { color: var(--chloro); }

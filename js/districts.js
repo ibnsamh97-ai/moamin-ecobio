@@ -183,6 +183,7 @@
     S.P = {}; q("SELECT * FROM parameters").forEach(p => { S.P[p.code] = p; });
     S.D = q("SELECT * FROM districts ORDER BY ord");
     S.ground = hasT("station_daily") && !!q1("SELECT 1 x FROM station_daily LIMIT 1");
+    S.dustM = hasT("dust_prob") && !!q1("SELECT 1 x FROM dust_prob LIMIT 1");
     if (S.ground) {   // الحرارة بعد تصحيح خطأ ERA5 بالقياس الأرضي
       S.P.t_max_adj = { code: "t_max_adj", name_ar: "أعلى درجة حرارة (مصححة بالقياس)", unit: "°C", category: "weather" };
       S.P.t_min_adj = { code: "t_min_adj", name_ar: "أدنى درجة حرارة (مصححة بالقياس)", unit: "°C", category: "weather" };
@@ -292,6 +293,7 @@
     /* هل أكّد الرصد الأرضي غبار ذلك اليوم؟ */
     const gd = S.ground && air ? q1(`SELECT s.name_ar, x.dust_hours, x.haze_hours, x.vis_min FROM district_stations ds JOIN stations s ON s.id = ds.station_id
       JOIN station_daily x ON x.station_id = s.id AND x.date = ? WHERE ds.district_id = ? AND ds.role = 'now'`, [air.date, d.id]) : null;
+    const dp = S.dustM ? q1("SELECT * FROM dust_prob WHERE district_id = ? AND date >= ? ORDER BY date LIMIT 1", [d.id, today()]) || q1("SELECT * FROM dust_prob WHERE district_id = ? ORDER BY date DESC LIMIT 1", [d.id]) : null;
     const camsHigh = air && ((U.isNum(air.dust) && air.dust >= 100) || (U.isNum(air.pm2_5) && air.pm2_5 >= 75));
     const unconfirmed = camsHigh && gd && gd.dust_hours === 0 && U.isNum(gd.vis_min) && gd.vis_min >= 8;
 
@@ -302,6 +304,8 @@
       air ? kpi("PM2.5 آخر يوم مكتمل", `${N(air.pm2_5, 1)}<small>µg/m³</small>`, `تقدير نموذج CAMS${unconfirmed ? " (لم يؤكده الرصد الأرضي)" : gd && gd.dust_hours > 0 ? " · الرصد الأرضي أكّد غباراً" : ""} · ${fD(air.date)} · ${ratio >= 1 ? `${N(ratio, 1)} ضعف حد الصحة العالمية` : "ضمن حد الصحة العالمية (15)"}`, tone(air.pm2_5, 15)) : kpi("PM2.5", "—", "لا بيانات"),
       gn ? kpi("مقاس فعلاً · آخر رصد", `${N(gn.t, 0)}<small>°C</small>`, `${esc(gn.name_ar)} على بعد ${N(gn.dist_km, 0)} كم · ${esc(gn.ago)}${gn.wxText ? " · " + esc(gn.wxText) : gn.vis != null ? " · رؤية " + esc(visKm(gn.vis)) : ""}`, gn.dust ? "warn" : "info",
         `<button type="button" class="linkbtn db-kpi-go" data-tab-go="ground">التفاصيل والمقارنة</button>`) : "",
+      dp ? kpi(`احتمال غبار فعلي · ${fD(dp.date)}`, `${N(100 * dp.prob, 0)}<small>%</small>`, `نموذجنا المتعلَّم من الرصد الأرضي${U.isNum(dp.cams_dust) ? ` · CAMS يقدّر ${N(dp.cams_dust, 0)} µg/m³` : ""}`, dustTone(dp.prob),
+        `<button type="button" class="linkbtn db-kpi-go" data-tab-go="ground">كيف نحسبه ودقته</button>`) : "",
       f1 && f1.best ? kpi(`توقّع ${fD(fDates[0])}`, `${N(f1.best.value, 1)}<small>µg/m³</small>`, `${esc(MODEL[f1.best.model] || f1.best.model)} · المدى المرجّح ${N(f1.best.lo, 0)}–${N(f1.best.hi, 0)}${f1.cams ? ` · CAMS: ${N(f1.cams.value, 1)}` : ""}`, tone(f1.best.value, 15))
         : f1 && f1.cams ? kpi(`توقّع ${fD(fDates[0])}`, `${N(f1.cams.value, 1)}<small>µg/m³</small>`, "توقّع CAMS (نموذجنا لم يُدرَّب بعد)", tone(f1.cams.value, 15)) : kpi("توقّع الغد", "—", "لا توقّع بعد"),
       y && y.n ? kpi("أيام فوق حد الصحة العالمية", `${N(100 * y.o / y.n, 0)}<small>%</small>`, `${N(y.o, 0)} يوماً من آخر ${N(y.n, 0)} يوماً تجاوز فيها PM2.5 الحد 15`, y.o / y.n > 0.5 ? "bad" : y.o / y.n > 0.2 ? "warn" : "fair") : kpi("أيام فوق الحد", "—", ""),
@@ -313,6 +317,7 @@
     // الخلاصة بلغة بسيطة
     const say = [];
     if (unconfirmed) say.push(`<b>تنبيه:</b> نموذج CAMS يقدّر غباراً وجسيمات عالية في ${fD(air.date)}، لكن محطة ${esc(gd.name_ar)} لم ترصد أي غبار ذلك اليوم وكانت الرؤية ${N(gd.vis_min, 0)} كم فأكثر، فالرقم على الأرجح مبالغ فيه. قياساتنا تبيّن أن CAMS يقدّر غباراً في كثير من الأيام التي لا يُرصد فيها غبار فعلاً.`);
+    if (dp) say.push(`احتمال أن يُرصد غبار فعلاً في ${fD(dp.date)}: ${N(100 * dp.prob, 0)}% (${dustWord(dp.prob)}) حسب نموذجنا المتعلَّم من أرصاد المطارات.`);
     if (air) say.push(`في آخر يوم مكتمل (${fD(air.date)}) كان متوسط الجسيمات الدقيقة PM2.5 في ${esc(d.name_ar)} ${NU(air.pm2_5, 1, "µg/m³")}${ratio >= 1 ? `، أي ${N(ratio, 1)} ضعف حد منظمة الصحة العالمية` : "، ضمن حد منظمة الصحة العالمية"}${U.isNum(air.dust) && air.dust > 100 ? `، مع غبار مرتفع (${NU(air.dust, 0, "µg/m³")})` : ""}.`);
     if (y && y.n) say.push(`خلال آخر سنة تجاوز PM2.5 الحد في ${N(100 * y.o / y.n, 0)}% من الأيام، وبلغ أعلاه ${NU(y.mx, 0, "µg/m³")}.`);
     if (f1 && f1.best) say.push(`يتوقّع نموذج ${esc(MODEL[f1.best.model] || f1.best.model)} ليوم ${fD(fDates[0])} قيمة ${N(f1.best.value, 0)} (بين ${N(f1.best.lo, 0)} و${N(f1.best.hi, 0)})${f1.cams ? `، ويتوقّع CAMS ${N(f1.cams.value, 0)}` : ""}.`);
@@ -416,6 +421,8 @@
   /* ------------------------------------------------------------------
      1ب) المقاس فعلاً: أرصاد المطارات الحقيقية مقابل النماذج
   ------------------------------------------------------------------ */
+  const dustWord = p => p >= 0.4 ? "مرجّح جداً" : p >= 0.2 ? "مرجّح" : p >= 0.1 ? "ممكن" : "ضعيف";
+  const dustTone = p => p >= 0.4 ? "bad" : p >= 0.2 ? "warn" : p >= 0.1 ? "fair" : "good";
   const visKm = v => !U.isNum(v) ? "—" : v >= 10 ? "10 كم فأكثر" : `${U.fmt(v, v < 1 ? 1 : 0)} كم`;
   const SNAME = id => (q1("SELECT name_ar FROM stations WHERE id = ?", [id]) || {}).name_ar || id;
   function agoText(ms) {
@@ -457,6 +464,7 @@
       <div class="panel"><div class="panel-h"><h3 id="db-g-st-h"></h3><span class="sub">نفس المكان ونفس الأيام · °C</span></div><div class="chart-box"><canvas id="db-g-st"></canvas></div><p class="db-cap" id="db-g-st-cap"></p></div>
       <div class="grid g-2 db-g2">
         <div class="panel"><div class="panel-h"><h3 id="db-g-bias-h"></h3><span class="sub">المقاس − النموذج · °C</span></div><div class="chart-box sm"><canvas id="db-g-bias"></canvas></div><p class="db-cap" id="db-g-bias-cap"></p></div>
+        <div class="panel" id="db-g-dm"></div>
         <div class="panel"><div class="panel-h"><h3 id="db-g-dust-h"></h3><span class="sub">أيام في الشهر</span></div><div class="chart-box sm"><canvas id="db-g-dust"></canvas></div><p class="db-cap" id="db-g-dust-cap"></p></div>
       </div>
       <div class="panel"><div class="panel-h"><h3>محطات القياس المستعملة</h3><span class="sub">أرشيف Iowa Environmental Mesonet لتقارير METAR</span></div><div id="db-g-list"></div></div>`;
@@ -526,6 +534,24 @@
         const T = q1("SELECT SUM(dust_hours > 0) obs, SUM(dust_hours > 0 AND cams_dust >= 100) hit, SUM(cams_dust >= 100) cams, SUM(cams_dust >= 100 AND dust_hours = 0) fa, COUNT(*) n FROM station_daily WHERE station_id = ? AND cams_dust IS NOT NULL AND dust_hours IS NOT NULL", [now.id]);
         U.$("#db-g-dust-cap").innerHTML = T && T.obs ? `منذ آب 2022: رصدت المحطة غباراً أو رمالاً في ${N(T.obs, 0)} يوماً من ${N(T.n, 0)}. قدّر النموذج غباراً عالياً في ${N(100 * T.hit / T.obs, 0)}% من هذه الأيام، وقدّره في ${N(T.fa, 0)} يوماً لم يُرصد فيها غبار. هذا يبيّن لماذا نعامل أرقام غبار CAMS كتقدير لا كقياس.` : "";
       }
+    }
+
+    // 5ب) نموذجنا للغبار مقابل CAMS
+    if (S.dustM) {
+      const E = {}; q("SELECT * FROM dust_eval").forEach(r => { E[r.model] = r; });
+      const P = q("SELECT date, prob, cams_dust, obs_dust, kind FROM dust_prob WHERE district_id = ? ORDER BY date DESC LIMIT 120", [d.id]).reverse();
+      const L = E.logistic, C = E.cams_100, Pe = E.persistence;
+      const row = (name, r) => r ? `<tr><td>${name}</td><td class="num">${U.fmt(100 * r.pod, 0)}%</td><td class="num">${U.fmt(100 * r.far, 0)}%</td><td class="num"><b>${U.fmt(r.csi, 2)}</b></td><td class="num">${U.fmt(r.auc, 2)}</td></tr>` : "";
+      U.$("#db-g-dm").innerHTML = `<div class="panel-h"><h3>احتمال الغبار الفعلي في ${esc(d.name_ar)}</h3><span class="sub">انحدار لوجستي متعلَّم من أيام الغبار المرصودة في المطارات</span></div>
+        <div class="chart-box sm"><canvas id="db-g-dm-c"></canvas></div>
+        ${L ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>الطريقة</th><th class="num">كشف</th><th class="num">إنذار كاذب</th><th class="num">CSI</th><th class="num">AUC</th></tr></thead><tbody>
+          ${row("نموذجنا", L)}${row("CAMS (غبار ≥ 100)", C)}${row("اليوم مثل أمس", Pe)}</tbody></table></div>
+        <p class="db-cap">اختُبر على سنة لم يرها النموذج (${fD(L.test_from)} ← ${fD(L.test_to)}، ${N(L.n_test, 0)} يوماً فيها ${N(L.n_events, 0)} يوم غبار مرصود في بغداد وأربيل وكركوك). CSI مؤشر النجاح: 1 مثالي و0 فاشل. «كشف» = نسبة أيام الغبار الحقيقية التي نبّه عليها، و«إنذار كاذب» = نسبة تنبيهاته التي لم يُرصد فيها غبار. التوقع ليوم واحد صعب في كل العالم، والرقم المهم أن نموذجنا ${L.csi > (C ? C.csi : 0) ? `أدق من CAMS بنحو ${N(L.csi / Math.max(0.01, C.csi), 1)} مرة` : "لم يتفوق على CAMS بعد"}. يُطبَّق على ${esc(d.name_ar)} بقيم CAMS والطقس عند القضاء وبرصد أقرب محطة لليوم السابق.</p>` : ""}`;
+      if (P.length) chart("ground", U.$("#db-g-dm-c"), { type: "line", data: { labels: P.map(r => r.date), datasets: [
+        { label: "احتمال الغبار (نموذجنا) %", data: P.map(r => 100 * r.prob), borderColor: ECO.COL.silt, backgroundColor: "rgba(230,174,79,.15)", fill: true, borderWidth: 1.6, pointRadius: P.map(r => r.kind === "forecast" ? 4 : 0), yAxisID: "y" },
+        { type: "bar", label: "رُصد غبار فعلاً في أقرب محطة", data: P.map(r => r.obs_dust === 1 ? 100 : null), backgroundColor: "rgba(239,90,100,.55)", barPercentage: 1, categoryPercentage: 1, yAxisID: "y" },
+        { label: "غبار CAMS µg/m³", data: P.map(r => r.cams_dust), borderColor: "rgba(79,200,220,.6)", borderWidth: 1, pointRadius: 0, yAxisID: "y2" }] },
+        options: { interaction: { mode: "index", intersect: false }, scales: { x: { ticks: xTicks }, y: { position: "right", min: 0, max: 100, title: { display: true, text: "%" } }, y2: { position: "left", grid: { display: false }, beginAtZero: true } } } });
     }
 
     // 6) قائمة المحطات
@@ -782,6 +808,29 @@
   /* ------------------------------------------------------------------
      5) البحوث ومصادر التلوث
   ------------------------------------------------------------------ */
+  /* المخاطر الصحية لشرب الماء من القيم المنشورة (US EPA: HQ = CDI / RfD) */
+  const RFD = { Pb: [0.0035, "WHO PTWI 25 µg/kg/أسبوع"], Cd: [0.0005, "US EPA IRIS"], Cr: [0.003, "US EPA IRIS (Cr VI)"], Ni: [0.02, "US EPA IRIS"], Cu: [0.04, "US EPA HEAST"], Zn: [0.3, "US EPA IRIS"], Fe: [0.7, "US EPA PPRTV"], As: [0.0003, "US EPA IRIS"] };
+  const METAL = [[/الرصاص|\bPb\b/, "Pb", "الرصاص"], [/الكادميوم|\bCd\b/, "Cd", "الكادميوم"], [/الكروم|\bCr\b/, "Cr", "الكروم"], [/النيكل|\bNi\b/, "Ni", "النيكل"], [/النحاس|\bCu\b/, "Cu", "النحاس"], [/الزنك|\bZn\b/, "Zn", "الزنك"], [/الحديد|\bFe\b/, "Fe", "الحديد"], [/الزرنيخ|\bAs\b/, "As", "الزرنيخ"]];
+  function healthBlock(s) {
+    if (!/مياه\s*(آبار|نهر|شرب)/.test(s.medium || "") || /صرف/.test(s.medium || "")) return "";
+    const M = {};
+    q("SELECT item, value, unit FROM study_values WHERE study_id = ?", [s.id]).forEach(v => {
+      if (/–|أوراق|جذور|سيقان|رواسب|تربة/.test(v.item) || !U.isNum(v.value)) return;
+      if (v.unit && !/mg\/L|ppm|ملغم\/لتر/i.test(v.unit) && !/\((ppm|mg\/L)\)/i.test(v.item)) return;
+      const m = METAL.find(([re]) => re.test(v.item)); if (!m) return;
+      (M[m[1]] = M[m[1]] || { name: m[2], v: [] }).v.push(v.value);
+    });
+    const ks = Object.keys(M); if (!ks.length) return "";
+    const hq = (c, ir, bw, k) => c * ir / (bw * RFD[k][0]);
+    let HIa = 0, HIc = 0;
+    const rows = ks.map(k => { const c = Math.max(...M[k].v), a = hq(c, 2, 70, k), ch = hq(c, 1, 15, k); HIa += a; HIc += ch;
+      return `<tr><td>${esc(M[k].name)} <small class="muted">${k}</small></td><td class="num">${U.fmt(c, "auto")}</td><td class="num"><b class="${a >= 1 ? "bad" : "ok"}">${U.fmt(a, 2)}</b></td><td class="num"><b class="${ch >= 1 ? "bad" : "ok"}">${U.fmt(ch, 2)}</b></td><td><small>${esc(RFD[k][1])}</small></td></tr>`; }).join("");
+    return `<div class="db-health"><h5>المخاطر الصحية لو شُرب هذا الماء يومياً</h5>
+      <div class="tbl-wrap"><table class="tbl"><thead><tr><th>العنصر</th><th class="num">أعلى تركيز mg/L</th><th class="num">HQ بالغ</th><th class="num">HQ طفل</th><th>مرجع RfD</th></tr></thead><tbody>${rows}</tbody>
+      <tfoot><tr><td colspan="2"><b>مؤشر الخطورة HI</b></td><td class="num"><b class="${HIa >= 1 ? "bad" : "ok"}">${U.fmt(HIa, 2)}</b></td><td class="num"><b class="${HIc >= 1 ? "bad" : "ok"}">${U.fmt(HIc, 2)}</b></td><td></td></tr></tfoot></table></div>
+      <p class="db-cap">محسوب بنموذج US EPA لمياه الشرب: بالغ يشرب 2 لتر يومياً ووزنه 70 كغم، وطفل يشرب لتراً ووزنه 15 كغم، على أعلى تركيز منشور في البحث (أسوأ حالة). HQ أكبر من 1 يعني احتمال أثر صحي مزمن مع الشرب المستمر. ${HIc >= 1 ? "<b>النتيجة: هذا الماء غير آمن للشرب المستمر، خصوصاً للأطفال، بحسب القيم المنشورة.</b>" : ""} لحساب عيّنتك أنت استعمل <a href="#calc">حاسبة المخاطر الصحية</a>.</p></div>`;
+  }
+
   function studyCard(s) {
     const vals = q("SELECT table_id, item, col, stat, value, unit, note FROM study_values WHERE study_id = ? ORDER BY id", [s.id]);
     const nAll = q1("SELECT COUNT(*) n FROM study_values WHERE study_id = ?", [s.id]).n;
@@ -793,7 +842,7 @@
         ${s.doi ? `<a href="https://doi.org/${encodeURI(s.doi)}" target="_blank" rel="noopener">${ico("i-ext")}DOI</a>` : s.url ? `<a href="${esc(s.url)}" target="_blank" rel="noopener">${ico("i-ext")}رابط البحث</a>` : ""}</p>
       ${vals.length ? `<details><summary>القيم المنشورة في القاعدة (${N(nAll, 0)})</summary><div class="tbl-wrap"><table class="tbl"><thead><tr><th>المعيار أو الصف</th><th>العمود</th><th>النوع</th><th class="num">القيمة</th><th>الوحدة</th></tr></thead><tbody>${vals.map(v =>
         `<tr><td>${esc(v.item)}</td><td>${esc(v.col || "—")}</td><td>${ST[v.stat] || esc(v.stat)}</td><td class="num">${U.fmt(v.value, "auto")}</td><td><bdi>${esc(v.unit || "")}</bdi></td></tr>`).join("")}</tbody></table></div>
-</details>` : ""}</article>`;
+</details>` : ""}${healthBlock(s)}</article>`;
   }
   function rStudies(el) {
     const d = dist();
@@ -868,7 +917,7 @@
       if (!S.db) return null;
       const d = S.D.find(x => x.id === id); if (!d) return null;
       const air = q1("SELECT date, pm2_5, dust FROM air_daily WHERE district_id = ? ORDER BY date DESC LIMIT 1", [id]);
-      const fc = air ? q1("SELECT for_date, value, lo, hi, model FROM forecasts WHERE district_id = ? AND model != 'cams' AND for_date > ? ORDER BY for_date LIMIT 1", [id, air.date]) : null;
+      const fc = air ? q1("SELECT for_date, value, lo, hi, model FROM forecasts WHERE district_id = ? AND target = 'pm2_5' AND model != 'cams' AND for_date > ? ORDER BY for_date LIMIT 1", [id, air.date]) : null;
       return { district: d, air, forecast: fc };
     }
   };

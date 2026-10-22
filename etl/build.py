@@ -124,8 +124,8 @@ def main():
                 st.rows = upsert(con, "air_daily", rows); st.msg = f"{s} → {yesterday}"
             with log.step(f"air.cams_forecast.{d['id']}") as st:
                 fc = om.cams_forecast(d)
-                rows = [{"district_id": d["id"], "target": "pm2_5", "for_date": day, "model": "cams", "value": v, "lo": None, "hi": None, "run_at": run_at}
-                        for day, v in fc.items() if day >= T.isoformat()]
+                rows = [{"district_id": d["id"], "target": tg, "for_date": day, "model": "cams", "value": v.get(tg), "lo": None, "hi": None, "run_at": run_at}
+                        for day, v in fc.items() if day >= T.isoformat() for tg in ("pm2_5", "dust", "pm10") if v.get(tg) is not None]
                 con.execute("DELETE FROM forecasts WHERE district_id=? AND model='cams' AND for_date < ?", (d["id"], (T - dt.timedelta(days=60)).isoformat()))
                 st.rows = upsert(con, "forecasts", rows)
 
@@ -197,6 +197,8 @@ def main():
             ai.regimes(con, log)
         with log.step("ai.relationships_wrap"):
             ai.relationships(con, D, log)
+        with log.step("ai.dust_events") as st:
+            st.rows = ai.dust_events(con, D, run_at, T)
 
     # 9) الملخص والضغط
     counts = {t: con.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0] for t in

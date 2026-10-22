@@ -63,14 +63,15 @@ def air_daily(d: dict, start: dt.date, end: dt.date):
 
 
 def cams_forecast(d: dict):
-    """توقع CAMS نفسه لمتوسط PM2.5 للغد (للمقارنة مع نموذجنا)."""
+    """توقع CAMS نفسه لمتوسطات الأيام القادمة: PM2.5 (للمقارنة مع نموذجنا) والغبار وPM10 (مدخلات نموذج الغبار)."""
     r = http_json("https://air-quality-api.open-meteo.com/v1/air-quality", {
-        "latitude": d["lat"], "longitude": d["lon"], "hourly": "pm2_5", "timezone": TZ, "forecast_days": 3, "past_days": 0, "domains": "cams_global"})
+        "latitude": d["lat"], "longitude": d["lon"], "hourly": "pm2_5,dust,pm10", "timezone": TZ, "forecast_days": 3, "past_days": 0, "domains": "cams_global"})
     h = r.get("hourly", {})
-    by = defaultdict(list)
-    for t, v in zip(h.get("time", []), h.get("pm2_5", [])):
-        by[t[:10]].append(v)
-    return {day: _mean(v) for day, v in by.items() if sum(1 for x in v if x is not None) >= 18}
+    by = defaultdict(lambda: defaultdict(list))
+    for i, t in enumerate(h.get("time", [])):
+        for k in ("pm2_5", "dust", "pm10"):
+            by[t[:10]][k].append((h.get(k) or [None] * (i + 1))[i])
+    return {day: {k: _mean(v[k]) for k in v} for day, v in by.items() if sum(1 for x in v["pm2_5"] if x is not None) >= 18}
 
 
 def _weather(url: str, d: dict, params: dict, src: str):

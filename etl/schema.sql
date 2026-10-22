@@ -269,6 +269,35 @@ CREATE TABLE IF NOT EXISTS district_stations (
   PRIMARY KEY (district_id, role)
 );
 
+-- ---------- نموذج أحداث الغبار المتعلَّم من الرصد الأرضي ----------
+-- يتعلّم من الأيام التي رصدت فيها محطات المطارات غباراً فعلاً (لا من أرقام CAMS)،
+-- ويُقيَّم على آخر سنة لم يرها، ويُقارَن بقاعدة CAMS (غبار ≥ 100) وبالاستمرارية.
+CREATE TABLE IF NOT EXISTS dust_eval (
+  model      TEXT PRIMARY KEY,             -- logistic | cams_100 | persistence | climatology
+  run_at     TEXT,
+  test_from  TEXT, test_to TEXT,
+  n_train    INTEGER, n_test INTEGER, n_events INTEGER,
+  threshold  REAL,
+  pod REAL, far REAL, csi REAL,            -- نسبة الكشف، نسبة الإنذار الكاذب، مؤشر النجاح الحرج
+  auc REAL, brier REAL
+);
+
+CREATE TABLE IF NOT EXISTS dust_coef (
+  feature TEXT PRIMARY KEY,
+  coef    REAL                             -- معامل الانحدار اللوجستي بعد التقييس
+);
+
+CREATE TABLE IF NOT EXISTS dust_prob (
+  district_id TEXT NOT NULL REFERENCES districts(id),
+  date        TEXT NOT NULL,
+  prob        REAL,                        -- احتمال أن يُرصد غبار فعلاً
+  kind        TEXT,                        -- past | forecast
+  cams_dust   REAL,
+  obs_dust    INTEGER,                     -- هل رصدت أقرب محطة غباراً ذلك اليوم (إن عُرف)
+  run_at      TEXT,
+  PRIMARY KEY (district_id, date)
+);
+
 -- ---------- سجل التحديث ----------
 CREATE TABLE IF NOT EXISTS etl_log (
   id      INTEGER PRIMARY KEY AUTOINCREMENT,
