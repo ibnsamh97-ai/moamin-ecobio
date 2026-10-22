@@ -222,6 +222,115 @@
     return { n, r, p: isFinite(t) ? ST.pT2(t, df) : 0 };
   };
 
+  /* ---------- مقلوب التوزيع الطبيعي (Acklam) ---------- */
+  ST.qnorm = p => {
+    if (p <= 0) return -Infinity; if (p >= 1) return Infinity;
+    const a = [-3.969683028665376e+01, 2.209460984245205e+02, -2.759285104469687e+02, 1.383577518672690e+02, -3.066479806614716e+01, 2.506628277459239e+00],
+      b = [-5.447609879822406e+01, 1.615858368580409e+02, -1.556989798598866e+02, 6.680131188771972e+01, -1.328068155288572e+01],
+      c = [-7.784894002430293e-03, -3.223964580411365e-01, -2.400758277161838e+00, -2.549732539343734e+00, 4.374664141464968e+00, 2.938163982698783e+00],
+      d = [7.784695709041462e-03, 3.224671290700398e-01, 2.445134137142996e+00, 3.754408661907416e+00];
+    const pl = 0.02425; let q, r;
+    if (p < pl) { q = Math.sqrt(-2 * Math.log(p)); return (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1); }
+    if (p > 1 - pl) { q = Math.sqrt(-2 * Math.log(1 - p)); return -(((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1); }
+    q = p - 0.5; r = q * q;
+    return (((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) * q / (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1);
+  };
+
+  /* ---------- اختبار شابيرو–ويلك (Royston 1995، الخوارزمية AS R94) ---------- */
+  ST.shapiro = arr => {
+    const x = arr.filter(v => typeof v === "number" && isFinite(v)).slice().sort((p, q) => p - q), n = x.length;
+    if (n < 3 || n > 5000 || x[n - 1] - x[0] < 1e-12) return null;
+    const poly = (cc, xx) => cc.reduce((s, c, i) => s + c * Math.pow(xx, i), 0);
+    const nn2 = Math.floor(n / 2), a = new Array(nn2 + 1).fill(0);
+    if (n === 3) a[1] = Math.SQRT1_2;
+    else {
+      const an25 = n + 0.25, m = [0]; let summ2 = 0;
+      for (let i = 1; i <= nn2; i++) { m[i] = ST.qnorm((i - 0.375) / an25); summ2 += m[i] * m[i]; }
+      summ2 *= 2; const ssumm2 = Math.sqrt(summ2), rsn = 1 / Math.sqrt(n);
+      const a1 = poly([0, 0.221157, -0.147981, -2.07119, 4.434685, -2.706056], rsn) - m[1] / ssumm2;
+      let i1, fac;
+      if (n > 5) { i1 = 3; const a2 = -m[2] / ssumm2 + poly([0, 0.042981, -0.293762, -1.752461, 5.682633, -3.582633], rsn);
+        fac = Math.sqrt((summ2 - 2 * m[1] * m[1] - 2 * m[2] * m[2]) / (1 - 2 * a1 * a1 - 2 * a2 * a2)); a[2] = a2; }
+      else { i1 = 2; fac = Math.sqrt((summ2 - 2 * m[1] * m[1]) / (1 - 2 * a1 * a1)); }
+      a[1] = a1; for (let i = i1; i <= nn2; i++) a[i] = -m[i] / fac;
+    }
+    const mean = x.reduce((s, v) => s + v, 0) / n, ss = x.reduce((s, v) => s + (v - mean) ** 2, 0);
+    let b = 0; for (let i = 1; i <= nn2; i++) b += a[i] * (x[n - i] - x[i - 1]);
+    const W = Math.min(1, b * b / ss);
+    let p;
+    if (n === 3) p = Math.max(0, 1.90985931710274 * (Math.asin(Math.sqrt(W)) - 1.04719755119660));
+    else {
+      let y = Math.log(1 - W), mu, sg; const xx = Math.log(n);
+      if (n <= 11) { const gam = -2.273 + 0.459 * n; if (y >= gam) return { W, p: 1e-99, n }; y = -Math.log(gam - y); mu = poly([0.544, -0.39978, 0.025054, -6.714e-4], n); sg = Math.exp(poly([1.3822, -0.77857, 0.062767, -0.0020322], n)); }
+      else { mu = poly([-1.5861, -0.31082, -0.083751, 0.0038915], xx); sg = Math.exp(poly([-0.4803, -0.082676, 0.0030302], xx)); }
+      p = 1 - ST.pnorm((y - mu) / sg);
+    }
+    return { W, p: Math.min(1, Math.max(0, p)), n };
+  };
+
+  /* ---------- دالة غاما غير التامة (للتوزيع χ²) ---------- */
+  function gammq(a, x) {
+    if (x <= 0) return 1;
+    const gln = lgamma(a);
+    if (x < a + 1) { let ap = a, sum = 1 / a, del = sum; for (let i = 0; i < 500; i++) { ap += 1; del *= x / ap; sum += del; if (Math.abs(del) < Math.abs(sum) * 1e-14) break; } return 1 - sum * Math.exp(-x + a * Math.log(x) - gln); }
+    let b = x + 1 - a, c = 1 / 1e-300, d = 1 / b, h = d;
+    for (let i = 1; i < 500; i++) { const an = -i * (i - a); b += 2; d = an * d + b; if (Math.abs(d) < 1e-300) d = 1e-300; c = b + an / c; if (Math.abs(c) < 1e-300) c = 1e-300; d = 1 / d; const del = d * c; h *= del; if (Math.abs(del - 1) < 1e-14) break; }
+    return Math.exp(-x + a * Math.log(x) - gln) * h;
+  }
+  ST.pChi2 = (x, df) => gammq(df / 2, x / 2);
+
+  /* ---------- كروسكال–والس (مع تصحيح التعادل) ---------- */
+  ST.kruskal = groups => {
+    const G = groups.map(g => g.filter(v => typeof v === "number" && isFinite(v))).filter(g => g.length);
+    const k = G.length, all = []; G.forEach((g, i) => g.forEach(v => all.push([v, i])));
+    const N = all.length; if (k < 2 || N < 3) return null;
+    all.sort((p, q) => p[0] - q[0]);
+    const rank = new Array(N); let tie = 0;
+    for (let i = 0; i < N;) { let j = i; while (j + 1 < N && all[j + 1][0] === all[i][0]) j++; const r = (i + j) / 2 + 1, t = j - i + 1; for (let q = i; q <= j; q++) rank[q] = r; tie += t * t * t - t; i = j + 1; }
+    const R = new Array(k).fill(0); all.forEach((p, i) => { R[p[1]] += rank[i]; });
+    let H = 12 / (N * (N + 1)) * G.reduce((s, g, i) => s + R[i] * R[i] / g.length, 0) - 3 * (N + 1);
+    const C = 1 - tie / (N * N * N - N); if (C > 0) H /= C;
+    return { H, df: k - 1, p: ST.pChi2(H, k - 1), meanRanks: R.map((r, i) => r / G[i].length) };
+  };
+
+  /* ---------- ليفين (براون–فورسايث: الانحراف عن الوسيط) ---------- */
+  const median = a => { const s = a.slice().sort((p, q) => p - q), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+  ST.median = median;
+  ST.levene = groups => {
+    const G = groups.map(g => g.filter(v => typeof v === "number" && isFinite(v))).filter(g => g.length >= 2);
+    if (G.length < 2) return null;
+    const rows = []; G.forEach((g, i) => { const md = median(g); g.forEach(v => rows.push({ a: String(i), y: Math.abs(v - md) })); });
+    const an = ST.anova(rows, false); return an ? { F: an.FA, df1: an.dfA, df2: an.dfE, p: an.pA } : null;
+  };
+
+  /* ---------- تحليل تباين ويلش (لا يفترض تساوي التباين) ---------- */
+  ST.welch = groups => {
+    const G = groups.map(g => g.filter(v => typeof v === "number" && isFinite(v))).filter(g => g.length >= 2);
+    const k = G.length; if (k < 2) return null;
+    const st = G.map(g => ST.describe(g)); if (st.some(s => !(s.sd > 0))) return null;
+    const w = st.map(s => s.n / (s.sd * s.sd)), W = w.reduce((p, q) => p + q, 0), mw = st.reduce((p, s, i) => p + w[i] * s.mean, 0) / W;
+    const A = st.reduce((p, s, i) => p + w[i] * (s.mean - mw) ** 2, 0) / (k - 1);
+    const tmp = st.reduce((p, s, i) => p + (1 - w[i] / W) ** 2 / (s.n - 1), 0);
+    const F = A / (1 + 2 * (k - 2) / (k * k - 1) * tmp), df2 = (k * k - 1) / (3 * tmp);
+    return { F, df1: k - 1, df2, p: ST.pF(F, k - 1, df2) };
+  };
+
+  /* ---------- القيم الشاذة بقاعدة IQR (توكي) ---------- */
+  ST.outliersIQR = arr => {
+    const x = arr.filter(v => typeof v === "number" && isFinite(v)).slice().sort((p, q) => p - q); if (x.length < 4) return [];
+    const qt = p => { const h = (x.length - 1) * p, l = Math.floor(h); return x[l] + (x[Math.min(l + 1, x.length - 1)] - x[l]) * (h - l); };
+    const q1 = qt(0.25), q3 = qt(0.75), iqr = q3 - q1;
+    return arr.filter(v => typeof v === "number" && (v < q1 - 1.5 * iqr || v > q3 + 1.5 * iqr));
+  };
+
+  /* حجم العينة لكل مجموعة لكشف حجم الأثر المشاهد بقوة 80% وα = 0.05 (Cohen 1988، λ المعلمة اللامركزية) */
+  const LAMBDA80 = { 1: 7.85, 2: 9.64, 3: 10.91, 4: 11.94, 5: 12.83, 6: 13.62, 7: 14.32, 8: 14.98, 9: 15.58, 10: 16.14 };
+  ST.nPerGroup = (eta2, k) => {
+    if (!(eta2 > 0 && eta2 < 1) || k < 2) return null;
+    const f2 = eta2 / (1 - eta2), lam = LAMBDA80[Math.min(10, k - 1)];
+    return Math.max(2, Math.ceil(lam / f2 / k) + 1);
+  };
+
   root.ECO_STATS = ST;
   if (root.ECO) root.ECO.stats = ST;
   if (typeof module !== "undefined") module.exports = ST;

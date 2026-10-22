@@ -72,8 +72,8 @@
   const S = { db: null, gz: null, meta: null, from: "", D: [], P: {}, d: null, tab: "overview", task: "pm25_d1",
     ts: { p: "pm2_5", span: 365, cmp: "" }, cmpP: "pm2_5", map: null, mapG: null, tigris: null, sqlLast: null, painted: {} };
   const TABS = [["overview", "لوحة القضاء", "i-home"], ["ground", "المقاس فعلاً", "i-pin"], ["series", "السلاسل الزمنية", "i-layers"], ["ai", "الذكاء الاصطناعي", "i-brain"],
-    ["compare", "مقارنة الأقضية", "i-table"], ["studies", "البحوث ومصادر التلوث", "i-book"]];
-  const DIST_TABS = new Set(["overview", "ground", "series", "ai", "studies"]);
+    ["plan", "خطة العينات", "i-gps"], ["compare", "مقارنة الأقضية", "i-table"], ["studies", "البحوث ومصادر التلوث", "i-book"]];
+  const DIST_TABS = new Set(["overview", "ground", "series", "ai", "plan", "studies"]);
 
   /* ------------------------------------------------------------------
      الاستعلام
@@ -227,7 +227,7 @@
     const el = U.$("#db-p-" + S.tab);
     if (S.painted[S.tab] === key) { if (S.tab === "overview" && S.map) setTimeout(() => S.map.invalidateSize(), 50); return; }
     S.painted[S.tab] = key;
-    try { ({ overview: rOverview, ground: rGround, series: rSeries, ai: rAI, compare: rCompare, studies: rStudies })[S.tab](el); }
+    try { ({ overview: rOverview, ground: rGround, plan: rPlan, series: rSeries, ai: rAI, compare: rCompare, studies: rStudies })[S.tab](el); }
     catch (e) { console.error(e); el.innerHTML = `<div class="notice warn">${ico("i-info")}<span>تعذّر عرض هذا القسم: ${esc(e.message)}</span></div>`; }
     writeHash();
   }
@@ -560,6 +560,130 @@
     U.$("#db-g-list").innerHTML = `<ul class="db-st-list">${L.map(s => `<li><b>${esc(s.name_ar)}</b> <small class="muted">${LTR(s.icao || "")}</small>
         <span>${s.kind === "current" ? `<em class="db-live">تبث الآن</em>` : "أرشيف منتهٍ"} · ${U.fmt(km(d.lat, d.lon, s.lat, s.lon), 0)} كم عن ${esc(d.name_ar)} · ${s.first_date ? `${s.first_date.slice(0, 4)}–${s.last_date.slice(0, 4)}` : "—"} (${U.fmt(s.n, 0)} يوماً)</span></li>`).join("")}</ul>
       <p class="db-cap">${esc(SNAME(now ? now.id : ""))} هي أقرب محطة تبث إلى ${esc(d.name_ar)}. المحطات المؤرشفة داخل الأقضية (تكريت وبيجي وبلد) توقفت عن النشر العام، لكن سجلها الحقيقي يكشف خطأ النموذج في المكان نفسه.</p>`;
+  }
+
+
+  /* ------------------------------------------------------------------
+     خطة أخذ العينات: مواقع حقيقية على مجرى دجلة حول مصادر التلوث المرسومة،
+     ومواسم من سجل التصريف والحرارة، وعدد المكررات من معامل الاختلاف
+  ------------------------------------------------------------------ */
+  async function getTigris() {
+    if (S.tigris) return S.tigris;
+    try {
+      const c = await openCache(), key = RAW + "tigris.json";
+      let r = c && await c.match(key);
+      if (!r) { r = await fetch(key); if (r.ok && c) c.put(key, r.clone()); }
+      S.tigris = r && r.ok !== false ? await r.json() : [];
+    } catch (e) { S.tigris = []; }
+    return S.tigris;
+  }
+  function nearestOnRiver(lines, lat, lon) {
+    let best = null;
+    lines.forEach((ln, li) => ln.forEach((p, i) => { const dk = km(lat, lon, p[0], p[1]); if (!best || dk < best.dk) best = { li, i, dk }; }));
+    return best;
+  }
+  /* السير على المجرى: dir = +1 مع التيار (نحو الجنوب في صلاح الدين)، −1 عكسه */
+  function walk(ln, i, dir, dist) {
+    const span = Math.min(30, ln.length - 1), a = ln[Math.max(0, i - span)], b = ln[Math.min(ln.length - 1, i + span)];
+    const down = b[0] < a[0] ? 1 : -1;               // أي اتجاه في ترتيب النقاط يذهب جنوباً
+    const step = dir * down; let acc = 0, j = i;
+    while (acc < dist) { const k = j + step; if (k < 0 || k >= ln.length) break; acc += km(ln[j][0], ln[j][1], ln[k][0], ln[k][1]); j = k; }
+    return { p: ln[j], ok: acc >= dist * 0.8 };
+  }
+  function tInv975(df) { let lo = 0, hi = 50; for (let i = 0; i < 60; i++) { const m = (lo + hi) / 2; (ECO.stats.pT2(m, df) > 0.05 ? (lo = m) : (hi = m)); } return (lo + hi) / 2; }
+  function replicates(cv, e) {
+    if (!(cv > 0 && e > 0)) return null;
+    let n = Math.max(2, Math.ceil((1.96 * cv / e) ** 2));
+    for (let it = 0; it < 20; it++) { const m = Math.max(2, Math.ceil((tInv975(n - 1) * cv / e) ** 2)); if (m === n) break; n = m; }
+    return n;
+  }
+  const PRIO = { refinery: 1, wastewater: 2, oil_facility: 3, power_plant: 4, landfill: 5, industrial: 6, works: 7, oil_storage: 8, quarry: 9, oil_well: 10 };
+
+  async function rPlan(el) {
+    const d = dist();
+    el.innerHTML = `<p class="muted">جارٍ تحميل مجرى النهر…</p>`;
+    const lines = (await getTigris()) || [];
+    if (dist().id !== d.id) return;
+    // مصادر قريبة من النهر
+    const src = q("SELECT * FROM pollution_sources WHERE district_id = ? AND lat IS NOT NULL AND dist_river_km IS NOT NULL AND dist_river_km <= 3 ORDER BY dist_river_km", [d.id])
+      .sort((a, b) => (PRIO[a.kind] || 20) - (PRIO[b.kind] || 20) || a.dist_river_km - b.dist_river_km)
+      .filter((x, i, arr) => !arr.slice(0, i).some(y => (x.name && y.name === x.name) || km(x.lat, x.lon, y.lat, y.lon) < 1)).slice(0, 3);
+    const pts = [];
+    const add = (p, kind, why) => { if (!p) return; const x = pts.find(x => km(x.lat, x.lon, p[0], p[1]) < 0.8); if (x) { if (x.n < 2) { x.why += "؛ " + why; x.n++; } return; } pts.push({ lat: +p[0].toFixed(5), lon: +p[1].toFixed(5), kind, why, n: 1 }); };
+    const anchor = d.river_lat != null ? nearestOnRiver(lines, d.river_lat, d.river_lon) : null;
+    const proj = src.map(s => ({ s, n: nearestOnRiver(lines, s.lat, s.lon) })).filter(x => x.n && x.n.dk < 4);
+    if (lines.length && anchor) {
+      const ln = lines[anchor.li];
+      const onLine = proj.filter(x => x.n.li === anchor.li);
+      // ترتيب المصادر مع التيار: الأبعد شمالاً أولاً
+      onLine.sort((a, b) => ln[b.n.i][0] - ln[a.n.i][0]);
+      const top = onLine.length ? onLine[0].n.i : anchor.i, bottom = onLine.length ? onLine[onLine.length - 1].n.i : anchor.i;
+      const ref = walk(ln, top, -1, 5); add(ref.p, "ref", "موقع مرجعي قبل كل المصادر (5 كم عكس التيار)");
+      onLine.forEach(({ s }) => { const k = (KIND[s.kind] || [s.kind])[0], nm = s.name ? ` «${s.name}»` : "", i = nearestOnRiver([ln], s.lat, s.lon).i;
+        add(walk(ln, i, -1, 0.5).p, "up", `قبل ${k}${nm} بـ 500 م`); add(walk(ln, i, 1, 1).p, "down", `بعد ${k}${nm} بـ 1 كم (نقطة التأثير)`); });
+      if (onLine.length) add(walk(ln, bottom, 1, 3).p, "mix", "بعد آخر مصدر بـ 3 كم (منطقة الاختلاط)");
+      add(ln[anchor.i], "city", `عند مدينة ${d.name_ar}`);
+      const end = walk(ln, bottom, 1, 5); add(end.p, "end", "نهاية القطاع (5 كم بعد آخر مصدر)");
+    }
+    pts.forEach((p, i) => { p.id = `${d.id.slice(0, 3).toUpperCase()}-${String(i + 1).padStart(2, "0")}`; });
+    // المواسم من السجل الحقيقي
+    const qc = q("SELECT CAST(substr(date,6,2) AS INTEGER) m, AVG(discharge) v FROM river_daily WHERE district_id = ? GROUP BY m", [d.id]);
+    const tc = q("SELECT CAST(substr(date,6,2) AS INTEGER) m, AVG(t_max) v FROM weather_daily WHERE district_id = ? AND src = 'era5' GROUP BY m", [d.id]);
+    const hiQ = qc.slice().sort((a, b) => b.v - a.v)[0], loQ = qc.slice().sort((a, b) => a.v - b.v)[0], hot = tc.slice().sort((a, b) => b.v - a.v)[0], cold = tc.slice().sort((a, b) => a.v - b.v)[0];
+    const occ = [hiQ && [hiQ.m, `أعلى تصريف (${N(hiQ.v, 0)} م³/ثا): تخفيف أعلى وعكورة من الجريان`], loQ && [loQ.m, `أدنى تصريف (${N(loQ.v, 0)} م³/ثا): أسوأ حالة لتركيز الملوثات`], hot && [hot.m, `أحر شهر (عظمى ${N(hot.v, 0)}°): أعلى نشاط بكتيري وطحلبي وأقل أكسجين`], cold && [cold.m, `أبرد شهر (عظمى ${N(cold.v, 0)}°)`]].filter(Boolean);
+    const occU = []; occ.forEach(o => { const x = occU.find(y => y[0] === o[0]); if (x) x[1] += "؛ " + o[1]; else occU.push(o.slice()); });
+    // معاملات الاختلاف من البحوث المنشورة للقضاء
+    const cvs = q(`SELECT v.item, v.unit, GROUP_CONCAT(v.value) vals, s.title FROM study_values v JOIN studies s ON s.id = v.study_id JOIN study_districts sd ON sd.study_id = s.id
+      WHERE sd.district_id = ? AND v.stat = 'value' GROUP BY v.study_id, v.item HAVING COUNT(*) >= 3`, [d.id]).map(r => { const v = r.vals.split(",").map(Number).filter(U.isNum); const m = U.mean(v), sd = U.std(v); return { item: r.item, cv: m > 0 ? 100 * sd / m : NaN, n: v.length, title: r.title }; }).filter(r => U.isNum(r.cv) && r.cv > 0).slice(0, 30);
+    S.plan = { d, pts, occU };
+    el.innerHTML = `<div class="notice info">${ico("i-info")}<span>خطة مقترحة لأخذ عينات مياه دجلة في ${esc(d.name_ar)}، مبنية على بيانات حقيقية: مجرى النهر من OpenStreetMap، ومصادر التلوث المرسومة ضمن 3 كم من النهر، ومواسم التصريف والحرارة من سجل القاعدة، وتباين القياسات المنشورة. راجعها مع مشرفك وتأكد من إمكانية الوصول والأمان في الموقع.</span></div>
+      <div class="grid g-2 db-g2">
+        <div class="panel"><div class="panel-h"><h3>مواقع أخذ العينات (${N(pts.length, 0)})</h3><div class="row"><button type="button" class="btn btn-ghost btn-sm" data-plan="csv">${ico("i-down")}CSV</button><button type="button" class="btn btn-ghost btn-sm" data-plan="gpx">${ico("i-gps")}GPX للهاتف</button></div></div>
+          <div class="db-map" id="db-plan-map" role="img" aria-label="خريطة مواقع العينات المقترحة"></div>
+          <ol class="db-plan-list">${pts.map(p => `<li><b>${p.id}</b> <span class="db-plan-k k-${p.kind}"></span>${esc(p.why)} <small class="muted">${LTR(p.lat + ", " + p.lon)}</small></li>`).join("") || `<li class="muted">لا يتوفر مجرى النهر لهذا القضاء.</li>`}</ol>
+          ${!proj.length ? `<p class="db-cap">لا توجد مصادر تلوث مرسومة ضمن 3 كم من النهر في ${esc(d.name_ar)}، فاقتُرح موقع مرجعي وموقع المدينة ونهاية القطاع فقط.</p>` : ""}</div>
+        <div>
+          <div class="panel"><div class="panel-h"><h3>متى تأخذ العينات</h3><span class="sub">من سجل القضاء</span></div>
+            <ul class="db-plan-occ">${occU.map(o => `<li><b>${MONTHS[o[0] - 1]}</b>: ${o[1]}</li>`).join("")}</ul>
+            <p class="db-cap">${N(occU.length, 0)} مواعيد تغطي التباين الموسمي الحقيقي في القضاء، وتسمح بتحليل التباين حسب الموسم.</p></div>
+          <div class="panel"><div class="panel-h"><h3>كم مكرراً في كل موقع</h3></div>
+            <div class="db-ctrl">
+              <div class="field"><label for="db-plan-cv">معامل الاختلاف CV%</label><select id="db-plan-cv" class="input">
+                <option value="30">افتراضي 30%</option>${cvs.map(c => `<option value="${c.cv.toFixed(1)}">${esc(c.item)}: ${U.fmt(c.cv, 0)}% (بحث منشور، ${c.n} قيم)</option>`).join("")}<option value="custom">قيمة من تجربتك…</option></select></div>
+              <div class="field" id="db-plan-cvc-f" hidden><label for="db-plan-cvc">CV% من تجربتك</label><input id="db-plan-cvc" class="input" type="number" min="1" step="1" value="25"></div>
+              <div class="field"><label for="db-plan-e">الدقة المطلوبة للمتوسط</label><select id="db-plan-e" class="input"><option value="10">± 10%</option><option value="20" selected>± 20%</option><option value="30">± 30%</option></select></div>
+            </div>
+            <div id="db-plan-n"></div></div>
+        </div>
+      </div>`;
+    const calcN = () => {
+      const sel = U.$("#db-plan-cv").value, cust = sel === "custom"; U.$("#db-plan-cvc-f").hidden = !cust;
+      const cv = cust ? +U.$("#db-plan-cvc").value : +sel, e = +U.$("#db-plan-e").value, nRep = replicates(cv, e);
+      const tot = nRep ? nRep * pts.length * occU.length : null;
+      U.$("#db-plan-n").innerHTML = nRep ? `<div class="db-gnow"><div><span class="k">مكررات لكل موقع وموعد</span><b>${N(nRep, 0)}</b></div><div><span class="k">مجموع العينات</span><b>${N(tot, 0)}</b></div></div>
+        <p class="db-cap">n = (t × CV / E)² مع t من توزيع ستيودنت عند ثقة 95%، أي ${N(nRep, 0)} مكررات تقدّر المتوسط ضمن ±${e}% عندما يكون CV ${U.fmt(cv, 0)}%. المجموع = ${N(pts.length, 0)} مواقع × ${N(occU.length, 0)} مواعيد × ${N(nRep, 0)} مكررات. ${nRep > 10 ? "العدد كبير؛ خفّف الدقة المطلوبة أو قلّل المعايير، أو ركّز على مواقع التأثير." : ""}</p>` : "";
+    };
+    U.$("#db-plan-cv").onchange = calcN; U.$("#db-plan-e").onchange = calcN; U.$("#db-plan-cvc").oninput = calcN; calcN();
+    if (window.L && pts.length) {
+      const m = L.map(U.$("#db-plan-map"), { scrollWheelZoom: false }); const b = ECO.BASEMAPS.find(x => x.id === "esri") || ECO.BASEMAPS[0];
+      L.tileLayer(b.url, { maxNativeZoom: b.max, maxZoom: 18, attribution: b.attr, crossOrigin: true }).addTo(m);
+      lines.forEach(ln => L.polyline(ln, { color: ECO.COL.river, weight: 3, opacity: 0.8 }).addTo(m));
+      proj.forEach(({ s }) => L.circleMarker([s.lat, s.lon], { radius: 5, color: "#041114", weight: 1, fillColor: (KIND[s.kind] || [0, "#c4d3cf"])[1], fillOpacity: 0.95 }).bindTooltip(esc((KIND[s.kind] || [s.kind])[0]) + (s.name ? " · " + esc(s.name) : "")).addTo(m));
+      const COLK = { ref: "#93dd8a", up: "#4fc8dc", down: "#ef5a64", mix: "#e6ae4f", city: "#b493ff", end: "#c4d3cf" };
+      pts.forEach(p => L.circleMarker([p.lat, p.lon], { radius: 7, color: "#fff", weight: 2, fillColor: COLK[p.kind], fillOpacity: 1 }).bindTooltip(`${p.id}: ${esc(p.why)}`).addTo(m));
+      m.fitBounds(L.latLngBounds(pts.map(p => [p.lat, p.lon])).pad(0.25));
+      setTimeout(() => m.invalidateSize(), 80);
+    }
+    el.onclick = e => {
+      const b = e.target.closest("[data-plan]"); if (!b || !S.plan) return;
+      const P = S.plan;
+      if (b.dataset.plan === "csv") save(new Blob([csvOf(["id", "lat", "lon", "purpose"], P.pts.map(p => [p.id, p.lat, p.lon, p.why]))], { type: "text/csv;charset=utf-8" }), `خطة-عينات-${P.d.id}.csv`);
+      else {
+        const x = s2 => String(s2).replace(/[<&>"]/g, c => ({ "<": "&lt;", "&": "&amp;", ">": "&gt;", '"': "&quot;" })[c]);
+        const gpx = `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="EcoBio AI" xmlns="http://www.topografix.com/GPX/1/1">\n${P.pts.map(p => `<wpt lat="${p.lat}" lon="${p.lon}"><name>${x(p.id)}</name><desc>${x(p.why)}</desc></wpt>`).join("\n")}\n</gpx>\n`;
+        save(new Blob([gpx], { type: "application/gpx+xml" }), `خطة-عينات-${P.d.id}.gpx`);
+      }
+    };
   }
 
   /* ------------------------------------------------------------------

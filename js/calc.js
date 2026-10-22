@@ -347,11 +347,106 @@
         if (U.isNum(RL)) out.cards.push({ label: "معامل الفصل RL", value: f2(RL, 4), sub: RL > 0 && RL < 1 ? "امتصاص ملائم (0<RL<1)" : "غير ملائم" });
         const xs = P.map(p => p[0]), mx = Math.max(...xs), cv = Array.from({ length: 30 }, (_, i) => (mx * (i + 1)) / 30);
         out.chart = { type: "scatter", data: { datasets: [{ label: "بيانات التوازن", data: P.map(p => ({ x: p[0], y: p[1] })), backgroundColor: ECO.COL.silt, pointRadius: 5 }, { type: "line", label: "لانكماير", data: cv.map(x => ({ x, y: qmax * KL * x / (1 + KL * x) })), borderColor: ECO.COL.river, pointRadius: 0, borderWidth: 2 }, { type: "line", label: "فرندلش", data: cv.map(x => ({ x, y: KF * Math.pow(x, 1 / nF) })), borderColor: ECO.COL.chloro, borderDash: [5, 4], pointRadius: 0, borderWidth: 2 }] }, options: { plugins: { legend: { position: "bottom" } }, scales: { x: { type: "linear", title: { display: true, text: "Ce (mg/L)" } }, y: { title: { display: true, text: "qe (mg/g)" } } } } };
-        out.interp = `النموذج الأنسب: <b>${Lg.r2 >= Fr.r2 ? "لانكماير (امتصاص بطبقة أحادية على مواقع متجانسة)" : "فرندلش (سطح غير متجانس متعدد الطبقات)"}</b>.`;
+        const Tk = linreg(P.map(p => Math.log(p[0])), P.map(p => p[1])), BT = Tk.slope, KT = Math.exp(Tk.intercept / Tk.slope), bT = 8.314 * 298.15 / BT;
+        out.cards.push({ label: "تمكن KT", value: f2(KT, 4), unit: "L/mg" }, { label: "تمكن bT", value: f2(bT, 1), unit: "J/mol", sub: "حرارة الامتصاص عند 25°م" }, { label: "R² تمكن", value: f2(Tk.r2, 4), tone: Tk.r2 > Math.max(Lg.r2, Fr.r2) ? "good" : "none" });
+        out.chart.data.datasets.push({ type: "line", label: "تمكن", data: cv.map(x => ({ x, y: BT * Math.log(KT * x) })), borderColor: ECO.COL.violet, borderDash: [2, 3], pointRadius: 0, borderWidth: 2 });
+        const best = [["لانكماير (امتصاص بطبقة أحادية على مواقع متجانسة)", Lg.r2], ["فرندلش (سطح غير متجانس متعدد الطبقات)", Fr.r2], ["تمكن (تتناقص حرارة الامتصاص خطياً مع التغطية)", Tk.r2]].sort((x, y) => y[1] - x[1])[0];
+        out.interp = `النموذج الأنسب بحسب R²: <b>${best[0]}</b>. قارن أيضاً بالمعنى الفيزيائي، ولا تعتمد على R² وحده عند تقارب القيم.`;
       }
       return out.cards.length ? out : null;
     },
-    formula: "qe = (C₀ − Ce)·V / m          R% = (C₀ − Ce)/C₀ × 100\nLangmuir: Ce/qe = 1/(qmax·KL) + Ce/qmax          RL = 1/(1 + KL·C₀)\nFreundlich: log qe = log KF + (1/n)·log Ce", refs: [REF.langmuir]
+    formula: "qe = (C₀ − Ce)·V / m          R% = (C₀ − Ce)/C₀ × 100\nLangmuir: Ce/qe = 1/(qmax·KL) + Ce/qmax          RL = 1/(1 + KL·C₀)\nFreundlich: log qe = log KF + (1/n)·log Ce\nTemkin: qe = BT·ln KT + BT·ln Ce      bT = RT / BT", refs: [REF.langmuir, "Temkin, M.J., Pyzhev, V. (1940). Acta Physicochim. URSS 12: 217–222."]
+  });
+
+  /* ملاءمة غير خطية بطريقة ليفنبرغ–ماركوارت لنموذج بمعاملين */
+  function lm2(f, xs, ys, p0) {
+    let p = p0.slice(), lam = 1e-3;
+    const sse = q => xs.reduce((s, x, i) => s + (ys[i] - f(x, q)) ** 2, 0);
+    let cur = sse(p);
+    for (let it = 0; it < 200; it++) {
+      const J = xs.map(x => p.map((v, k) => { const h = Math.max(1e-8, Math.abs(v) * 1e-6), q = p.slice(); q[k] += h; return (f(x, q) - f(x, p)) / h; }));
+      const r = xs.map((x, i) => ys[i] - f(x, p));
+      const A = [[0, 0], [0, 0]], g = [0, 0];
+      J.forEach((j, i) => { for (let a = 0; a < 2; a++) { g[a] += j[a] * r[i]; for (let b = 0; b < 2; b++) A[a][b] += j[a] * j[b]; } });
+      let improved = false;
+      for (let t = 0; t < 10; t++) {
+        const M = [[A[0][0] * (1 + lam), A[0][1]], [A[1][0], A[1][1] * (1 + lam)]], det = M[0][0] * M[1][1] - M[0][1] * M[1][0];
+        if (Math.abs(det) < 1e-300) { lam *= 10; continue; }
+        const d = [(g[0] * M[1][1] - g[1] * M[0][1]) / det, (M[0][0] * g[1] - M[1][0] * g[0]) / det], q = [p[0] + d[0], p[1] + d[1]], s2 = sse(q);
+        if (isFinite(s2) && s2 < cur) { p = q; cur = s2; lam = Math.max(1e-12, lam / 10); improved = true; break; } else lam *= 10;
+      }
+      if (!improved || cur < 1e-18) break;
+    }
+    const my = U.mean(ys), sst = ys.reduce((s, y) => s + (y - my) ** 2, 0), n = xs.length;
+    return { p, sse: cur, r2: 1 - cur / sst, rmse: Math.sqrt(cur / n), aic: n * Math.log(cur / n) + 4 };
+  }
+
+  C.push({
+    id: "adskin", cat: "bio", title: "حركية الامتصاص (الرتبة الأولى والثانية الكاذبة)", en: "Adsorption kinetics – PFO · PSO · Elovich · IPD",
+    desc: "ملاءمة غير خطية لنموذجي الرتبة الأولى والثانية الكاذبة، ونموذجي إيلوفيتش والانتشار داخل الجسيمات، من قياسات qt عبر الزمن.",
+    fields: [{ id: "qe", label: "qe التجريبية عند التوازن (اختياري)", unit: "mg/g" }],
+    table: { cols: [{ id: "t", label: "الزمن t (دقيقة)" }, { id: "q", label: "qt (mg/g)" }], rows: [["", ""], ["", ""], ["", ""], ["", ""], ["", ""], ["", ""]] },
+    run(f, rows) {
+      const P = rows.map(r => [n(r.t), n(r.q)]).filter(p => p.every(U.isNum) && p[0] > 0 && p[1] >= 0).sort((a, b) => a[0] - b[0]);
+      if (P.length < 4) return null;
+      const t = P.map(p => p[0]), q = P.map(p => p[1]), qmax = Math.max(...q), qeExp = n(f.qe);
+      const pfo = lm2((x, p) => p[0] * (1 - Math.exp(-p[1] * x)), t, q, [qmax, 1 / U.mean(t)]);
+      const pso = lm2((x, p) => p[1] * p[0] * p[0] * x / (1 + p[1] * p[0] * x), t, q, [qmax * 1.1, 1 / (qmax * U.mean(t))]);
+      const el = linreg(t.map(Math.log), q), beta = 1 / el.slope, alpha = Math.exp(el.intercept / el.slope) / beta;
+      const ipd = linreg(t.map(Math.sqrt), q);
+      const M = [["الرتبة الأولى الكاذبة (PFO)", pfo.r2, pfo.aic], ["الرتبة الثانية الكاذبة (PSO)", pso.r2, pso.aic]].sort((a, b) => a[2] - b[2]);
+      const tm = Math.max(...t), cv = Array.from({ length: 40 }, (_, i) => tm * (i + 1) / 40);
+      return {
+        cards: [
+          { label: "PFO: qe", value: f2(pfo.p[0], 3), unit: "mg/g" }, { label: "PFO: k₁", value: sci(pfo.p[1]), unit: "min⁻¹" }, { label: "PFO: R²", value: f2(pfo.r2, 4), tone: pfo.aic <= pso.aic ? "good" : "none" },
+          { label: "PSO: qe", value: f2(pso.p[0], 3), unit: "mg/g" }, { label: "PSO: k₂", value: sci(pso.p[1]), unit: "g/mg·min" }, { label: "PSO: R²", value: f2(pso.r2, 4), tone: pso.aic < pfo.aic ? "good" : "none" },
+          { label: "إيلوفيتش β", value: f2(beta, 4), unit: "g/mg", sub: `R² ${f2(el.r2, 3)}` }, { label: "الانتشار kid", value: f2(ipd.slope, 4), unit: "mg/g·min^0.5", sub: `C = ${f2(ipd.intercept, 3)} · R² ${f2(ipd.r2, 3)}` }
+        ].concat(U.isNum(qeExp) ? [{ label: "qe التجريبية مقابل المحسوبة", value: `${f2(qeExp, 2)} / ${f2(pso.aic < pfo.aic ? pso.p[0] : pfo.p[0], 2)}`, unit: "mg/g" }] : []),
+        table: { head: ["النموذج", "المعاملات", "R²", "RMSE", "AIC"], rows: [
+          ["PFO", `qe = ${f2(pfo.p[0], 3)}، k₁ = ${sci(pfo.p[1])}`, f2(pfo.r2, 4), f2(pfo.rmse, 4), f2(pfo.aic, 2)],
+          ["PSO", `qe = ${f2(pso.p[0], 3)}، k₂ = ${sci(pso.p[1])}`, f2(pso.r2, 4), f2(pso.rmse, 4), f2(pso.aic, 2)],
+          ["Elovich", `α = ${sci(alpha)}، β = ${f2(beta, 4)}`, f2(el.r2, 4), "—", "—"],
+          ["IPD", `kid = ${f2(ipd.slope, 4)}، C = ${f2(ipd.intercept, 3)}`, f2(ipd.r2, 4), "—", "—"]] },
+        chart: { type: "scatter", data: { datasets: [{ label: "القياسات", data: P.map(p => ({ x: p[0], y: p[1] })), backgroundColor: ECO.COL.silt, pointRadius: 5 },
+          { type: "line", label: "PFO", data: cv.map(x => ({ x, y: pfo.p[0] * (1 - Math.exp(-pfo.p[1] * x)) })), borderColor: ECO.COL.river, pointRadius: 0, borderWidth: 2 },
+          { type: "line", label: "PSO", data: cv.map(x => ({ x, y: pso.p[1] * pso.p[0] ** 2 * x / (1 + pso.p[1] * pso.p[0] * x) })), borderColor: ECO.COL.chloro, borderDash: [5, 4], pointRadius: 0, borderWidth: 2 }] },
+          options: { plugins: { legend: { position: "bottom" } }, scales: { x: { type: "linear", title: { display: true, text: "t (min)" } }, y: { beginAtZero: true, title: { display: true, text: "qt (mg/g)" } } } } },
+        interp: `الأنسب بمعيار AIC (يعاقب التعقيد): <b>${M[0][0]}</b>. الملاءمة غير خطية مباشرة على qt، وهي أصح من الصيغ الخطية التي تشوّه الأخطاء. ${ipd.intercept > 0.05 * qmax ? "تقاطع الانتشار داخل الجسيمات لا يساوي صفراً، فالانتشار ليس الخطوة الوحيدة المحددة للسرعة." : "خط الانتشار يمر قرب الأصل، فقد يكون الانتشار داخل الجسيمات هو المحدد للسرعة."}`
+      };
+    },
+    formula: "PFO: qt = qe·(1 − e^(−k₁t))\nPSO: qt = k₂·qe²·t / (1 + k₂·qe·t)\nElovich: qt = (1/β)·ln(αβ) + (1/β)·ln t\nIPD: qt = kid·t^0.5 + C",
+    refs: ["Lagergren, S. (1898). K. Sven. Vetenskapsakad. Handl. 24: 1–39.", "Ho, Y.S., McKay, G. (1999). Process Biochem. 34: 451–465.", "Weber, W.J., Morris, J.C. (1963). J. Sanit. Eng. Div. ASCE 89: 31–60.", "Tran, H.N., et al. (2017). Water Res. 120: 88–116 (أخطاء الملاءمة الخطية)."]
+  });
+
+  C.push({
+    id: "wetland", cat: "bio", title: "تصميم أرض رطبة مصنَّعة لمعالجة مياه قرية", en: "Constructed wetland sizing (SSF / FWS)",
+    desc: "مساحة الحوض اللازمة لخفض BOD إلى الهدف بنموذج الرتبة الأولى المصحَّح بالحرارة، مع فحص الجريان الهيدروليكي وعدد المستفيدين.",
+    fields: [{ id: "type", label: "النوع", type: "select", opts: [["ssf", "جريان تحت السطح أفقي (حصى + قصب)"], ["fws", "جريان سطحي حر"]], def: "ssf" },
+      { id: "pop", label: "عدد السكان (اختياري)", unit: "نسمة" }, { id: "lpcd", label: "استهلاك الفرد", unit: "لتر/يوم", def: "150" },
+      { id: "q", label: "أو التصريف مباشرة Q", unit: "m³/يوم" }, { id: "c0", label: "BOD الداخل C₀", unit: "mg/L", def: "200" }, { id: "ce", label: "BOD المستهدف Ce", unit: "mg/L", def: "40" },
+      { id: "t", label: "حرارة الماء في أبرد شهر", unit: "°C", def: "12" }, { id: "d", label: "عمق الماء d", unit: "m", def: "0.6" }, { id: "nn", label: "المسامية n", def: "0.35" },
+      { id: "k20", label: "K₂₀ (اختياري)", unit: "يوم⁻¹" }],
+    run(f) {
+      const ssf = f.type !== "fws", pop = n(f.pop), lp = n(f.lpcd);
+      const Q = U.isNum(n(f.q)) ? n(f.q) : U.isNum(pop) && U.isNum(lp) ? pop * lp * 0.8 / 1000 : NaN;   // 80% من الماء المستهلك يصبح صرفاً
+      const C0 = n(f.c0), Ce = n(f.ce), T = n(f.t), d = n(f.d), por = ssf ? n(f.nn) : 0.75;
+      if (![Q, C0, Ce, T, d, por].every(U.isNum) || Q <= 0 || Ce <= 0 || Ce >= C0) return null;
+      const K20 = U.isNum(n(f.k20)) ? n(f.k20) : ssf ? 1.104 : 0.678, KT = K20 * Math.pow(1.06, T - 20);
+      const t = Math.log(C0 / Ce) / KT, A = Q * t / (d * por), L2W = 3;
+      const W = Math.sqrt(A / L2W), Lg = A / W;
+      // فحص هيدروليكي (دارسي) للجريان تحت السطح: ks حصى 20 مم ≈ 10000 م/يوم، ميل 1%، نستعمل ثلث ks احتياطاً للانسداد
+      const ks = 10000 / 3, S = 0.01, Ac = ssf ? Q / (ks * S) : NaN, Wmin = ssf ? Ac / d : NaN;
+      const people = U.isNum(pop) ? pop : U.isNum(lp) ? Q * 1000 / (lp * 0.8) : NaN;
+      return {
+        cards: [{ label: "المساحة المطلوبة A", value: f2(A, 0), unit: "m²", tone: "info" }, { label: "زمن البقاء الهيدروليكي", value: f2(t, 2), unit: "يوم" },
+          { label: "K عند الحرارة T", value: f2(KT, 3), unit: "يوم⁻¹" }, { label: "الأبعاد المقترحة (طول:عرض 3:1)", value: `${f2(Lg, 0)} × ${f2(W, 0)}`, unit: "m" },
+          { label: "التصريف Q", value: f2(Q, 1), unit: "m³/يوم" }].concat(U.isNum(people) ? [{ label: "المساحة لكل شخص", value: f2(A / people, 2), unit: "m²/نسمة", sub: (A / people) > 10 ? "كبيرة: فكّر بمعالجة أولية أقوى" : (A / people) < 2 ? "أقل من المعتاد (2–10): معادلة الرتبة الأولى متفائلة، فخذ هامش أمان ×1.5–2" : "ضمن المدى المعتاد 2–10" }] : [])
+          .concat(ssf ? [{ label: "أقل عرض لتمرير الجريان", value: f2(Wmin, 1), unit: "m", tone: Wmin > W ? "bad" : "good", sub: Wmin > W ? "العرض المقترح أقل من اللازم: وسّع الحوض" : "العرض المقترح كافٍ" }] : []),
+        interp: `يخفض حوض ${ssf ? "الجريان تحت السطح" : "الجريان السطحي"} بمساحة ${f2(A, 0)} م² تركيز BOD من ${C0} إلى ${Ce} ملغم/لتر عند ${T}°م. صُمم على أبرد شهر لأن التحلل الحيوي أبطأ في البرد، فيعمل الحوض صيفاً بكفاءة أعلى. يُسبق دائماً بخزان ترسيب (سبتك) لإزالة المواد الصلبة. القصب Phragmites australis نبات محلي مناسب.`
+      };
+    },
+    formula: "Q = السكان × استهلاك الفرد × 0.8\nK_T = K₂₀ · 1.06^(T − 20)      (SSF: K₂₀ = 1.104، FWS: K₂₀ = 0.678 يوم⁻¹)\nt = ln(C₀ / Ce) / K_T\nA = Q · t / (d · n)\nفحص دارسي: Ac = Q / (ks · S)",
+    refs: ["Reed, S.C., Crites, R.W., Middlebrooks, E.J. (1995). Natural Systems for Waste Management and Treatment, 2nd ed. McGraw-Hill.", "US EPA (2000). Constructed Wetlands Treatment of Municipal Wastewaters. EPA/625/R-99/010.", "Kadlec, R.H., Wallace, S.D. (2009). Treatment Wetlands, 2nd ed. CRC Press."]
   });
 
   const phytoRows = st => { const r = ECO.RESEARCH.find(x => x.id === "baiji-2025"), sed = r.tables.find(t => t.id === "sed"), pl = r.tables.find(t => t.id === "plant"); return ["Pb", "Cu", "Cd", "Ni"].map(m => { const g = p => pl.rows.find(x => x[0] === `${m} – ${p}`)[st]; const s = sed.rows.find(x => x[0].startsWith(m))[st]; return [m, String(s), String(g("جذور")), String(+((g("سيقان") + g("أوراق")) / 2).toFixed(4))]; }); };

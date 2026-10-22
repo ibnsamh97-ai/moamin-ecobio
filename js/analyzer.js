@@ -228,6 +228,45 @@
       <p class="faint pl-mini">قيم المدى المعنوي محسوبة من توزيع المدى المعياري بمستوى حماية دنكن αp = 1 − (1 − α)^(p−1)، وتطابق جداول دنكن المنشورة. للأعداد غير المتساوية يُستخدم تعديل Kramer.</p>`;
   }
 
+
+  /* ------------------------------------------------------------------
+     المشرف الإحصائي: يتحقق من شروط تحليل التباين ويقترح الاختبار الصحيح
+  ------------------------------------------------------------------ */
+  function advise(p) {
+    const st = ST(), a = p.an; if (!a) return null;
+    const G = a.groups.map(g => g.ys), ns = G.map(g => g.length), nMin = Math.min(...ns);
+    const res = []; a.groups.forEach(g => g.ys.forEach(y => res.push(y - g.mean)));
+    const sw = st.shapiro(res);
+    const allPos = G.every(g => g.every(v => v > 0));
+    let swLog = null;
+    if (allPos && sw && sw.p <= 0.05) { const r2 = []; G.forEach(g => { const L = g.map(Math.log), m = L.reduce((s, v) => s + v, 0) / L.length; L.forEach(v => r2.push(v - m)); }); swLog = st.shapiro(r2); }
+    const lev = st.levene(G), kw = st.kruskal(G), wl = st.welch(G);
+    const out = G.map(g => st.outliersIQR(g).length).reduce((s, v) => s + v, 0);
+    const eta2 = a.SST > 0 ? a.SSA / a.SST : NaN, need = st.nPerGroup(eta2, G.length);
+    const normal = sw ? sw.p > 0.05 : null, eqVar = lev ? lev.p > 0.05 : null;
+    let rec, recP, why;
+    if (nMin < 3) { rec = "زِد المكررات"; recP = NaN; why = `أقل مجموعة فيها ${nMin} ${nMin === 1 ? "قياس" : "قياسان"} فقط، ولا تكفي لفحص التوزيع أو التباين بشكل موثوق.`; }
+    else if (normal !== false && eqVar !== false) { rec = "تحليل التباين ANOVA + دنكن"; recP = a.pA; why = "البواقي تتبع التوزيع الطبيعي والتباين متجانس، فشروط تحليل التباين متحققة."; }
+    else if (normal !== false && eqVar === false) { rec = "تحليل تباين ويلش (Welch)"; recP = wl ? wl.p : NaN; why = "البواقي طبيعية لكن التباين غير متجانس بين المجموعات (ليفين معنوي)، وويلش لا يفترض تساوي التباين."; }
+    else if (swLog && swLog.p > 0.05) { rec = "ANOVA على لوغاريتم القيم"; recP = (() => { const rows = []; a.groups.forEach(g => g.ys.forEach(y => rows.push({ a: g.l, y: Math.log(y) }))); const r = st.anova(rows, false); return r ? r.pA : NaN; })(); why = "البواقي ليست طبيعية، لكنها تصبح طبيعية بعد تحويل اللوغاريتم (شائع في تراكيز الملوثات)."; }
+    else { rec = "كروسكال–والس (لا معلمي)"; recP = kw ? kw.p : NaN; why = "البواقي لا تتبع التوزيع الطبيعي حتى بعد التحويل، فالاختبار اللامعلمي أصح."; }
+    return { ns, nMin, sw, swLog, lev, kw, wl, out, eta2, need, rec, recP, why, normal, eqVar, anovaP: a.pA };
+  }
+
+  function renderAdvisor() {
+    const R = S.res, P = R.P.filter(p => p.an), box = U.$("#an-p-advisor"); if (!box) return;
+    if (!P.length) { box.innerHTML = `<p class="empty">المشرف الإحصائي يحتاج عمود مجموعات (مثل المحطة أو المعاملة) وأكثر من قياس لكل مجموعة.</p>`; return; }
+    const A = P.map(p => Object.assign({ p }, advise(p)));
+    const yes = (ok, t, f) => ok == null ? "—" : ok ? `<span class="ok">${t}</span>` : `<span class="bad">${f}</span>`;
+    const agree = x => U.isNum(x.recP) && U.isNum(x.anovaP) && ((x.recP <= 0.05) !== (x.anovaP <= 0.05));
+    box.innerHTML = `<div class="tbl-wrap"><table class="tbl an-tbl"><thead><tr><th>المعيار</th><th class="num">أقل مكررات</th><th>التوزيع الطبيعي للبواقي<br><small>شابيرو–ويلك</small></th><th>تجانس التباين<br><small>ليفين</small></th><th class="num">قيم شاذة</th><th class="num">حجم الأثر η²</th><th>الاختبار المناسب</th><th class="num">p</th></tr></thead><tbody>
+      ${A.map(x => `<tr><td>${bi(x.p.name)}</td><td class="num">${x.nMin}</td><td>${x.sw ? yes(x.normal, "نعم", "لا") + ` <small class="faint">(p ${pf(x.sw.p)})</small>` : "—"}</td><td>${x.lev ? yes(x.eqVar, "متجانس", "غير متجانس") + ` <small class="faint">(p ${pf(x.lev.p)})</small>` : "—"}</td><td class="num">${x.out || "0"}</td><td class="num">${U.isNum(x.eta2) ? nf(x.eta2) : "—"}</td><td><b>${U.esc(x.rec)}</b></td><td class="num${x.recP <= 0.05 ? " sig" : ""}">${pf(x.recP)}${stars(x.recP)}</td></tr>`).join("")}</tbody></table></div>
+      <div class="an-interp">${A.map(x => `<p><b>${bi(x.p.name)}:</b> ${x.why} ${agree(x) ? `<b class="bad">انتبه: نتيجة الاختبار المناسب (p ${pf(x.recP)}) تختلف عن ANOVA العادي (p ${pf(x.anovaP)})، فاعتمد الاختبار المناسب في رسالتك.</b>` : ""}
+        ${x.out ? `وُجدت ${x.out} قيمة شاذة بقاعدة IQR؛ تأكد أنها ليست خطأ إدخال قبل حذفها، ولا تحذفها لمجرد أنها بعيدة.` : ""}
+        ${x.need && x.need > x.nMin ? `لكشف فرق بحجم الأثر الحالي (η² = ${nf(x.eta2)}) بقوة 80% تحتاج نحو <b>${x.need}</b> مكررات لكل مجموعة (لديك ${x.nMin}).` : x.need ? `عدد المكررات كافٍ لكشف هذا الأثر بقوة 80%.` : ""}</p>`).join("")}
+        <p class="faint pl-mini">الطرق: شابيرو–ويلك على بواقي النموذج (Royston 1995)، ليفين بالوسيط (Brown–Forsythe 1974)، ويلش (1951)، كروسكال–والس مع تصحيح التعادل، القيم الشاذة بقاعدة توكي 1.5×IQR، وحجم العينة من جداول القوة لكوهين (1988). نتائجها مطابقة لمكتبة SciPy. ملاحظة: اختبار دنكن متساهل نسبياً، وبعض المجلات تفضّل توكي HSD.</p></div>`;
+  }
+
   function renderCorr() {
     const R = S.res, P = R.P;
     if (P.length < 2) { U.$("#an-p-corr").innerHTML = `<p class="empty">اختر معيارين على الأقل لحساب الارتباط.</p>`; return; }
@@ -336,7 +375,7 @@
 
   function render() {
     const R = S.res; if (!R) return;
-    renderTable(); renderAnova(); renderCorr(); renderStd();
+    renderTable(); renderAnova(); renderAdvisor(); renderCorr(); renderStd();
     if (S.tab === "chart") renderChart(); else U.$("#an-p-chart").dataset.stale = "1";
   }
 
