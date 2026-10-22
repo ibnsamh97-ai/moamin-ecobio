@@ -22,6 +22,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import ai  # noqa: E402
+import airports  # noqa: E402
 import geo  # noqa: E402
 import openmeteo as om  # noqa: E402
 import research  # noqa: E402
@@ -61,6 +62,15 @@ def districts(con):
 def start_for(con, table, did, first: dt.date, full: bool):
     m = None if full else max_date(con, table, did)
     return first if not m else max(first, dt.date.fromisoformat(m) - dt.timedelta(days=OVERLAP))
+
+
+def _station_now(con, did):
+    """آخر رصد حقيقي من أقرب محطة تبث (للتطبيق دون إنترنت)."""
+    r = con.execute("""SELECT s.id, s.name_ar, ds.dist_km, h.valid, h.t, h.rh, h.wind, h.vis, h.wx FROM district_stations ds
+                       JOIN stations s ON s.id = ds.station_id
+                       JOIN station_hourly h ON h.station_id = s.id
+                       WHERE ds.district_id = ? AND ds.role = 'now' ORDER BY h.valid DESC LIMIT 1""", (did,)).fetchone()
+    return dict(zip(["station", "name_ar", "dist_km", "valid", "t", "rh", "wind", "vis", "wx"], r)) if r else None
 
 
 def main():
@@ -133,6 +143,10 @@ def main():
                 st.rows += upsert(con, "weather_daily", rec)
                 st.msg = f"ERA5 حتى {last_era5}، وتنبؤ لـ {len(rec)} يوماً"
 
+    # 3ب) القياس الأرضي الحقيقي من محطات المطارات (METAR) وخطأ النماذج
+    if "stations" not in skip:
+        airports.run(con, D, yesterday, a.full, log)
+
     # 4) تصريف النهر (GloFAS)
     if "river" not in skip:
         for d in D:
@@ -187,8 +201,8 @@ def main():
     # 9) الملخص والضغط
     counts = {t: con.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0] for t in
               ["districts", "air_daily", "weather_daily", "river_daily", "water_rs_monthly", "studies", "study_values", "pollution_sources",
-               "model_runs", "forecasts", "anomalies", "air_regime_daily"]}
-    ranges = {t: con.execute(f"SELECT MIN(date), MAX(date) FROM {t}").fetchone() for t in ["air_daily", "weather_daily", "river_daily"]}
+               "model_runs", "forecasts", "anomalies", "air_regime_daily", "station_daily", "station_bias"]}
+    ranges = {t: con.execute(f"SELECT MIN(date), MAX(date) FROM {t}").fetchone() for t in ["air_daily", "weather_daily", "river_daily", "station_daily"]}
     ranges["water_rs_monthly"] = con.execute("SELECT MIN(month), MAX(month) FROM water_rs_monthly WHERE ndti IS NOT NULL").fetchone()
     errors = con.execute("SELECT COUNT(*) FROM etl_log WHERE run_at=? AND status='error'", (run_at,)).fetchone()[0]
     con.execute("DELETE FROM etl_log WHERE run_at < ?", ((dt.datetime.fromisoformat(run_at) - dt.timedelta(days=30)).isoformat(),))
@@ -210,7 +224,8 @@ def main():
         latest["districts"].append({"id": d["id"], "name_ar": d["name_ar"], "lat": d["lat"], "lon": d["lon"],
                                     "air": dict(zip(["date", "pm2_5", "pm10", "dust", "aqi_pm25"], a_)) if a_ else None,
                                     "forecast": [dict(zip(["for_date", "model", "value", "lo", "hi"], r)) for r in fc if r[1] != "cams"],
-                                    "cams": [dict(zip(["for_date", "model", "value"], r[:3])) for r in fc if r[1] == "cams"]})
+                                    "cams": [dict(zip(["for_date", "model", "value"], r[:3])) for r in fc if r[1] == "cams"],
+                                    "now": _station_now(con2, d["id"])})
     con2.close()
     (path.parent / "latest.json").write_text(json.dumps(latest, ensure_ascii=False), encoding="utf-8")
     meta["bytes"] = path.stat().st_size

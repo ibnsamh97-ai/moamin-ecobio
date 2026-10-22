@@ -47,6 +47,26 @@ def http_json(url: str, params: dict | None = None, data: bytes | None = None, h
     raise last
 
 
+def http_text(url: str, params: list | dict | None = None, tries: int = 4, timeout: int = 120) -> str:
+    """GET يعيد نصاً (CSV مثلاً). params قد تكون قائمة أزواج لتكرار المفتاح نفسه."""
+    if params:
+        url = url + ("&" if "?" in url else "?") + urllib.parse.urlencode(params, safe=",:/")
+    last = None
+    for i in range(tries):
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": UA})
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                return r.read().decode("utf-8", "replace")
+        except urllib.error.HTTPError as e:
+            last = RuntimeError(f"HTTP {e.code}: {e.read().decode('utf-8', 'replace')[:300]}")
+            if e.code in (400, 401, 403, 404):
+                raise last
+        except Exception as e:
+            last = e
+        time.sleep(3 * (i + 1) ** 2)
+    raise last
+
+
 class Log:
     """يسجّل كل خطوة في جدول etl_log وفي الطرفية."""
 

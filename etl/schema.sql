@@ -207,6 +207,68 @@ CREATE TABLE IF NOT EXISTS relationships (
   PRIMARY KEY (district_id, x, y, method)
 );
 
+-- ---------- القياس الأرضي الحقيقي: محطات الأرصاد في المطارات (METAR) ----------
+-- المصدر: أرشيف Iowa Environmental Mesonet لتقارير METAR الرسمية. هذه قياسات أجهزة
+-- فعلية وليست نموذجاً، وتُستعمل لعرض «المقاس فعلاً» ولتقدير خطأ النماذج وتصحيحه.
+CREATE TABLE IF NOT EXISTS stations (
+  id         TEXT PRIMARY KEY,             -- kirkuk, baghdad, erbil, tikrit_ab, baiji_ab, balad_ab
+  name_ar    TEXT NOT NULL,
+  name_en    TEXT,
+  icao       TEXT,                         -- رمز المحطة الدولي
+  lat        REAL NOT NULL,
+  lon        REAL NOT NULL,
+  kind       TEXT NOT NULL,                -- current (تبث الآن) | historic (أرشيف انتهى)
+  note       TEXT,
+  first_date TEXT,
+  last_date  TEXT
+);
+
+CREATE TABLE IF NOT EXISTS station_daily (
+  station_id  TEXT NOT NULL REFERENCES stations(id),
+  date        TEXT NOT NULL,               -- بتوقيت بغداد
+  n_hours     INTEGER,                     -- عدد الساعات التي فيها رصد
+  t_max REAL, t_min REAL, t_mean REAL,     -- °C مقاسة
+  rh_mean     REAL,                        -- %
+  wind_mean   REAL, wind_max REAL, gust_max REAL,   -- km/h
+  vis_min     REAL, vis_mean REAL,         -- km (يُسجَّل 10 كم فما فوق كـ 10)
+  dust_hours  INTEGER,                     -- ساعات فيها غبار أو رمال (DU, SA, BLDU, DS, SS)
+  haze_hours  INTEGER,                     -- ساعات فيها عتمة أو دخان (HZ, FU)
+  rain_hours  INTEGER,                     -- ساعات مطر أو رذاذ
+  storm_hours INTEGER,                     -- ساعات عواصف رعدية
+  era5_t_max REAL, era5_t_min REAL, era5_t_mean REAL, era5_rh_mean REAL, era5_wind_max REAL,  -- نموذج ERA5 عند المحطة نفسها
+  cams_dust  REAL, cams_pm10 REAL,         -- نموذج CAMS عند المحطة نفسها (µg/m³)
+  PRIMARY KEY (station_id, date)
+);
+
+CREATE TABLE IF NOT EXISTS station_hourly (   -- آخر 10 أيام فقط، لعرض «الآن» دون إنترنت
+  station_id TEXT NOT NULL REFERENCES stations(id),
+  valid      TEXT NOT NULL,                -- بتوقيت بغداد YYYY-MM-DD HH:MM
+  t REAL, rh REAL, wind REAL, gust REAL, wind_dir REAL, vis REAL,
+  wx         TEXT,                         -- رموز الظواهر الجوية
+  metar      TEXT,                         -- نص التقرير الأصلي
+  PRIMARY KEY (station_id, valid)
+);
+
+CREATE TABLE IF NOT EXISTS station_bias (     -- خطأ النموذج = المقاس − النموذج، لكل شهر من السنة
+  station_id TEXT NOT NULL REFERENCES stations(id),
+  var        TEXT NOT NULL,                -- t_max | t_min | t_mean | rh_mean
+  month      INTEGER NOT NULL,             -- 1..12
+  n          INTEGER,                      -- عدد الأيام المتطابقة
+  bias       REAL,                         -- متوسط (المقاس − النموذج)
+  mae        REAL,
+  r          REAL,
+  obs_mean   REAL, model_mean REAL,
+  PRIMARY KEY (station_id, var, month)
+);
+
+CREATE TABLE IF NOT EXISTS district_stations (
+  district_id TEXT NOT NULL REFERENCES districts(id),
+  role        TEXT NOT NULL,               -- now: أقرب محطة تبث الآن | calib: محطة تصحيح النموذج
+  station_id  TEXT NOT NULL REFERENCES stations(id),
+  dist_km     REAL,
+  PRIMARY KEY (district_id, role)
+);
+
 -- ---------- سجل التحديث ----------
 CREATE TABLE IF NOT EXISTS etl_log (
   id      INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -229,6 +291,7 @@ CREATE INDEX IF NOT EXISTS ix_weather_date  ON weather_daily(date);
 CREATE INDEX IF NOT EXISTS ix_river_date    ON river_daily(date);
 CREATE INDEX IF NOT EXISTS ix_src_district  ON pollution_sources(district_id);
 CREATE INDEX IF NOT EXISTS ix_runs_district ON model_runs(district_id, task);
+CREATE INDEX IF NOT EXISTS ix_station_date  ON station_daily(date);
 
 -- ---------- عروض جاهزة للاستعلام ----------
 DROP VIEW IF EXISTS v_air_weather;
@@ -238,6 +301,21 @@ SELECT a.district_id, a.date, a.pm2_5, a.pm10, a.dust, a.no2, a.so2, a.o3, a.co,
 FROM air_daily a
 LEFT JOIN weather_daily w ON w.district_id = a.district_id AND w.date = a.date
 LEFT JOIN river_daily  r ON r.district_id = a.district_id AND r.date = a.date;
+
+-- الحرارة بعد تصحيح خطأ ERA5 الشهري المقاس في محطة التصحيح (يُطبَّق فقط إذا توفّر 60 يوماً متطابقاً على الأقل)
+DROP VIEW IF EXISTS v_weather_corrected;
+CREATE VIEW v_weather_corrected AS
+SELECT w.district_id, w.date, w.src, w.t_max, w.t_min, w.t_mean, w.rh_mean,
+       ds.station_id AS calib_station,
+       ROUND(w.t_max  + bx.bias, 1) AS t_max_adj,
+       ROUND(w.t_min  + bn.bias, 1) AS t_min_adj,
+       ROUND(w.t_mean + bm.bias, 1) AS t_mean_adj,
+       bx.bias AS t_max_bias, bn.bias AS t_min_bias
+FROM weather_daily w
+LEFT JOIN district_stations ds ON ds.district_id = w.district_id AND ds.role = 'calib'
+LEFT JOIN station_bias bx ON bx.station_id = ds.station_id AND bx.var = 't_max'  AND bx.month = CAST(strftime('%m', w.date) AS INTEGER) AND bx.n >= 60
+LEFT JOIN station_bias bn ON bn.station_id = ds.station_id AND bn.var = 't_min'  AND bn.month = CAST(strftime('%m', w.date) AS INTEGER) AND bn.n >= 60
+LEFT JOIN station_bias bm ON bm.station_id = ds.station_id AND bm.var = 't_mean' AND bm.month = CAST(strftime('%m', w.date) AS INTEGER) AND bm.n >= 60;
 
 DROP VIEW IF EXISTS v_district_summary;
 CREATE VIEW v_district_summary AS

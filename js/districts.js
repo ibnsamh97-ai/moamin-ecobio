@@ -39,7 +39,7 @@
   const COLS = {
     pm2_5: ["air_daily", "pm2_5"], pm10: ["air_daily", "pm10"], dust: ["air_daily", "dust"], no2: ["air_daily", "no2"], so2: ["air_daily", "so2"],
     o3: ["air_daily", "o3_max"], co: ["air_daily", "co"], aqi_pm25: ["air_daily", "aqi_pm25"],
-    t_max: ["weather_daily", "t_max"], t_mean: ["weather_daily", "t_mean"], precip: ["weather_daily", "precip"], wind_max: ["weather_daily", "wind_max"],
+    t_max: ["weather_daily", "t_max"], t_max_adj: ["v_weather_corrected", "t_max_adj"], t_min_adj: ["v_weather_corrected", "t_min_adj"], t_mean: ["weather_daily", "t_mean"], precip: ["weather_daily", "precip"], wind_max: ["weather_daily", "wind_max"],
     rh_mean: ["weather_daily", "rh_mean"], et0: ["weather_daily", "et0"],
     discharge: ["river_daily", "discharge"],
     ndti: ["water_rs_monthly", "ndti", true], ndci: ["water_rs_monthly", "ndci", true]
@@ -71,9 +71,9 @@
   ------------------------------------------------------------------ */
   const S = { db: null, gz: null, meta: null, from: "", D: [], P: {}, d: null, tab: "overview", task: "pm25_d1",
     ts: { p: "pm2_5", span: 365, cmp: "" }, cmpP: "pm2_5", map: null, mapG: null, tigris: null, sqlLast: null, painted: {} };
-  const TABS = [["overview", "لوحة القضاء", "i-home"], ["series", "السلاسل الزمنية", "i-layers"], ["ai", "الذكاء الاصطناعي", "i-brain"],
+  const TABS = [["overview", "لوحة القضاء", "i-home"], ["ground", "المقاس فعلاً", "i-pin"], ["series", "السلاسل الزمنية", "i-layers"], ["ai", "الذكاء الاصطناعي", "i-brain"],
     ["compare", "مقارنة الأقضية", "i-table"], ["studies", "البحوث ومصادر التلوث", "i-book"]];
-  const DIST_TABS = new Set(["overview", "series", "ai", "studies"]);
+  const DIST_TABS = new Set(["overview", "ground", "series", "ai", "studies"]);
 
   /* ------------------------------------------------------------------
      الاستعلام
@@ -85,6 +85,7 @@
   }
   const q1 = (sql, p) => q(sql, p)[0] || null;
   const dist = () => S.D.find(d => d.id === S.d) || S.D[0];
+  const hasT = n => { try { return !!q1("SELECT 1 x FROM sqlite_master WHERE name = ?", [n]); } catch (e) { return false; } };
 
   /* ------------------------------------------------------------------
      التحميل: البيانات الوصفية ← النسخة المحفوظة أو التنزيل ← فك الضغط ← sql.js
@@ -181,6 +182,11 @@
   function boot() {
     S.P = {}; q("SELECT * FROM parameters").forEach(p => { S.P[p.code] = p; });
     S.D = q("SELECT * FROM districts ORDER BY ord");
+    S.ground = hasT("station_daily") && !!q1("SELECT 1 x FROM station_daily LIMIT 1");
+    if (S.ground) {   // الحرارة بعد تصحيح خطأ ERA5 بالقياس الأرضي
+      S.P.t_max_adj = { code: "t_max_adj", name_ar: "أعلى درجة حرارة (مصححة بالقياس)", unit: "°C", category: "weather" };
+      S.P.t_min_adj = { code: "t_min_adj", name_ar: "أدنى درجة حرارة (مصححة بالقياس)", unit: "°C", category: "weather" };
+    }
     readHash();
     if (!S.D.find(d => d.id === S.d)) S.d = U.store.get("dbDistrict", "tikrit");
     if (!S.D.find(d => d.id === S.d)) S.d = S.D[0] && S.D[0].id;
@@ -220,7 +226,7 @@
     const el = U.$("#db-p-" + S.tab);
     if (S.painted[S.tab] === key) { if (S.tab === "overview" && S.map) setTimeout(() => S.map.invalidateSize(), 50); return; }
     S.painted[S.tab] = key;
-    try { ({ overview: rOverview, series: rSeries, ai: rAI, compare: rCompare, studies: rStudies })[S.tab](el); }
+    try { ({ overview: rOverview, ground: rGround, series: rSeries, ai: rAI, compare: rCompare, studies: rStudies })[S.tab](el); }
     catch (e) { console.error(e); el.innerHTML = `<div class="notice warn">${ico("i-info")}<span>تعذّر عرض هذا القسم: ${esc(e.message)}</span></div>`; }
     writeHash();
   }
@@ -281,13 +287,16 @@
     const rs = q1("SELECT * FROM water_rs_monthly WHERE district_id = ? AND ndti IS NOT NULL ORDER BY month DESC LIMIT 1", [d.id]);
     const rsAvg = q1("SELECT AVG(ndti) a, COUNT(*) n FROM water_rs_monthly WHERE district_id = ? AND ndti IS NOT NULL", [d.id]);
     const reg = q1("SELECT r.label_ar l, a.date FROM air_regime_daily a JOIN regimes r ON r.cluster = a.cluster WHERE a.district_id = ? ORDER BY a.date DESC LIMIT 1", [d.id]);
-    const wx = air ? q1("SELECT * FROM weather_daily WHERE district_id = ? AND date = ?", [d.id, air.date]) : null;
+    const wx = air ? q1(S.ground ? "SELECT * FROM v_weather_corrected WHERE district_id = ? AND date = ?" : "SELECT * FROM weather_daily WHERE district_id = ? AND date = ?", [d.id, air.date]) : null;
+    const gn = S.ground ? groundNow(d) : null;
 
     const kpi = (k, v, sub, t, extra = "") => `<div class="db-kpi${t ? " tone-b-" + t : ""}"><span class="k">${k}</span><span class="v">${v}</span><span class="d">${sub}</span>${extra}</div>`;
     const f1 = fDates[0] && FC[fDates[0]];
     const ratio = air && U.isNum(air.pm2_5) ? air.pm2_5 / 15 : NaN;
     const kpis = [
-      air ? kpi("PM2.5 آخر يوم مكتمل", `${N(air.pm2_5, 1)}<small>µg/m³</small>`, `${fD(air.date)} · ${ratio >= 1 ? `${N(ratio, 1)} ضعف حد الصحة العالمية` : "ضمن حد الصحة العالمية (15)"}`, tone(air.pm2_5, 15)) : kpi("PM2.5", "—", "لا بيانات"),
+      air ? kpi("PM2.5 آخر يوم مكتمل", `${N(air.pm2_5, 1)}<small>µg/m³</small>`, `تقدير نموذج CAMS · ${fD(air.date)} · ${ratio >= 1 ? `${N(ratio, 1)} ضعف حد الصحة العالمية` : "ضمن حد الصحة العالمية (15)"}`, tone(air.pm2_5, 15)) : kpi("PM2.5", "—", "لا بيانات"),
+      gn ? kpi("مقاس فعلاً · آخر رصد", `${N(gn.t, 0)}<small>°C</small>`, `${esc(gn.name_ar)} على بعد ${N(gn.dist_km, 0)} كم · ${esc(gn.ago)}${gn.wxText ? " · " + esc(gn.wxText) : gn.vis != null ? " · رؤية " + esc(visKm(gn.vis)) : ""}`, gn.dust ? "warn" : "info",
+        `<button type="button" class="linkbtn db-kpi-go" data-tab-go="ground">التفاصيل والمقارنة</button>`) : "",
       f1 && f1.best ? kpi(`توقّع ${fD(fDates[0])}`, `${N(f1.best.value, 1)}<small>µg/m³</small>`, `${esc(MODEL[f1.best.model] || f1.best.model)} · المدى المرجّح ${N(f1.best.lo, 0)}–${N(f1.best.hi, 0)}${f1.cams ? ` · CAMS: ${N(f1.cams.value, 1)}` : ""}`, tone(f1.best.value, 15))
         : f1 && f1.cams ? kpi(`توقّع ${fD(fDates[0])}`, `${N(f1.cams.value, 1)}<small>µg/m³</small>`, "توقّع CAMS (نموذجنا لم يُدرَّب بعد)", tone(f1.cams.value, 15)) : kpi("توقّع الغد", "—", "لا توقّع بعد"),
       y && y.n ? kpi("أيام فوق حد الصحة العالمية", `${N(100 * y.o / y.n, 0)}<small>%</small>`, `${N(y.o, 0)} يوماً من آخر ${N(y.n, 0)} يوماً تجاوز فيها PM2.5 الحد 15`, y.o / y.n > 0.5 ? "bad" : y.o / y.n > 0.2 ? "warn" : "fair") : kpi("أيام فوق الحد", "—", ""),
@@ -302,9 +311,11 @@
     if (y && y.n) say.push(`خلال آخر سنة تجاوز PM2.5 الحد في ${N(100 * y.o / y.n, 0)}% من الأيام، وبلغ أعلاه ${NU(y.mx, 0, "µg/m³")}.`);
     if (f1 && f1.best) say.push(`يتوقّع نموذج ${esc(MODEL[f1.best.model] || f1.best.model)} ليوم ${fD(fDates[0])} قيمة ${N(f1.best.value, 0)} (بين ${N(f1.best.lo, 0)} و${N(f1.best.hi, 0)})${f1.cams ? `، ويتوقّع CAMS ${N(f1.cams.value, 0)}` : ""}.`);
     if (riv && rp) say.push(`تصريف دجلة عند القضاء ${N(riv.discharge, 0)} م³/ثا، ${rp.pct < 50 ? `وهو أقل من المعتاد لهذا الشهر` : `وهو أعلى من المعتاد لهذا الشهر`} (متوسط الشهر منذ ${rp.y0}: ${N(rp.avg, 0)}).`);
-    if (wx && U.isNum(wx.t_max)) say.push(`الحرارة العظمى ${N(wx.t_max, 0)}° وأقوى رياح ${N(wx.wind_max, 0)} كم/ساعة.`);
+    if (wx && U.isNum(wx.t_max_adj)) say.push(`الحرارة العظمى نحو ${N(wx.t_max_adj, 0)}° بعد تصحيح خطأ النموذج بالقياس الأرضي (النموذج وحده: ${N(wx.t_max, 0)}°).`);
+    else if (wx && U.isNum(wx.t_max)) say.push(`الحرارة العظمى ${N(wx.t_max, 0)}° حسب نموذج ERA5${U.isNum(wx.wind_max) ? ` وأقوى رياح ${N(wx.wind_max, 0)} كم/ساعة` : ""}.`);
+    if (gn) say.push(`آخر قياس حقيقي من ${esc(gn.name_ar)} (${esc(gn.ago)}): ${N(gn.t, 0)}°${gn.wxText ? "، " + esc(gn.wxText) : ""}.`);
 
-    U.$("#db-ov-main").innerHTML = `<div class="db-kpis">${kpis.join("")}</div>
+    U.$("#db-ov-main").innerHTML = `<div class="db-kpis">${kpis.filter(Boolean).join("")}</div>
       <div class="panel db-say"><h3>${ico("i-spark")}الخلاصة بلغة بسيطة</h3><p>${say.join(" ") || "لا تتوفر بيانات كافية بعد."}</p></div>
       <div class="panel"><div class="panel-h"><h3>PM2.5 في آخر 120 يوماً والتوقّع القادم</h3><span class="sub">µg/m³ · المتوسط اليومي</span></div><div class="chart-box"><canvas id="db-ov-c"></canvas></div>
         <p class="db-cap">${esc(SRC_NOTE.air)}</p></div>
@@ -318,7 +329,7 @@
       chart("overview", U.$("#db-ov-c"), {
         type: "line",
         data: { labels, datasets: [
-          { label: "المقيس (CAMS)", data: hist.map(r => r.pm2_5).concat(fDates.map(() => null)), borderColor: ECO.COL.river, backgroundColor: "rgba(79,200,220,.12)", fill: true, borderWidth: 1.6 },
+          { label: "تقدير CAMS (نموذج)", data: hist.map(r => r.pm2_5).concat(fDates.map(() => null)), borderColor: ECO.COL.river, backgroundColor: "rgba(79,200,220,.12)", fill: true, borderWidth: 1.6 },
           { label: "توقّع نموذجنا", data: pad(fDates.map(x => FC[x].best ? FC[x].best.value : null)), borderColor: ECO.COL.chloro, pointRadius: 4, pointBackgroundColor: ECO.COL.chloro, showLine: false },
           { label: "مدى التوقّع 80%", data: pad(fDates.map(x => FC[x].best ? FC[x].best.hi : null)), borderColor: "rgba(147,221,138,.35)", pointRadius: 2, pointStyle: "line", showLine: false },
           { label: " ", data: pad(fDates.map(x => FC[x].best ? FC[x].best.lo : null)), borderColor: "rgba(147,221,138,.35)", pointRadius: 2, pointStyle: "line", showLine: false },
@@ -395,6 +406,130 @@
     }
   }
 
+
+  /* ------------------------------------------------------------------
+     1ب) المقاس فعلاً: أرصاد المطارات الحقيقية مقابل النماذج
+  ------------------------------------------------------------------ */
+  const visKm = v => !U.isNum(v) ? "—" : v >= 10 ? "10 كم فأكثر" : `${U.fmt(v, v < 1 ? 1 : 0)} كم`;
+  const SNAME = id => (q1("SELECT name_ar FROM stations WHERE id = ?", [id]) || {}).name_ar || id;
+  function agoText(ms) {
+    const m = Math.round((Date.now() - ms) / 60000);
+    return m < 1 ? "الآن" : m < 60 ? `قبل ${m} دقيقة` : m < 1440 ? `قبل ${Math.round(m / 60)} ساعة` : `قبل ${Math.round(m / 1440)} يوم`;
+  }
+  /* آخر رصد لأقرب محطة تبث: من القاعدة، ثم يُستبدل بالرصد الحي إن كان أحدث */
+  function groundNow(d) {
+    const st = q1("SELECT s.*, ds.dist_km FROM district_stations ds JOIN stations s ON s.id = ds.station_id WHERE ds.district_id = ? AND ds.role = 'now'", [d.id]);
+    if (!st) return null;
+    const h = q1("SELECT * FROM station_hourly WHERE station_id = ? AND t IS NOT NULL ORDER BY valid DESC LIMIT 1", [st.id]);
+    let o = h ? { t: h.t, rh: h.rh, wind: h.wind, vis: h.vis, ms: Date.parse(h.valid.replace(" ", "T") + ":00+03:00"), raw: h.metar, wx: h.wx } : null;
+    const G = ECO.ground, live = G && G.state === "ok" && (G.stations || []).find(x => x.id === st.icao);
+    if (live && live.last && (!o || live.last.time * 1000 > o.ms) && U.isNum(live.last.temp)) {
+      const L = live.last;
+      o = { t: L.temp, rh: null, wind: L.wind ? L.wind.kmh : null, vis: U.isNum(L.vis) ? L.vis / 1000 : null, ms: L.time * 1000, raw: L.raw, live: true };
+    }
+    if (!o) return null;
+    const P = o.raw && G && G.parse ? G.parse(o.raw) : null;
+    return Object.assign(o, { id: st.id, icao: st.icao, name_ar: st.name_ar, dist_km: st.dist_km, ago: agoText(o.ms),
+      wxText: P && P.wxText && P.wxText.length ? P.wxText.join("، ") : "", dust: !!(P && P.dust) });
+  }
+
+  function rGround(el) {
+    clearCharts("ground");
+    const d = dist();
+    if (!S.ground) {
+      el.innerHTML = `<div class="notice info">${ico("i-info")}<span>القياسات الأرضية الحقيقية أضيفت حديثاً، وتظهر هنا بعد تحديث القاعدة القادم (يتم يومياً آلياً).</span></div>`;
+      return;
+    }
+    const now = q1("SELECT s.*, ds.dist_km FROM district_stations ds JOIN stations s ON s.id = ds.station_id WHERE ds.district_id = ? AND ds.role = 'now'", [d.id]);
+    const cal = q1("SELECT s.*, ds.dist_km FROM district_stations ds JOIN stations s ON s.id = ds.station_id WHERE ds.district_id = ? AND ds.role = 'calib'", [d.id]);
+    el.innerHTML = `
+      <div class="notice info">${ico("i-info")}<span>كل الأرقام في هذا القسم <b>قياسات أجهزة حقيقية</b> من محطات الأرصاد الرسمية في المطارات (تقارير METAR)، وليست نموذجاً. لا توجد اليوم محطة رسمية تبث من داخل ${esc(d.name_ar)}، فنعرض أقرب محطة تبث، ونستعمل أرشيف المحطات التي كانت داخل الأقضية لمعرفة خطأ النموذج وتصحيحه.</span></div>
+      <div class="grid g-2 db-g2">
+        <div class="panel" id="db-g-now"></div>
+        <div class="panel" id="db-g-adj"></div>
+      </div>
+      <div class="panel"><div class="panel-h"><h3 id="db-g-st-h"></h3><span class="sub">نفس المكان ونفس الأيام · °C</span></div><div class="chart-box"><canvas id="db-g-st"></canvas></div><p class="db-cap" id="db-g-st-cap"></p></div>
+      <div class="grid g-2 db-g2">
+        <div class="panel"><div class="panel-h"><h3 id="db-g-bias-h"></h3><span class="sub">المقاس − النموذج · °C</span></div><div class="chart-box sm"><canvas id="db-g-bias"></canvas></div><p class="db-cap" id="db-g-bias-cap"></p></div>
+        <div class="panel"><div class="panel-h"><h3 id="db-g-dust-h"></h3><span class="sub">أيام في الشهر</span></div><div class="chart-box sm"><canvas id="db-g-dust"></canvas></div><p class="db-cap" id="db-g-dust-cap"></p></div>
+      </div>
+      <div class="panel"><div class="panel-h"><h3>محطات القياس المستعملة</h3><span class="sub">أرشيف Iowa Environmental Mesonet لتقارير METAR</span></div><div id="db-g-list"></div></div>`;
+
+    // 1) الآن
+    const paintNow = () => {
+      const g = groundNow(d), box = U.$("#db-g-now"); if (!box) return;
+      box.innerHTML = !g ? `<div class="panel-h"><h3>المقاس الآن</h3></div><p class="empty">لا يوجد رصد حديث.</p>` : `
+        <div class="panel-h"><h3>المقاس الآن في ${esc(g.name_ar)}</h3><span class="sub">${g.live ? "رصد حي" : "من آخر تحديث للقاعدة"} · ${esc(g.ago)}</span></div>
+        <div class="db-gnow">
+          <div><span class="k">الحرارة</span><b>${NU(g.t, 0, "°C")}</b></div>
+          ${U.isNum(g.rh) ? `<div><span class="k">الرطوبة</span><b>${NU(g.rh, 0, "%")}</b></div>` : ""}
+          <div><span class="k">الرياح</span><b>${U.isNum(g.wind) ? NU(g.wind, 0, "km/h") : "—"}</b></div>
+          <div><span class="k">مدى الرؤية</span><b>${esc(visKm(g.vis))}</b></div>
+        </div>
+        <p class="db-cap">${g.wxText ? `<b>الظواهر:</b> ${esc(g.wxText)}. ` : "لا ظواهر جوية مسجلة (لا غبار ولا مطر). "}المحطة على بعد ${N(g.dist_km, 0)} كم من مركز ${esc(d.name_ar)}.${g.raw ? `<br><bdi dir="ltr" class="db-metar">${esc(g.raw)}</bdi>` : ""}</p>`;
+    };
+    paintNow();
+    if (ECO.ground && ECO.ground.load) ECO.ground.load().then(paintNow).catch(() => {});
+
+    // 2) الحرارة المصححة للقضاء
+    const adj = q(`SELECT date, src, t_max, t_min, t_max_adj, t_min_adj, t_max_bias FROM v_weather_corrected WHERE district_id = ? AND date >= ? ORDER BY date LIMIT 4`, [d.id, today()]);
+    U.$("#db-g-adj").innerHTML = `<div class="panel-h"><h3>حرارة ${esc(d.name_ar)} بعد التصحيح</h3><span class="sub">${cal ? `محطة التصحيح: ${esc(cal.name_ar)} (${N(cal.dist_km, 0)} كم)` : ""}</span></div>
+      ${adj.length && adj.some(r => U.isNum(r.t_max_adj)) ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>اليوم</th><th class="num">النموذج</th><th class="num">بعد التصحيح</th></tr></thead><tbody>
+        ${adj.map(r => `<tr><td>${fD(r.date).replace(/\s*\d{4}$/, "")}</td><td class="num">${U.fmt(r.t_max, 0)}° / ${U.fmt(r.t_min, 0)}°</td><td class="num"><b>${U.fmt(r.t_max_adj, 0)}° / ${U.fmt(r.t_min_adj, 0)}°</b></td></tr>`).join("")}</tbody></table></div>
+        <p class="db-cap">التصحيح = متوسط فرق القياس الحقيقي عن نموذج ERA5 في هذا الشهر من السنة، محسوب في ${cal ? esc(cal.name_ar) : "محطة التصحيح"} على ${N((q1("SELECT n FROM station_bias WHERE station_id = ? AND var = 't_max' AND month = ?", [cal && cal.id, +today().slice(5, 7)]) || {}).n, 0)} يوماً متطابقاً.</p>`
+        : `<p class="empty">لا يتوفر تصحيح لهذا الشهر بعد.</p>`}`;
+
+    // 3) المقاس مقابل ERA5 عند محطة القياس نفسها
+    const vs = now ? q("SELECT date, t_max, era5_t_max, t_min, era5_t_min FROM station_daily WHERE station_id = ? AND t_max IS NOT NULL AND date > date((SELECT MAX(date) FROM station_daily WHERE station_id = ?), '-180 day') ORDER BY date", [now.id, now.id]) : [];
+    U.$("#db-g-st-h").textContent = now ? `${now.name_ar}: الحرارة العظمى المقاسة مقابل نموذج ERA5 (آخر 6 أشهر)` : "المقاس مقابل النموذج";
+    if (vs.length) {
+      const pr = vs.filter(r => U.isNum(r.era5_t_max));
+      const mae = pr.length ? U.mean(pr.map(r => Math.abs(r.t_max - r.era5_t_max))) : NaN, bias = pr.length ? U.mean(pr.map(r => r.t_max - r.era5_t_max)) : NaN;
+      chart("ground", U.$("#db-g-st"), { type: "line", data: { labels: vs.map(r => r.date), datasets: [
+        { label: "المقاس فعلاً (العظمى)", data: vs.map(r => r.t_max), borderColor: ECO.COL.crimson, borderWidth: 1.8, pointRadius: 0 },
+        { label: "نموذج ERA5 (العظمى)", data: vs.map(r => r.era5_t_max), borderColor: ECO.COL.river, borderDash: [5, 4], borderWidth: 1.4, pointRadius: 0 },
+        { label: "المقاس فعلاً (الصغرى)", data: vs.map(r => r.t_min), borderColor: "#e6ae4f", borderWidth: 1.2, pointRadius: 0 },
+        { label: "نموذج ERA5 (الصغرى)", data: vs.map(r => r.era5_t_min), borderColor: "#a5b6ff", borderDash: [5, 4], borderWidth: 1.2, pointRadius: 0 }] },
+        options: { interaction: { mode: "index", intersect: false }, scales: { x: { ticks: xTicks } } } });
+      U.$("#db-g-st-cap").innerHTML = pr.length ? `على ${N(pr.length, 0)} يوماً: متوسط الخطأ المطلق للعظمى ${NU(mae, 1, "°C")}، و${bias > 0 ? `النموذج <b>أبرد</b> من الواقع بـ ${NU(bias, 1, "°C")} في المتوسط` : `النموذج <b>أحرّ</b> من الواقع بـ ${NU(-bias, 1, "°C")} في المتوسط`}. أرشيف ERA5 يتأخر نحو 5 أيام فتنقص الأيام الأخيرة من خطه.` : "";
+    }
+
+    // 4) خطأ النموذج شهرياً في محطة التصحيح
+    if (cal) {
+      const B = q("SELECT var, month, n, bias, mae FROM station_bias WHERE station_id = ? AND var IN ('t_max','t_min') ORDER BY month", [cal.id]);
+      const bx = {}, bn = {}; B.forEach(r => { (r.var === "t_max" ? bx : bn)[r.month] = r; });
+      U.$("#db-g-bias-h").textContent = `خطأ نموذج ERA5 في ${cal.name_ar} لكل شهر`;
+      chart("ground", U.$("#db-g-bias"), { type: "bar", data: { labels: MONTHS, datasets: [
+        { label: "العظمى", data: MONTHS.map((_, i) => bx[i + 1] ? bx[i + 1].bias : null), backgroundColor: "rgba(239,90,100,.75)", borderRadius: 3 },
+        { label: "الصغرى", data: MONTHS.map((_, i) => bn[i + 1] ? bn[i + 1].bias : null), backgroundColor: "rgba(165,182,255,.75)", borderRadius: 3 }] },
+        options: { scales: { x: { ticks: { maxRotation: 60, minRotation: 45, font: { size: 10 } } } } } });
+      const worst = Object.values(bx).sort((a, b) => Math.abs(b.bias) - Math.abs(a.bias))[0];
+      const nd = q1("SELECT COUNT(*) n, MIN(date) a, MAX(date) b FROM station_daily WHERE station_id = ? AND t_max IS NOT NULL AND era5_t_max IS NOT NULL", [cal.id]);
+      U.$("#db-g-bias-cap").innerHTML = `${worst ? `أكبر خطأ في ${MONTHS[worst.month - 1]}: القياس الحقيقي ${worst.bias > 0 ? "أعلى" : "أقل"} من النموذج بـ ${NU(Math.abs(worst.bias), 1, "°C")} للعظمى. ` : ""}العمود فوق الصفر يعني أن النموذج أبرد من الواقع. محسوب على ${N(nd.n, 0)} يوماً من قياسات ${esc(cal.name_ar)} (${nd.a ? nd.a.slice(0, 4) : ""}–${nd.b ? nd.b.slice(0, 4) : ""}) مقابل ERA5 في الأيام نفسها.`;
+    }
+
+    // 5) هل يرى نموذج CAMS الغبار الذي رُصد فعلاً؟
+    if (now) {
+      const rows = q("SELECT substr(date,1,7) m, SUM(dust_hours > 0) obs, SUM(cams_dust >= 100) cams, SUM(dust_hours > 0 AND cams_dust >= 100) hit, SUM(dust_hours > 0 AND cams_dust IS NOT NULL) obsN, SUM(cams_dust >= 100 AND dust_hours = 0) fa FROM station_daily WHERE station_id = ? AND cams_dust IS NOT NULL GROUP BY m ORDER BY m DESC LIMIT 24", [now.id]).reverse();
+      U.$("#db-g-dust-h").textContent = `الغبار في ${now.name_ar}: المرصود فعلاً مقابل نموذج CAMS`;
+      if (rows.length) {
+        chart("ground", U.$("#db-g-dust"), { type: "bar", data: { labels: rows.map(r => fM(r.m)), datasets: [
+          { label: "أيام رُصد فيها غبار فعلاً", data: rows.map(r => r.obs), backgroundColor: "rgba(230,174,79,.85)", borderRadius: 3 },
+          { label: "أيام قدّر فيها CAMS غباراً ≥ 100", data: rows.map(r => r.cams), backgroundColor: "rgba(79,200,220,.6)", borderRadius: 3 }] },
+          options: { scales: { x: { ticks: { maxRotation: 60, minRotation: 45, font: { size: 10 } } } } } });
+        const T = q1("SELECT SUM(dust_hours > 0) obs, SUM(dust_hours > 0 AND cams_dust >= 100) hit, SUM(cams_dust >= 100) cams, SUM(cams_dust >= 100 AND dust_hours = 0) fa, COUNT(*) n FROM station_daily WHERE station_id = ? AND cams_dust IS NOT NULL AND dust_hours IS NOT NULL", [now.id]);
+        U.$("#db-g-dust-cap").innerHTML = T && T.obs ? `منذ آب 2022: رصدت المحطة غباراً أو رمالاً في ${N(T.obs, 0)} يوماً من ${N(T.n, 0)}. قدّر النموذج غباراً عالياً في ${N(100 * T.hit / T.obs, 0)}% من هذه الأيام، وقدّره في ${N(T.fa, 0)} يوماً لم يُرصد فيها غبار. هذا يبيّن لماذا نعامل أرقام غبار CAMS كتقدير لا كقياس.` : "";
+      }
+    }
+
+    // 6) قائمة المحطات
+    const L = q(`SELECT s.*, (SELECT COUNT(*) FROM station_daily x WHERE x.station_id = s.id) n,
+      (SELECT dist_km FROM district_stations WHERE district_id = :d AND station_id = s.id LIMIT 1) dk FROM stations s ORDER BY s.kind, s.id`, { ":d": d.id });
+    U.$("#db-g-list").innerHTML = `<ul class="db-st-list">${L.map(s => `<li><b>${esc(s.name_ar)}</b> <small class="muted">${LTR(s.icao || "")}</small>
+        <span>${s.kind === "current" ? `<em class="db-live">تبث الآن</em>` : "أرشيف منتهٍ"} · ${U.fmt(km(d.lat, d.lon, s.lat, s.lon), 0)} كم عن ${esc(d.name_ar)} · ${s.first_date ? `${s.first_date.slice(0, 4)}–${s.last_date.slice(0, 4)}` : "—"} (${U.fmt(s.n, 0)} يوماً)</span></li>`).join("")}</ul>
+      <p class="db-cap">${esc(SNAME(now ? now.id : ""))} هي أقرب محطة تبث إلى ${esc(d.name_ar)}. المحطات المؤرشفة داخل الأقضية (تكريت وبيجي وبلد) توقفت عن النشر العام، لكن سجلها الحقيقي يكشف خطأ النموذج في المكان نفسه.</p>`;
+  }
+
   /* ------------------------------------------------------------------
      2) السلاسل الزمنية
   ------------------------------------------------------------------ */
@@ -408,7 +543,7 @@
     const [t, c, monthly] = COLS[p];
     const kc = monthly ? "month" : "date";
     let where = `district_id = ? AND ${c} IS NOT NULL`; const args = [did];
-    if (t === "weather_daily") { where += " AND date <= ?"; args.push(today()); }
+    if (/weather/.test(t)) { where += " AND date <= ?"; args.push(today()); }
     const last = (q1(`SELECT MAX(${kc}) m FROM ${t} WHERE ${where}`, args) || {}).m;
     if (!last) return { pts: [], raw: [], agg: "day" };
     if (span) {
@@ -476,7 +611,7 @@
 
     // الدورة الموسمية والسنوات (كامل السجل)
     const kc = monthly ? "month" : "date";
-    const w = `district_id = ? AND ${c} IS NOT NULL${t === "weather_daily" ? " AND date <= ?" : ""}`, wa = t === "weather_daily" ? [d.id, today()] : [d.id];
+    const w = `district_id = ? AND ${c} IS NOT NULL${/weather/.test(t) ? " AND date <= ?" : ""}`, wa = /weather/.test(t) ? [d.id, today()] : [d.id];
     const clim = q(`SELECT CAST(substr(${kc}, 6, 2) AS INTEGER) m, AVG(${c}) y FROM ${t} WHERE ${w} GROUP BY m ORDER BY m`, wa);
     const cm = {}; clim.forEach(r => { cm[r.m] = r.y; });
     chart("series", U.$("#db-ts-clim"), { type: "bar", data: { labels: MONTHS, datasets: [{ label: (P.name_ar || p) + unit, data: MONTHS.map((_, i) => cm[i + 1] ?? null), backgroundColor: DCOL[d.id] + "aa", borderRadius: 4 }] },
@@ -500,6 +635,9 @@
       sheet("الهواء اليومي", "SELECT date, pm2_5, pm2_5_max, pm10, dust, no2, so2, o3, o3_max, co, aqi_pm25, aqi, hours FROM air_daily WHERE district_id = ? ORDER BY date"),
       sheet("الطقس اليومي", "SELECT date, t_max, t_min, t_mean, precip, wind_max, wind_dir, rh_mean, et0, radiation, src FROM weather_daily WHERE district_id = ? ORDER BY date"),
       sheet("تصريف دجلة", "SELECT date, discharge FROM river_daily WHERE district_id = ? ORDER BY date"),
+      ...(S.ground ? [
+        sheet("حرارة مصححة بالقياس", "SELECT date, t_max AS t_max_era5, t_max_adj, t_min AS t_min_era5, t_min_adj, calib_station FROM v_weather_corrected WHERE district_id = ? ORDER BY date"),
+        sheet("قياس أقرب مطار", "SELECT s.name_ar AS station, x.date, x.t_max, x.t_min, x.t_mean, x.rh_mean, x.wind_mean, x.wind_max, x.vis_min, x.dust_hours, x.rain_hours, x.era5_t_max, x.cams_dust FROM station_daily x JOIN stations s ON s.id = x.station_id WHERE x.station_id = (SELECT station_id FROM district_stations WHERE district_id = ? AND role = 'now') ORDER BY x.date")] : []),
       sheet("Sentinel-2 شهري", "SELECT month, ndti, ndci, ndti_p90, ndci_p90, n_pixels, scene_date, cloud_pct, scene_id FROM water_rs_monthly WHERE district_id = ? ORDER BY month"),
       sheet("توقعات", "SELECT for_date, model, value, lo, hi, run_at FROM forecasts WHERE district_id = ? ORDER BY for_date, model"),
       { name: "المصادر", rows: [["المصدر", "المزوّد", "الدقة", "الترخيص", "المرجع"]].concat(q("SELECT * FROM sources").map(s => [s.name, s.provider, s.resolution, s.license, s.citation])) }

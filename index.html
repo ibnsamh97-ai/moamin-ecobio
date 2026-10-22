@@ -1099,7 +1099,7 @@
     <div class="view-head">
       <div>
         <h2>قاعدة بيانات أقضية دجلة</h2>
-        <p>قياسات حقيقية لكل قضاء من أقضية صلاح الدين الستة المطلة على نهر دجلة: ملوثات الهواء يومياً منذ 2022، والطقس منذ 2015، وتصريف النهر منذ 2000، وعكورة الماء وطحالبه من القمر Sentinel-2 منذ 2017، ومصادر التلوث المرسومة، وبحوث جامعة تكريت. تتحدّث كل يوم آلياً، وتُعاد معها تدريب نماذج الذكاء الاصطناعي التي تتوقّع الهواء وتكشف الأيام الشاذة.</p>
+        <p>سجل يومي لكل قضاء من أقضية صلاح الدين الستة المطلة على نهر دجلة، مع بيان واضح لما هو <b>مقاس فعلاً</b> وما هو <b>تقدير نموذج</b>: قياسات أرضية حقيقية من محطات الأرصاد في المطارات، وتقديرات ملوثات الهواء يومياً منذ 2022، والطقس منذ 2015 مصحّحاً بالقياس، وتصريف النهر منذ 2000، وعكورة الماء وطحالبه من القمر Sentinel-2 منذ 2017، ومصادر التلوث المرسومة، وبحوث جامعة تكريت. تتحدّث كل يوم آلياً، وتُعاد معها تدريب نماذج الذكاء الاصطناعي التي تتوقّع الهواء وتكشف الأيام الشاذة.</p>
       </div>
       <div class="db-status" id="db-status" aria-live="polite"></div>
     </div>
@@ -1109,6 +1109,7 @@
       <div class="an-tabs db-tabs" role="tablist" id="db-tabs" aria-label="أقسام قاعدة البيانات"></div>
       <div id="db-panels">
         <section class="an-panel" id="db-p-overview" role="tabpanel" aria-labelledby="db-t-overview"></section>
+        <section class="an-panel" id="db-p-ground" role="tabpanel" aria-labelledby="db-t-ground" hidden></section>
         <section class="an-panel" id="db-p-series" role="tabpanel" aria-labelledby="db-t-series" hidden></section>
         <section class="an-panel" id="db-p-ai" role="tabpanel" aria-labelledby="db-t-ai" hidden></section>
         <section class="an-panel" id="db-p-compare" role="tabpanel" aria-labelledby="db-t-compare" hidden></section>
