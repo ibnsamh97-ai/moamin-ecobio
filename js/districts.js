@@ -71,9 +71,9 @@
   ------------------------------------------------------------------ */
   const S = { db: null, gz: null, meta: null, from: "", D: [], P: {}, d: null, tab: "overview", task: "pm25_d1",
     ts: { p: "pm2_5", span: 365, cmp: "" }, cmpP: "pm2_5", map: null, mapG: null, tigris: null, sqlLast: null, painted: {} };
-  const TABS = [["overview", "لوحة القضاء", "i-home"], ["ground", "المقاس فعلاً", "i-pin"], ["series", "السلاسل الزمنية", "i-layers"], ["ai", "الذكاء الاصطناعي", "i-brain"],
+  const TABS = [["overview", "لوحة القضاء", "i-home"], ["ground", "المقاس فعلاً", "i-pin"], ["sat", "من الفضاء", "i-sat"], ["series", "السلاسل الزمنية", "i-layers"], ["ai", "الذكاء الاصطناعي", "i-brain"],
     ["plan", "خطة العينات", "i-gps"], ["compare", "مقارنة الأقضية", "i-table"], ["studies", "البحوث ومصادر التلوث", "i-book"]];
-  const DIST_TABS = new Set(["overview", "ground", "series", "ai", "plan", "studies"]);
+  const DIST_TABS = new Set(["overview", "ground", "sat", "series", "ai", "plan", "studies"]);
 
   /* ------------------------------------------------------------------
      الاستعلام
@@ -227,7 +227,7 @@
     const el = U.$("#db-p-" + S.tab);
     if (S.painted[S.tab] === key) { if (S.tab === "overview" && S.map) setTimeout(() => S.map.invalidateSize(), 50); return; }
     S.painted[S.tab] = key;
-    try { ({ overview: rOverview, ground: rGround, plan: rPlan, series: rSeries, ai: rAI, compare: rCompare, studies: rStudies })[S.tab](el); }
+    try { ({ overview: rOverview, ground: rGround, sat: rSat, plan: rPlan, series: rSeries, ai: rAI, compare: rCompare, studies: rStudies })[S.tab](el); }
     catch (e) { console.error(e); el.innerHTML = `<div class="notice warn">${ico("i-info")}<span>تعذّر عرض هذا القسم: ${esc(e.message)}</span></div>`; }
     writeHash();
   }
@@ -562,6 +562,101 @@
       <p class="db-cap">${esc(SNAME(now ? now.id : ""))} هي أقرب محطة تبث إلى ${esc(d.name_ar)}. المحطات المؤرشفة داخل الأقضية (تكريت وبيجي وبلد) توقفت عن النشر العام، لكن سجلها الحقيقي يكشف خطأ النموذج في المكان نفسه.</p>`;
   }
 
+
+
+  /* ------------------------------------------------------------------
+     من الفضاء: غازات Sentinel-5P، حرائق MODIS وحرق الغاز، الغطاء النباتي، حرارة ماء دجلة
+  ------------------------------------------------------------------ */
+  const GASN = { no2: ["ثاني أكسيد النتروجين NO₂", "عمود التروبوسفير، من المصافي ومحطات الكهرباء والمرور", "#ee7a4f"], so2: ["ثاني أكسيد الكبريت SO₂", "العمود الكلي، من حرق النفط الثقيل والمصافي (قياسه ضعيف الدقة قرب الصفر)", "#e6ae4f"], co: ["أول أكسيد الكربون CO", "العمود الكلي، من الاحتراق غير الكامل", "#b493ff"] };
+  function sen(xs, ys) {   // ميل ثيل–سن واختبار مان–كندال (ثابت أمام القيم الشاذة)
+    const n = xs.length; if (n < 8) return null;
+    const sl = []; let S0 = 0;
+    for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) { sl.push((ys[j] - ys[i]) / (xs[j] - xs[i])); S0 += Math.sign(ys[j] - ys[i]); }
+    sl.sort((a, b) => a - b);
+    const v = n * (n - 1) * (2 * n + 5) / 18, z = S0 > 0 ? (S0 - 1) / Math.sqrt(v) : S0 < 0 ? (S0 + 1) / Math.sqrt(v) : 0;
+    return { slope: sl[sl.length >> 1], z, p: 2 * (1 - ECO.stats.pnorm(Math.abs(z))) };
+  }
+  function rSat(el) {
+    clearCharts("sat"); clearCharts("sat-gas");
+    const d = dist();
+    const has = t => hasT(t) && !!q1(`SELECT 1 x FROM ${t} LIMIT 1`);
+    if (!has("s5p_daily") && !has("fire_pixels") && !has("ndvi_16d") && !has("river_lst")) {
+      el.innerHTML = `<div class="notice info">${ico("i-info")}<span>بيانات الأقمار الصناعية أضيفت حديثاً وتظهر بعد تحديث القاعدة القادم، ثم تكمل أرشيفها القديم تدريجياً كل يوم.</span></div>`; return;
+    }
+    el.innerHTML = `<div class="notice info">${ico("i-info")}<span>كل ما في هذا القسم <b>قياسات أقمار صناعية حقيقية</b>: Sentinel-5P للغازات، وMODIS للحرائق والنبات، وLandsat لحرارة الماء. يكتمل الأرشيف القديم تدريجياً مع كل تحديث يومي.</span></div>
+      <div class="panel" id="db-s-gas"></div>
+      <div class="grid g-2 db-g2"><div class="panel" id="db-s-fire"></div><div class="panel" id="db-s-flare"></div></div>
+      <div class="grid g-2 db-g2"><div class="panel" id="db-s-ndvi"></div><div class="panel" id="db-s-lst"></div></div>`;
+
+    // 1) الغازات
+    const G = has("s5p_daily") ? q("SELECT gas, substr(date,1,7) m, AVG(value) v, COUNT(*) n FROM s5p_daily WHERE district_id = ? GROUP BY gas, m ORDER BY m", [d.id]) : [];
+    if (G.length) {
+      const gases = Object.keys(GASN).filter(g => G.some(r => r.gas === g));
+      const months = Array.from(new Set(G.map(r => r.m))).sort();
+      const last = q1("SELECT MIN(date) a, MAX(date) b, COUNT(DISTINCT date) n FROM s5p_daily WHERE district_id = ?", [d.id]);
+      const cmp = q(`SELECT x.gas, x.district_id, AVG(x.value) v FROM s5p_daily x WHERE x.date > date((SELECT MAX(date) FROM s5p_daily), '-90 day') GROUP BY 1, 2`);
+      U.$("#db-s-gas").innerHTML = `<div class="panel-h"><h3>غازات التلوث فوق ${esc(d.name_ar)} من القمر Sentinel-5P</h3><span class="sub">ضمن 15 كم من المركز · µmol/m² · ${N(last.n, 0)} يوماً (${fD(last.a)} ← ${fD(last.b)})</span></div>
+        <div class="seg" id="db-s-gsel">${gases.map((g, i) => `<button type="button" data-g="${g}" class="${i ? "" : "on"}">${GASN[g][0].split(" ").pop()}</button>`).join("")}</div>
+        <div class="chart-box"><canvas id="db-s-gc"></canvas></div><p class="db-cap" id="db-s-gcap"></p>`;
+      const draw = g => {
+        clearCharts("sat-gas");
+        const R = {}; G.filter(r => r.gas === g).forEach(r => { R[r.m] = r; });
+        const c = U.chart(U.$("#db-s-gc"), { type: "bar", data: { labels: months.map(fM), datasets: [{ label: GASN[g][0] + " (متوسط شهري)", data: months.map(m => R[m] ? R[m].v : null), backgroundColor: GASN[g][2] + "bb", borderRadius: 3 }] },
+          options: { plugins: { legend: { display: false } }, scales: { x: { ticks: xTicks } } } });
+        if (c) (CH["sat-gas"] = CH["sat-gas"] || []).push(c);
+        const rk = cmp.filter(r => r.gas === g).sort((a, b) => b.v - a.v), me = rk.findIndex(r => r.district_id === d.id);
+        U.$("#db-s-gcap").innerHTML = `${esc(GASN[g][1])}. ${me >= 0 ? `في آخر 90 يوماً ${esc(d.name_ar)} في المرتبة ${me + 1} من ${rk.length} أقضية (${rk.map(r => `${esc(S.D.find(x => x.id === r.district_id).name_ar)} ${U.fmt(r.v, 1)}`).join("، ")}).` : ""} القيمة عمود غاز فوق المنطقة وليست تركيزاً عند سطح الأرض، وتفيد للمقارنة بين الأماكن والأشهر.`;
+      };
+      U.$("#db-s-gsel").onclick = e => { const b = e.target.closest("[data-g]"); if (!b) return; U.$$("#db-s-gsel button").forEach(x => x.classList.toggle("on", x === b)); draw(b.dataset.g); };
+      draw(gases[0]);
+    } else U.$("#db-s-gas").innerHTML = `<div class="panel-h"><h3>غازات التلوث من Sentinel-5P</h3></div><p class="empty">قيد التنزيل؛ تظهر بعد التحديث القادم.</p>`;
+
+    // 2) الحرائق
+    if (has("fire_pixels")) {
+      const F = q("SELECT substr(date,1,7) m, COUNT(*) n, SUM(near_kind IS NOT NULL) nf FROM fire_pixels WHERE district_id = ? GROUP BY m ORDER BY m", [d.id]);
+      const T = q1("SELECT COUNT(*) n, MIN(date) a, MAX(date) b, SUM(near_kind IS NOT NULL) nf FROM fire_pixels WHERE district_id = ?", [d.id]);
+      U.$("#db-s-fire").innerHTML = `<div class="panel-h"><h3>الحرائق المرصودة حول ${esc(d.name_ar)}</h3><span class="sub">MODIS Terra وAqua · بكسل 1 كم</span></div>
+        ${F.length ? `<div class="chart-box sm"><canvas id="db-s-fc"></canvas></div><p class="db-cap">${N(T.n, 0)} رصد حريق ضمن 40 كم (${fD(T.a)} ← ${fD(T.b)})، منها ${N(T.nf, 0)} على بعد 2 كم أو أقل من منشأة نفطية أو صناعية مرسومة. الحرائق الصيفية المتفرقة غالباً حرق مخلفات زراعية أو نفايات.</p>` : `<p class="empty">لم تُرصد حرائق بعد في الأرشيف المعالَج.</p>`}`;
+      if (F.length) chart("sat", U.$("#db-s-fc"), { type: "bar", data: { labels: F.map(r => fM(r.m)), datasets: [{ label: "قرب منشأة", data: F.map(r => r.nf), backgroundColor: "rgba(239,90,100,.8)", stack: "a" }, { label: "حرائق أخرى", data: F.map(r => r.n - r.nf), backgroundColor: "rgba(230,174,79,.7)", stack: "a" }] },
+        options: { scales: { x: { stacked: true, ticks: xTicks }, y: { stacked: true } } } });
+      const H = q("SELECT * FROM fire_hotspots WHERE district_id = ? ORDER BY days_365 DESC", [d.id]);
+      U.$("#db-s-flare").innerHTML = `<div class="panel-h"><h3>مصادر حرارية دائمة (شعلات غاز ومنشآت)</h3><span class="sub">بكسل يحترق 20 يوماً أو أكثر خلال سنة</span></div>
+        ${H.length ? `<ul class="db-st-list">${H.map(h => `<li><b>${h.near_name ? esc(h.near_name) : h.near_kind ? esc((KIND[h.near_kind] || [h.near_kind])[0]) : "موقع غير مرسوم في الخرائط"}</b>
+          <span>${N(h.days_365, 0)} يوم احتراق في آخر سنة · متوسط القدرة ${U.isNum(h.mean_frp) ? NU(h.mean_frp, 0, "MW") : "—"} · آخر رصد ${fD(h.last_date)} · ${LTR(h.lat.toFixed(2) + ", " + h.lon.toFixed(2))}</span></li>`).join("")}</ul>
+          <p class="db-cap">الاحتراق المستمر شبه اليومي في الموقع نفسه بصمة شعلات حرق الغاز المصاحب في الحقول والمصافي، وهي مصدر رئيسي لـ NO₂ والسخام وغازات الاحتباس.</p>`
+        : `<p class="empty">لا مصادر حرارية دائمة ضمن 40 كم من ${esc(d.name_ar)} في الأرشيف المعالَج حتى الآن.</p>`}`;
+    }
+
+    // 3) الغطاء النباتي
+    if (has("ndvi_16d")) {
+      const V = q("SELECT substr(date,1,4) y, AVG(ndvi) v, AVG(pct_green) g, COUNT(*) n FROM ndvi_16d WHERE district_id = ? GROUP BY y HAVING n >= 15 ORDER BY y", [d.id]);
+      const all = q("SELECT date, ndvi FROM ndvi_16d WHERE district_id = ? ORDER BY date", [d.id]);
+      const tr = V.length >= 8 ? sen(V.map(r => +r.y), V.map(r => r.g)) : null;
+      U.$("#db-s-ndvi").innerHTML = `<div class="panel-h"><h3>الغطاء النباتي حول ${esc(d.name_ar)}</h3><span class="sub">MODIS NDVI · 250 م · ضمن 10 كم</span></div>
+        <div class="chart-box sm"><canvas id="db-s-nc"></canvas></div>
+        <p class="db-cap">${tr ? `نسبة الأرض الخضراء (NDVI ≥ 0.3) ${tr.slope > 0 ? "تزداد" : "تتناقص"} بمعدل ${NU(Math.abs(tr.slope * 10), 1, "%")} كل عشر سنوات (ثيل–سن)، ${tr.p <= 0.05 ? `والاتجاه معنوي إحصائياً (مان–كندال p = ${U.fmt(tr.p, 3)}).` : `لكن الاتجاه غير معنوي إحصائياً (p = ${U.fmt(tr.p, 2)}).`} ` : `يحتاج الاتجاه 8 سنوات كاملة على الأقل؛ الأرشيف يكتمل تدريجياً (${N(all.length, 0)} صورة حتى الآن). `}تراجع الغطاء النباتي يزيد مصادر الغبار المحلية.</p>`;
+      if (all.length) chart("sat", U.$("#db-s-nc"), { type: "line", data: { labels: all.map(r => r.date), datasets: [{ label: "NDVI", data: all.map(r => r.ndvi), borderColor: ECO.COL.chloro, borderWidth: 1.2, pointRadius: 0 }] },
+        options: { plugins: { legend: { display: false } }, scales: { x: { ticks: xTicks } } } });
+    }
+
+    // 4) حرارة ماء دجلة
+    if (has("river_lst")) {
+      const P = q("SELECT * FROM river_points WHERE district_id = ?", [d.id]);
+      const main = P.find(p => p.kind === "district");
+      const L = main ? q("SELECT date, lst_c FROM river_lst WHERE point_id = ? ORDER BY date", [main.id]) : [];
+      const pp = P.filter(p => p.kind === "pp_up").map(u => { const dn = P.find(p => p.kind === "pp_down" && p.source_id === u.source_id);
+        const r = dn ? q1(`SELECT COUNT(*) n, AVG(b.lst_c - a.lst_c) dt, MAX(b.lst_c - a.lst_c) mx FROM river_lst a JOIN river_lst b ON a.date = b.date WHERE a.point_id = ? AND b.point_id = ?`, [u.id, dn.id]) : null;
+        return { u, dn, r }; }).filter(x => x.r && x.r.n);
+      U.$("#db-s-lst").innerHTML = `<div class="panel-h"><h3>حرارة سطح ماء دجلة عند ${esc(d.name_ar)}</h3><span class="sub">Landsat 8/9 · 30 م · °C</span></div>
+        ${L.length ? `<div class="chart-box sm"><canvas id="db-s-lc"></canvas></div>` : `<p class="empty">لا مشاهد صافية معالَجة بعد.</p>`}
+        ${pp.length ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>محطة الكهرباء</th><th class="num">مشاهد</th><th class="num">فرق الحرارة بعدها</th><th class="num">أعلى فرق</th></tr></thead><tbody>
+          ${pp.map(x => `<tr><td>${esc(x.u.label.replace(/^قبل /, "").replace(/ بـ 1 كم$/, ""))}</td><td class="num">${N(x.r.n, 0)}</td><td class="num"><b class="${x.r.dt >= 1 ? "bad" : ""}">${x.r.dt >= 0 ? "+" : ""}${U.fmt(x.r.dt, 1)}°</b></td><td class="num">${U.fmt(x.r.mx, 1)}°</td></tr>`).join("")}</tbody></table></div>
+          <p class="db-cap">الفرق = حرارة الماء بعد المحطة بـ 1.5 كم ناقص قبلها بـ 1 كم في المشهد نفسه. فرق موجب مستمر يدل على تصريف مياه تبريد ساخنة (تلوث حراري) يقلّل الأكسجين المذاب.</p>` : ""}
+        <p class="db-cap">حرارة السطح (أول مليمترات) من القمر وقت مروره نحو 10:30 صباحاً، وتختلف قليلاً عن حرارة عمق الماء.</p>`;
+      if (L.length) chart("sat", U.$("#db-s-lc"), { type: "line", data: { labels: L.map(r => r.date), datasets: [{ label: "°C", data: L.map(r => r.lst_c), borderColor: ECO.COL.river, borderWidth: 1.2, pointRadius: 2 }] },
+        options: { plugins: { legend: { display: false } }, scales: { x: { ticks: xTicks } } } });
+    }
+  }
 
   /* ------------------------------------------------------------------
      خطة أخذ العينات: مواقع حقيقية على مجرى دجلة حول مصادر التلوث المرسومة،
