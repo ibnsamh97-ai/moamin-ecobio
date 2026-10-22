@@ -1,0 +1,36 @@
+name: probe
+on:
+  push:
+    paths: ['.github/workflows/probe.yml']
+permissions:
+  contents: write
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Probe network and tools
+        run: |
+          mkdir -p data
+          {
+            echo "date: $(date -u +%FT%TZ)"
+            echo "python: $(python3 --version)"
+            echo "java: $(java -version 2>&1 | head -1)"
+            echo "android_home: ${ANDROID_HOME:-none}"
+            for u in "https://air-quality-api.open-meteo.com/v1/air-quality?latitude=34.6&longitude=43.68&hourly=pm2_5&start_date=2022-07-01&end_date=2022-08-05" \
+                     "https://archive-api.open-meteo.com/v1/archive?latitude=34.6&longitude=43.68&start_date=2015-01-01&end_date=2015-01-03&daily=temperature_2m_max" \
+                     "https://flood-api.open-meteo.com/v1/flood?latitude=34.6&longitude=43.69&daily=river_discharge&start_date=1984-01-01&end_date=1984-01-03" \
+                     "https://planetarycomputer.microsoft.com/api/stac/v1/collections/sentinel-2-l2a" \
+                     "https://overpass-api.de/api/status"; do
+              code=$(curl -s -o /tmp/r.txt -w "%{http_code}" --max-time 40 "$u")
+              echo "$code $u"; head -c 300 /tmp/r.txt | tr '\n' ' '; echo
+            done
+          } > data/ci-probe.txt 2>&1
+          cat data/ci-probe.txt
+      - name: Commit result
+        run: |
+          git config user.name "ecobio-bot"
+          git config user.email "ecobio-bot@users.noreply.github.com"
+          git add data/ci-probe.txt
+          git commit -m "probe: CI network check [skip ci]" || echo nothing
+          git push
