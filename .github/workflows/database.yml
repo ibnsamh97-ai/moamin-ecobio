@@ -68,7 +68,7 @@ jobs:
         env:
           TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          mkdir -p pub && cp out/ecobio.db.gz pub/ && for f in ecobio-meta.json etl.log tigris.json; do cp out/$f pub/ 2>/dev/null || true; done
+          mkdir -p pub && cp out/ecobio.db.gz pub/ && for f in ecobio-meta.json etl.log tigris.json latest.json; do cp out/$f pub/ 2>/dev/null || true; done
           cp etl/schema.sql pub/
           cd pub && git init -q && git checkout -q --orphan db && git add -A
           git -c user.name=ecobio-bot -c user.email=ecobio-bot@users.noreply.github.com commit -qm "database $(date -u +%F)"

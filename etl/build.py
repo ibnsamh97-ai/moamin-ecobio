@@ -200,6 +200,19 @@ def main():
     con.close()
     with open(path, "rb") as f, gzip.open(str(path) + ".gz", "wb", compresslevel=9) as g:
         shutil.copyfileobj(f, g)
+    # ملخص صغير لآخر قراءة وتوقّع لكل قضاء (للتطبيق والتنبيه اليومي دون تنزيل القاعدة كاملة)
+    con2 = sqlite3.connect(path)
+    latest = {"updated_at": run_at, "districts": []}
+    for d in districts(con2):
+        a_ = con2.execute("SELECT date, pm2_5, pm10, dust, aqi_pm25 FROM air_daily WHERE district_id=? ORDER BY date DESC LIMIT 1", (d["id"],)).fetchone()
+        fc = con2.execute("SELECT for_date, model, value, lo, hi FROM forecasts WHERE district_id=? AND target='pm2_5' AND for_date > ? ORDER BY for_date, model",
+                          (d["id"], a_[0] if a_ else "0000")).fetchall()
+        latest["districts"].append({"id": d["id"], "name_ar": d["name_ar"], "lat": d["lat"], "lon": d["lon"],
+                                    "air": dict(zip(["date", "pm2_5", "pm10", "dust", "aqi_pm25"], a_)) if a_ else None,
+                                    "forecast": [dict(zip(["for_date", "model", "value", "lo", "hi"], r)) for r in fc if r[1] != "cams"],
+                                    "cams": [dict(zip(["for_date", "model", "value"], r[:3])) for r in fc if r[1] == "cams"]})
+    con2.close()
+    (path.parent / "latest.json").write_text(json.dumps(latest, ensure_ascii=False), encoding="utf-8")
     meta["bytes"] = path.stat().st_size
     meta["bytes_gz"] = Path(str(path) + ".gz").stat().st_size
     (path.parent / "ecobio-meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1), encoding="utf-8")

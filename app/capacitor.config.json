@@ -1,0 +1,33 @@
+{
+  "appId": "com.moamin.ecobio",
+  "appName": "EcoBio AI",
+  "webDir": "www",
+  "backgroundColor": "#051116",
+  "android": {
+    "allowMixedContent": false,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": false
+  },
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#051116"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1200,
+      "launchAutoHide": true,
+      "backgroundColor": "#051116",
+      "androidScaleType": "CENTER_CROP",
+      "showSpinner": false
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#051116",
+      "overlaysWebView": false
+    },
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_ecobio",
+      "iconColor": "#4FC8DC"
+    }
+  }
+}

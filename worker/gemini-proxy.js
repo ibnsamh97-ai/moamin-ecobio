@@ -285,7 +285,8 @@ export default {
   async fetch(req, env) {
     const origin = req.headers.get("Origin") || "";
     // يقبل الرابط كاملاً أو أصله فقط: https://user.github.io/ecobio-ai ← https://user.github.io
-    const allowed = list(env.ALLOWED_ORIGINS).map(o => { if (o === "*") return o; try { return new URL(o).origin; } catch (e) { return o; } });
+    // تطبيق EcoBio AI على أندرويد وiOS يعمل من هذين الأصلين دائماً
+    const allowed = list(env.ALLOWED_ORIGINS).map(o => { if (o === "*") return o; try { return new URL(o).origin; } catch (e) { return o; } }).concat(["https://localhost", "capacitor://localhost"]);
     const okOrigin = allowed.includes("*") || (origin !== "" && allowed.includes(origin));
     // نسمح للمتصفح بقراءة رسائل الخطأ من أي موقع، لكن لا نمرّر إلى Gemini إلا طلبات المواقع المسموحة
     const cors = {

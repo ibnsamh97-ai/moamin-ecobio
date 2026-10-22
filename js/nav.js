@@ -249,7 +249,7 @@
       </div>
       ${SECTIONS.map(s => `<nav class="foot-col" aria-label="${s.label}" style="--hue:${s.hue}"><a class="fc-h" href="#${s.id}">${s.label}</a>${s.tools.map(t => `<a href="#${t}">${esc(TOOLS[t].label)}</a>`).join("")}</nav>`).join("")}
     </div>
-    <div class="wrap foot-bar"><span id="foot-l"></span><a href="#assistant">المساعد الذكي</a></div>`;
+    <div class="wrap foot-bar"><span id="foot-l"></span><span class="foot-links"><a href="privacy.html">سياسة الخصوصية</a><a href="#assistant">المساعد الذكي</a></span></div>`;
   }
 
   function buildShell() {

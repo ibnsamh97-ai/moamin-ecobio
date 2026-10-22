@@ -1,0 +1,105 @@
+name: android
+# يبني تطبيق EcoBio AI لأندرويد من ملفات المنصة نفسها:
+#   AAB موقّع للرفع إلى Google Play، وAPK للتجربة المباشرة على الهاتف.
+# الناتج يُنشر في فرع app-build وفي صفحة الإصدارات (Releases).
+on:
+  push:
+    branches: [main]
+    paths: ['index.html', 'privacy.html', 'manifest.webmanifest', 'js/**', 'css/**', 'vendor/**', 'assets/**', 'app/**', '.github/workflows/android.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: android
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      VERSION_CODE: ${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+      - name: Install Capacitor
+        working-directory: app
+        run: npm ci --no-audit --no-fund
+      - name: Bundle the platform into the app
+        working-directory: app
+        run: npm run www && npx cap sync android
+      - name: Decrypt upload key
+        id: key
+        env:
+          PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -n "$PASS" ]; then
+            printf '%s' "$PASS" > "$RUNNER_TEMP/pw"
+            openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -in app/keystore/upload.p12.enc -out "$RUNNER_TEMP/upload.p12" -pass file:"$RUNNER_TEMP/pw"
+            rm -f "$RUNNER_TEMP/pw"
+            echo "file=$RUNNER_TEMP/upload.p12" >> "$GITHUB_OUTPUT"
+            echo "signed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::ANDROID_KEYSTORE_PASSWORD is not set; building an unsigned bundle and a debug APK only."
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Build
+        working-directory: app/android
+        env:
+          KEYSTORE_FILE: ${{ steps.key.outputs.file }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: upload
+        run: |
+          chmod +x gradlew
+          if [ "${{ steps.key.outputs.signed }}" = "true" ]; then
+            ./gradlew --no-daemon bundleRelease assembleRelease
+          else
+            ./gradlew --no-daemon bundleRelease assembleDebug
+          fi
+      - name: Collect outputs
+        id: out
+        run: |
+          V=$(node -p "require('./app/package.json').version")
+          mkdir -p pub
+          cp app/android/app/build/outputs/bundle/release/*.aab "pub/EcoBio-AI-$V-$VERSION_CODE.aab"
+          APK=$(ls app/android/app/build/outputs/apk/*/*.apk | head -1)
+          cp "$APK" "pub/EcoBio-AI-$V-$VERSION_CODE.apk"
+          {
+            echo "version=$V"
+            echo "versionCode=$VERSION_CODE"
+            echo "signed=${{ steps.key.outputs.signed }}"
+            echo "commit=$GITHUB_SHA"
+            echo "built=$(date -u +%FT%TZ)"
+            echo "aab_bytes=$(stat -c %s pub/*.aab)"
+            echo "apk_bytes=$(stat -c %s pub/*.apk)"
+          } > pub/build-info.txt
+          keytool -printcert -jarfile pub/*.apk 2>/dev/null | grep -E "Owner|SHA1|SHA256" >> pub/build-info.txt || true
+          cat pub/build-info.txt
+          echo "v=$V" >> "$GITHUB_OUTPUT"
+      - name: Publish to app-build branch
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd pub && git init -q && git checkout -q --orphan app-build && git add -A
+          git -c user.name=ecobio-bot -c user.email=ecobio-bot@users.noreply.github.com commit -qm "android ${{ steps.out.outputs.v }} ($VERSION_CODE)"
+          git push -qf "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" app-build
+      - name: Publish release
+        if: steps.key.outputs.signed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="android-${{ steps.out.outputs.v }}-$VERSION_CODE"
+          gh release create "$TAG" pub/*.aab pub/*.apk pub/build-info.txt --target "$GITHUB_SHA" \
+            --title "EcoBio AI لأندرويد ${{ steps.out.outputs.v }} (بناء $VERSION_CODE)" \
+            --notes "ملف AAB للرفع إلى Google Play، وملف APK للتثبيت المباشر على الهاتف للتجربة." --latest
+      - name: Clean up key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/upload.p12"

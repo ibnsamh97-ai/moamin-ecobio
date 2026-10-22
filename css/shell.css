@@ -423,3 +423,6 @@ footer.foot { border-top: 1px solid var(--line); background: #040e12; }
   .tool-card:hover { transform: none; }
 }
 .notice .btn { flex: none; white-space: nowrap; }
+.foot-links { display: inline-flex; flex-wrap: wrap; gap: 6px 18px; }
+/* داخل التطبيق: مسافة لأسفل الشاشة الآمنة */
+html.is-app body { padding-bottom: env(safe-area-inset-bottom); }
