@@ -255,6 +255,7 @@
 
   function renderAdvisor() {
     const R = S.res, P = R.P.filter(p => p.an), box = U.$("#an-p-advisor"); if (!box) return;
+    box.onclick = e => { if (e.target.closest("#an-write")) writeUp(); };
     if (!P.length) { box.innerHTML = `<p class="empty">المشرف الإحصائي يحتاج عمود مجموعات (مثل المحطة أو المعاملة) وأكثر من قياس لكل مجموعة.</p>`; return; }
     const A = P.map(p => Object.assign({ p }, advise(p)));
     const yes = (ok, t, f) => ok == null ? "—" : ok ? `<span class="ok">${t}</span>` : `<span class="bad">${f}</span>`;
@@ -264,7 +265,35 @@
       <div class="an-interp">${A.map(x => `<p><b>${bi(x.p.name)}:</b> ${x.why} ${agree(x) ? `<b class="bad">انتبه: نتيجة الاختبار المناسب (p ${pf(x.recP)}) تختلف عن ANOVA العادي (p ${pf(x.anovaP)})، فاعتمد الاختبار المناسب في رسالتك.</b>` : ""}
         ${x.out ? `وُجدت ${x.out} قيمة شاذة بقاعدة IQR؛ تأكد أنها ليست خطأ إدخال قبل حذفها، ولا تحذفها لمجرد أنها بعيدة.` : ""}
         ${x.need && x.need > x.nMin ? `لكشف فرق بحجم الأثر الحالي (η² = ${nf(x.eta2)}) بقوة 80% تحتاج نحو <b>${x.need}</b> مكررات لكل مجموعة (لديك ${x.nMin}).` : x.need ? `عدد المكررات كافٍ لكشف هذا الأثر بقوة 80%.` : ""}</p>`).join("")}
+        <div class="an-write"><button type="button" class="btn btn-sm" id="an-write">اكتب فقرتي المنهجية الإحصائية والنتائج</button><div id="an-write-out"></div></div>
         <p class="faint pl-mini">الطرق: شابيرو–ويلك على بواقي النموذج (Royston 1995)، ليفين بالوسيط (Brown–Forsythe 1974)، ويلش (1951)، كروسكال–والس مع تصحيح التعادل، القيم الشاذة بقاعدة توكي 1.5×IQR، وحجم العينة من جداول القوة لكوهين (1988). نتائجها مطابقة لمكتبة SciPy. ملاحظة: اختبار دنكن متساهل نسبياً، وبعض المجلات تفضّل توكي HSD.</p></div>`;
+  }
+
+  /* كاتب فقرات الرسالة: يكتب من الأرقام المحسوبة هنا فقط */
+  function writeUp() {
+    const out = U.$("#an-write-out"), R = S.res; if (!R) return;
+    if (ECO.gemini.ready && !ECO.gemini.ready()) { ECO.gemini.renderInto(out, ""); return; }
+    const facts = R.P.map(p => { const x = advise(p) || {};
+      return `المعيار: ${p.name}\n` + p.byG.filter(g => g.n).map(g => `  ${g.l}: n=${g.n}، المتوسط=${nf(g.mean)}، الانحراف=${nsd(g.sd, g.mean)}${p.letters && p.letters[g.l] ? "، حرف دنكن=" + p.letters[g.l] : ""}`).join("\n")
+        + (p.an ? `\n  ANOVA: F(${p.an.dfA}, ${p.an.dfE}) = ${nf(p.an.FA)}، p = ${pf(p.an.pA)}` : "")
+        + (x.rec ? `\n  الاختبار المناسب حسب الشروط: ${x.rec}، p = ${pf(x.recP)}؛ شابيرو–ويلك للبواقي p = ${x.sw ? pf(x.sw.p) : "—"}؛ ليفين p = ${x.lev ? pf(x.lev.p) : "—"}؛ η² = ${U.isNum(x.eta2) ? nf(x.eta2) : "—"}` : ""); }).join("\n\n");
+    const corr = []; R.P.forEach((p, i) => R.P.forEach((q, j) => { const c = R.corr[i][j]; if (j > i && U.isNum(c.r) && c.p <= 0.05) corr.push(`${p.name} مع ${q.name}: r = ${c.r.toFixed(3)}، p = ${pf(c.p)}، n = ${c.n}`); }));
+    out.innerHTML = `<p class="typing"><i></i><i></i><i></i></p>`;
+    ECO.gemini.generate({ temperature: 0.3,
+      system: "أنت محرر علمي لرسائل الماجستير في علوم البيئة. اكتب فقط من الأرقام المعطاة حرفياً، ولا تضف أي رقم أو تفسير سببي غير مدعوم. استعمل صيغة البحوث المحكمة.",
+      contents: [{ role: "user", parts: [{ text: `اكتب لرسالتي:
+1) فقرة «التحليل الإحصائي» (Statistical analysis) تصف الاختبارات المستعملة فعلاً حسب الشروط أدناه (ANOVA أو ويلش أو كروسكال–والس، ودنكن، وبيرسون) مع مستوى المعنوية 0.05 وبرنامج التحليل: منصة EcoBio AI.
+2) فقرة «النتائج» تصف الفروق بين مستويات «${S.cols[S.gA] || "المجموعات"}» لكل معيار بالأرقام، وتشير إلى الجدول بـ «الجدول (1)».
+اكتب الفقرتين بالعربية ثم ترجمتهما الإنكليزية.
+
+البيانات المحسوبة:
+${facts}
+
+الارتباطات المعنوية:
+${corr.join("\n") || "لا توجد"}` }] }],
+      onText: t => { out.innerHTML = U.md(t); } })
+      .then(() => out.insertAdjacentHTML("beforeend", `<p class="faint pl-mini">مسودة مكتوبة من أرقامك المحسوبة أعلاه؛ راجعها مع مشرفك وأضف تفسيرك العلمي ومقارنتك بالدراسات السابقة.</p>`))
+      .catch(e => { out.innerHTML = `<div class="notice warn">${U.esc(e.message)}</div>`; });
   }
 
   function renderCorr() {

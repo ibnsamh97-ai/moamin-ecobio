@@ -814,6 +814,40 @@
 </section>
 
 <!-- ======================= الفجوات البحثية ======================= -->
+<section class="view" id="view-scholar" data-title="الباحث الذكي">
+  <div class="wrap">
+    <div class="view-head"><div>
+      <h2>الباحث الذكي</h2>
+      <p>ذكاء اصطناعي يعمل على مصادر حقيقية فقط: يبحث في أكثر من 250 مليون عمل علمي (OpenAlex) ويجيب من ملخصاتها مع رقم المرجع لكل معلومة، ويقرأ ملفات البحوث ويستخرج قيمها، ويقارن طرق معالجة أي ملوث من الدراسات المنشورة.</p>
+    </div></div>
+    <div class="an-tabs" id="sch-tabs" role="tablist" aria-label="أدوات الباحث الذكي">
+      <button type="button" role="tab" data-tab="lit" aria-selected="true" aria-controls="sch-p-lit">اسأل الأدبيات العلمية</button>
+      <button type="button" role="tab" data-tab="pdf" aria-selected="false" aria-controls="sch-p-pdf">قارئ البحوث PDF</button>
+      <button type="button" role="tab" data-tab="treat" aria-selected="false" aria-controls="sch-p-treat">مرشّح طريقة المعالجة</button>
+    </div>
+    <div class="sch-panel panel" id="sch-p-lit" role="tabpanel">
+      <div class="field"><label for="sch-q">سؤالك البحثي (بالعربية أو الإنكليزية)</label>
+        <div class="row"><input id="sch-q" class="input" type="search" placeholder="مثال: كفاءة القصب في إزالة الرصاص من مياه الصرف النفطي"><button type="button" class="btn" id="sch-go">ابحث</button></div></div>
+      <p class="muted sch-ex">أمثلة: <button type="button" class="linkbtn" data-sch-ex>تراكيز العناصر الثقيلة في مياه نهر دجلة</button> · <button type="button" class="linkbtn" data-sch-ex>البكتيريا المحللة للنفط في التربة الملوثة</button> · <button type="button" class="linkbtn" data-sch-ex>أثر العواصف الغبارية على الصحة في العراق</button></p>
+      <div id="sch-lit-out"></div>
+    </div>
+    <div class="sch-panel panel" id="sch-p-pdf" role="tabpanel" hidden>
+      <div class="field"><label for="sch-file">ملف البحث (PDF حتى 10 ميغابايت)</label><input id="sch-file" class="input" type="file" accept="application/pdf"></div>
+      <p class="muted">يستخرج العنوان والباحثين والمجلة والمكان وطرق القياس وكل القيم المقاسة في الجداول إلى جدول تنزّله Excel. الملف يُرسل إلى Gemini للقراءة فقط ولا يُحفظ.</p>
+      <div id="sch-pdf-out"></div>
+    </div>
+    <div class="sch-panel panel" id="sch-p-treat" role="tabpanel" hidden>
+      <div class="db-ctrl">
+        <div class="field"><label for="sch-tp">الملوث</label><select id="sch-tp" class="input"></select></div>
+        <div class="field"><label for="sch-tm">الوسط</label><select id="sch-tm" class="input"><option value="ww">مياه صرف صناعي (نفطي)</option><option value="water">مياه نهر أو آبار</option><option value="soil">تربة</option><option value="sed">رواسب نهرية</option></select></div>
+        <div class="field"><label for="sch-tc">التركيز (اختياري)</label><input id="sch-tc" class="input" placeholder="مثال: 0.5 mg/L"></div>
+        <div class="field"><span class="lbl">&nbsp;</span><button type="button" class="btn" id="sch-tr-go">قارن الطرق</button></div>
+      </div>
+      <div id="sch-tr-out"></div>
+    </div>
+  </div>
+</section>
+
 <section class="view" id="view-gaps" data-title="الفجوات البحثية">
   <div class="wrap">
     <div class="view-head">
@@ -1229,6 +1263,7 @@
 <script src="js/contrib.js"></script>
 <script src="js/space.js"></script>
 <script src="js/gaps.js"></script>
+<script src="js/scholar.js"></script>
 <script src="js/palmer.js"></script>
 <script src="js/data-twin.js"></script>
 <script src="js/twin.js"></script>
