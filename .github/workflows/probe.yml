@@ -1,0 +1,25 @@
+name: probe
+# فحص سريع لمصادر الأقمار الصناعية قبل إضافتها إلى القاعدة؛ النتيجة في فرع probe
+on:
+  push:
+    branches: [main]
+    paths: ['etl/probe/**']
+permissions:
+  contents: write
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install pystac-client planetary-computer rasterio numpy h5py fsspec aiohttp requests
+      - run: python etl/probe/probe.py 2>&1 | tee probe.log
+        continue-on-error: true
+      - env: { TOKEN: '${{ secrets.GITHUB_TOKEN }}' }
+        run: |
+          mkdir pub && cp probe.log pub/ && cp probe.json pub/ 2>/dev/null || true
+          cd pub && git init -q && git checkout -q --orphan probe && git add -A
+          git -c user.name=ecobio-bot -c user.email=ecobio-bot@users.noreply.github.com commit -qm probe
+          git push -qf "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" probe
