@@ -191,3 +191,185 @@
 .u-w100p-r10-mt12 { width:100% !important;border-radius:10px !important;margin-top:12px !important; }
 .hud h3.hud-h { font-size: var(--fs-sm); margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 #vo-prev, #sf-photo-prev { height: auto; }
+
+/* =====================================================================
+   قاعدة بيانات أقضية دجلة
+   ===================================================================== */
+#view-districts .view-head { align-items: flex-start; }
+.db-status { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.db-status .chip svg { width: 13px; height: 13px; }
+.db-n { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+
+/* التحميل */
+.db-load { display: grid; place-items: center; min-height: 320px; }
+.db-load[hidden] { display: none; }
+.db-load-box { display: grid; justify-items: center; gap: 12px; text-align: center; max-width: 460px; padding: 28px 20px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--ink-1); }
+.db-load-box > svg, .db-load-ic svg { width: 34px; height: 34px; color: var(--hue); }
+.db-load-ic { width: 64px; height: 64px; border-radius: 18px; display: grid; place-items: center; background: var(--hue-soft); border: 1px solid var(--hue-line); }
+.db-load-box small { color: var(--faint); font-size: var(--fs-xs); line-height: 1.7; }
+.db-prog { width: 100%; height: 6px; border-radius: 6px; background: var(--ink-0); overflow: hidden; }
+.db-prog i { display: block; height: 100%; background: var(--hue); transform: scaleX(0); transform-origin: right; transition: transform .25s ease; }
+
+/* شريط الأقضية: النهر من الشمال إلى الجنوب */
+.db-ribbon { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; overflow-x: auto; scrollbar-width: none; padding: 2px 2px 6px; }
+.db-ribbon::-webkit-scrollbar { display: none; }
+.db-ribbon ol { list-style: none; margin: 0; padding: 0; display: flex; gap: 6px; position: relative; flex: 1 0 auto; }
+.db-ribbon ol::before { content: ""; position: absolute; inset-inline: 10px; top: 50%; height: 2px; background: linear-gradient(270deg, rgba(79,200,220,.15), rgba(79,200,220,.6), rgba(79,200,220,.15)); }
+.db-ribbon li { position: relative; flex: 1 0 auto; }
+.db-ribbon li button { width: 100%; display: flex; align-items: center; gap: 8px; padding: 9px 12px; min-height: 44px; border-radius: 12px; border: 1px solid var(--line); background: var(--ink-1); color: var(--text); cursor: pointer; font: inherit; white-space: nowrap; transition: border-color .15s, background .15s; }
+.db-ribbon li button:hover { border-color: var(--line-2); }
+.db-ribbon li button[aria-pressed="true"] { border-color: var(--dc); background: color-mix(in srgb, var(--dc) 14%, var(--ink-1)); box-shadow: 0 0 0 1px var(--dc) inset; }
+.db-ribbon li button b { font-weight: 600; font-size: .92rem; }
+.db-ribbon .chip { padding: 2px 8px; }
+.rb-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--dc); flex: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--dc) 25%, transparent); display: inline-block; }
+.rb-end { font-size: var(--fs-xs); color: var(--faint); white-space: nowrap; flex: none; }
+.rb-near { flex: none; white-space: nowrap; }
+.db-tabs button { display: inline-flex; align-items: center; gap: 7px; }
+.db-tabs button svg { width: 16px; height: 16px; }
+#view-districts.db-no-dist .db-ribbon { opacity: .55; }
+
+/* لوحة القضاء */
+.db-ov { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.db-ov-main, .db-ov-side { display: grid; gap: 16px; min-width: 0; }
+.db-kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.db-kpi { display: grid; gap: 4px; align-content: start; padding: 14px; border-radius: var(--r-md); background: var(--ink-1); border: 1px solid var(--line); border-top: 3px solid var(--tc, var(--line-2)); min-width: 0; }
+.db-kpi.tone-b-good { --tc: var(--chloro); } .db-kpi.tone-b-fair { --tc: #e8d35a; } .db-kpi.tone-b-warn { --tc: var(--silt); }
+.db-kpi.tone-b-bad { --tc: var(--rust); } .db-kpi.tone-b-severe { --tc: var(--crimson); } .db-kpi.tone-b-hazard { --tc: var(--violet); } .db-kpi.tone-b-info { --tc: var(--river); }
+.db-kpi { background: var(--ink-1); }
+.db-kpi .k { font-size: var(--fs-xs); color: var(--muted); }
+.db-kpi .v { font-family: var(--f-mono); font-size: 1.6rem; font-weight: 600; line-height: 1.15; }
+.db-kpi .v small { font-size: .72rem; color: var(--faint); font-weight: 400; margin-inline-start: 4px; }
+.db-kpi .v .db-kpi-t { font-family: var(--f-display); font-size: 1.12rem; }
+.db-kpi .d { font-size: .76rem; color: var(--faint); line-height: 1.6; }
+.db-say h3 { display: flex; align-items: center; gap: 8px; font-size: var(--fs-md); margin-bottom: 8px; }
+.db-say h3 svg { width: 18px; height: 18px; color: var(--hue); }
+.db-say p { line-height: 1.95; color: #cfe0dc; }
+.db-cap { font-size: var(--fs-xs); color: var(--faint); line-height: 1.75; margin-top: 10px; }
+.db-map { height: 330px; border-radius: var(--r-sm); overflow: hidden; background: var(--ink-0); }
+.db-map-leg { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-top: 10px; font-size: var(--fs-xs); color: var(--muted); }
+.db-map-leg i, .db-kinds .chip i, .db-kdot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-inline-end: 6px; vertical-align: middle; }
+.db-kinds { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.db-kinds .chip { background: var(--ink-0); border-color: var(--line); color: var(--text); }
+.db-kinds .chip i { background: var(--kc); margin: 0; }
+.leaflet-tooltip.db-tip { background: rgba(5, 17, 22, .9); color: var(--text); border: 1px solid var(--line-2); font-weight: 600; box-shadow: none; }
+.leaflet-tooltip.db-tip::before { display: none; }
+.db-ov-side .kv dd { line-height: 1.7; }
+
+/* السلاسل */
+.db-ctrl { display: grid; grid-template-columns: minmax(0, 1.4fr) auto minmax(0, 1fr); gap: 12px; align-items: end; margin-bottom: 14px; }
+.db-ctrl .lbl { font-size: var(--fs-xs); color: var(--muted); }
+.db-ctrl .seg { flex-wrap: nowrap; }
+.db-ctrl .seg button { white-space: nowrap; min-height: 34px; }
+.db-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 14px 0; }
+.db-stats .stat .v { font-size: 1.3rem; }
+.db-g2 { margin-top: 14px; }
+#db-panels .panel + .panel, #db-panels .panel + .grid, #db-panels .grid + .panel, #db-panels .db-ai-grid + .panel { margin-top: 14px; }
+.db-years { max-height: 260px; overflow-y: auto; }
+.db-inline { min-width: 220px; }
+
+/* الذكاء الاصطناعي */
+.db-ai-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+.db-ai-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 16px; }
+.db-models tr.is-best td { background: rgba(147, 221, 138, .07); }
+.db-models td:first-child { white-space: normal; }
+.db-regs { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+.db-reg { display: grid; gap: 4px; padding: 12px; border-radius: var(--r-sm); background: var(--ink-0); border: 1px solid var(--line); border-inline-start: 3px solid var(--rc); }
+.db-reg b { display: flex; align-items: center; gap: 8px; }
+.db-reg b i { width: 10px; height: 10px; border-radius: 3px; background: var(--rc); }
+.db-reg .muted, .db-reg-v { font-size: var(--fs-xs); }
+.db-reg-v { color: var(--faint); display: flex; flex-wrap: wrap; gap: 2px 12px; }
+.db-reg-v span { unicode-bidi: isolate; white-space: nowrap; }
+.db-h4 { font-size: var(--fs-sm); color: var(--muted); margin: 16px 0 8px; font-weight: 500; }
+.db-cal { display: grid; grid-template-rows: repeat(7, 11px); grid-auto-flow: column; grid-auto-columns: 11px; gap: 2px; overflow-x: auto; padding-bottom: 4px; direction: ltr; }
+.db-cal i { border-radius: 2px; }
+.db-method summary { cursor: pointer; display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.db-method summary svg { width: 18px; height: 18px; color: var(--hue); }
+.db-method .prose { margin-top: 10px; max-width: 80ch; }
+.db-method .prose p { margin: 8px 0; line-height: 1.9; }
+
+/* المقارنة */
+.db-cmp .linkbtn { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; color: var(--text); font-weight: 600; min-height: 32px; }
+.db-cmp td.db-max { color: var(--rust); font-weight: 600; }
+.db-cmp + .notice, #db-p-compare .notice { margin-top: 12px; }
+
+/* البحوث والمصادر */
+.db-st-grid { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); align-items: start; }
+.db-study { padding: 12px 0; border-bottom: 1px solid var(--line); }
+.db-study:last-of-type { border-bottom: 0; }
+.db-study h4 { font-size: .95rem; line-height: 1.6; margin-bottom: 4px; }
+.db-study p { font-size: var(--fs-sm); line-height: 1.8; margin: 4px 0; }
+.db-study-m { display: flex; flex-wrap: wrap; gap: 6px 14px; color: var(--muted); font-size: var(--fs-xs) !important; }
+.db-study-m span, .db-study-m a { display: inline-flex; align-items: center; gap: 5px; }
+.db-study-m svg { width: 14px; height: 14px; }
+.db-study details summary { cursor: pointer; color: var(--river); font-size: var(--fs-sm); margin-top: 6px; }
+.db-study details .tbl-wrap { max-height: 300px; overflow: auto; margin-top: 8px; }
+#db-p-studies td a svg { width: 16px; height: 16px; }
+#db-p-studies td a { display: inline-grid; place-items: center; width: 32px; height: 32px; }
+
+/* SQL */
+.db-sql-grid { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 16px; align-items: start; }
+.db-sql-main { display: grid; gap: 14px; min-width: 0; }
+.db-sql { font-family: var(--f-mono); font-size: .86rem; line-height: 1.6; text-align: left; resize: vertical; min-height: 170px; tab-size: 2; }
+.db-sql-act { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; align-items: center; }
+.db-sql-act kbd { font-family: var(--f-mono); font-size: .68rem; padding: 1px 5px; border-radius: 4px; border: 1px solid rgba(255,255,255,.25); margin-inline-start: 4px; }
+.db-samples { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; align-items: center; font-size: var(--fs-xs); }
+.db-sample { cursor: pointer; background: var(--ink-0); border-color: var(--line-2); color: var(--text); font-weight: 500; min-height: 30px; white-space: normal; text-align: right; }
+.db-sample:hover { border-color: var(--river); }
+.db-res { max-height: 520px; overflow: auto; }
+.db-res table td, .db-res table th { font-size: .8rem; }
+.db-schema { max-height: 720px; overflow-y: auto; position: sticky; top: calc(var(--header-h) + 12px); }
+.db-schema details { border-bottom: 1px solid var(--line); padding: 6px 0; }
+.db-schema summary { cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.db-schema summary small, .db-schema li small { color: var(--faint); font-size: .7rem; }
+.db-schema ul { list-style: none; margin: 6px 0 4px; padding: 0 10px 0 0; display: grid; gap: 2px; }
+.db-schema li { display: flex; justify-content: space-between; gap: 8px; }
+.db-schema code { font-family: var(--f-mono); font-size: .78rem; cursor: pointer; color: var(--river); }
+.db-schema code:hover { text-decoration: underline; }
+
+/* المخطط والمصادر */
+.db-pipe { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; counter-reset: s; }
+.db-pipe li { display: grid; gap: 6px; align-content: start; padding: 12px; border-radius: var(--r-sm); background: var(--ink-0); border: 1px solid var(--line); position: relative; }
+.db-pipe li .tc-ic { width: 36px; height: 36px; border-radius: 10px; }
+.db-pipe li .tc-ic svg { width: 18px; height: 18px; }
+.db-pipe li p { font-size: var(--fs-xs); color: var(--muted); line-height: 1.75; margin: 0; }
+.db-dl { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.db-ents { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+.db-ent { border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--ink-0); overflow: hidden; }
+.db-ent-h { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 10px; background: var(--ink-2); border-bottom: 1px solid var(--line); }
+.db-ent-h code { font-family: var(--f-mono); font-weight: 600; color: var(--river); font-size: .85rem; }
+.db-ent-h small { color: var(--faint); font-size: .7rem; }
+.db-ent > p { font-size: var(--fs-xs); color: var(--muted); padding: 6px 10px 0; margin: 0; }
+.db-ent ul { list-style: none; margin: 0; padding: 6px 10px 10px; display: grid; gap: 3px; }
+.db-ent li { display: flex; align-items: center; gap: 6px; font-size: .76rem; }
+.db-ent li code { font-family: var(--f-mono); }
+.db-ent li small { margin-inline-start: auto; color: var(--faint); font-size: .66rem; }
+.db-ent li.pk code { color: var(--silt); font-weight: 600; }
+.db-key { font-family: var(--f-mono); font-size: .62rem; padding: 0 5px; border-radius: 4px; background: rgba(230,174,79,.15); color: var(--silt); }
+.db-key.fk { background: rgba(79,200,220,.12); color: var(--river); }
+.db-wrap-tbl td { white-space: normal; min-width: 120px; vertical-align: top; line-height: 1.7; }
+.db-msg { white-space: normal !important; min-width: 220px; font-size: .78rem; color: var(--muted); }
+#db-p-about details > summary { cursor: pointer; font-weight: 600; }
+#db-p-about details .tbl-wrap { margin-top: 10px; max-height: 420px; overflow: auto; }
+
+/* الهاتف */
+@media (max-width: 1100px) {
+  .db-ov { grid-template-columns: 1fr; }
+  .db-ov-side { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .db-pipe { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .db-sql-grid { grid-template-columns: 1fr; }
+  .db-schema { position: static; max-height: 360px; }
+}
+@media (max-width: 760px) {
+  .db-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .db-kpi { padding: 12px; }
+  .db-kpi .v { font-size: 1.3rem; }
+  .db-ov-side, .db-ai-grid, .db-st-grid, .db-g2 { grid-template-columns: 1fr; }
+  .db-ctrl { grid-template-columns: 1fr; }
+  .db-ctrl .seg { overflow-x: auto; scrollbar-width: none; max-width: 100%; }
+  .db-map { height: 260px; }
+  .db-pipe { grid-template-columns: 1fr; }
+  .rb-end { display: none; }
+  .db-ribbon { margin-inline: -16px; padding-inline: 16px; }
+  .db-ribbon li button { padding: 8px 10px; }
+  .db-ai-grid { gap: 14px; }
+}

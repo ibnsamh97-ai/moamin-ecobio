@@ -1,0 +1,910 @@
+/* =====================================================================
+   EcoBio AI — قاعدة بيانات أقضية دجلة في صلاح الدين
+   قاعدة SQLite حقيقية تُبنى وتُحدَّث كل يوم آلياً على GitHub Actions
+   (مجلد etl/)، وتُقرأ هنا كاملة داخل المتصفح بمحرك sql.js،
+   وتُحفظ نسخة منها في الجهاز للعمل دون إنترنت.
+   ===================================================================== */
+(function () {
+  "use strict";
+  const ECO = window.ECO, U = ECO.util;
+  if (!document.getElementById("view-districts")) return;
+
+  const RAW = "https://raw.githubusercontent.com/ibnsamh97-ai/moamin-ecobio/db/";
+  const CACHE = "ecobio-db-v1";
+  const esc = s => U.esc(s == null ? "" : String(s));
+  const ico = id => `<svg aria-hidden="true"><use href="#${id}"/></svg>`;
+  const N = (v, d = "auto") => `<bdi class="db-n">${U.fmt(v, d)}</bdi>`;
+  const LTR = s => `<bdi dir="ltr">${esc(s)}</bdi>`;
+  const dayF = new Intl.DateTimeFormat("ar-IQ-u-nu-latn", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+  const monF = new Intl.DateTimeFormat("ar-IQ-u-nu-latn", { month: "long", year: "numeric", timeZone: "UTC" });
+  const stampF = new Intl.DateTimeFormat("ar-IQ-u-nu-latn", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Baghdad" });
+  const fD = iso => iso ? dayF.format(new Date(String(iso).slice(0, 10) + "T12:00:00Z")) : "—";
+  const fM = ym => ym ? monF.format(new Date(String(ym).slice(0, 7) + "-15T12:00:00Z")) : "—";
+  const fStamp = s => { try { return stampF.format(new Date(/[zZ]|[+-]\d\d:?\d\d$/.test(s) ? s : s + "Z")); } catch (e) { return s || "—"; } };
+  const MONTHS = ["كانون الثاني", "شباط", "آذار", "نيسان", "أيار", "حزيران", "تموز", "آب", "أيلول", "تشرين الأول", "تشرين الثاني", "كانون الأول"];
+  const today = () => U.isoDate(new Date());
+
+  /* ------------------------------------------------------------------
+     مسميات ثابتة
+  ------------------------------------------------------------------ */
+  const DCOL = { shirqat: "#b493ff", baiji: "#ee7a4f", tikrit: "#4fc8dc", dour: "#93dd8a", samarra: "#e6ae4f", balad: "#f08fb8" };
+  const MODEL = { persistence: "الاستمرارية (خط الأساس)", ridge: "انحدار Ridge", random_forest: "الغابة العشوائية", gradient_boosting: "التعزيز التدرّجي", mlp: "شبكة عصبية MLP", cams: "توقّع CAMS" };
+  const KIND = {
+    refinery: ["مصفاة نفط", "#ef5a64"], oil_facility: ["منشأة نفطية", "#ee7a4f"], power_plant: ["محطة كهرباء", "#e6ae4f"],
+    wastewater: ["محطة معالجة مياه صرف", "#4fc8dc"], landfill: ["مكبّ نفايات", "#b493ff"], oil_well: ["بئر نفط", "#c98b5a"],
+    oil_storage: ["خزّان نفط", "#f2b27a"], quarry: ["مقلع", "#9aa7a4"], works: ["معمل", "#e8d35a"], industrial: ["منطقة صناعية", "#c4d3cf"]
+  };
+  /* عمود كل معيار في جداول القاعدة: [الجدول، العمود، شهري؟] */
+  const COLS = {
+    pm2_5: ["air_daily", "pm2_5"], pm10: ["air_daily", "pm10"], dust: ["air_daily", "dust"], no2: ["air_daily", "no2"], so2: ["air_daily", "so2"],
+    o3: ["air_daily", "o3_max"], co: ["air_daily", "co"], aqi_pm25: ["air_daily", "aqi_pm25"],
+    t_max: ["weather_daily", "t_max"], t_mean: ["weather_daily", "t_mean"], precip: ["weather_daily", "precip"], wind_max: ["weather_daily", "wind_max"],
+    rh_mean: ["weather_daily", "rh_mean"], et0: ["weather_daily", "et0"],
+    discharge: ["river_daily", "discharge"],
+    ndti: ["water_rs_monthly", "ndti", true], ndci: ["water_rs_monthly", "ndci", true]
+  };
+  const CAT = { air: "الهواء (CAMS)", weather: "الطقس (ERA5)", river: "النهر (GloFAS)", water_rs: "الماء من الفضاء (Sentinel-2)" };
+  const SRC_NOTE = {
+    air: "قيم CAMS العالمية: نموذج يدمج قياسات الأقمار الصناعية بدقة ≈45 كم، فهي تمثّل هواء المنطقة المحيطة بالقضاء وليست قراءة محطة أرضية.",
+    weather: "ERA5 إعادة تحليل بدقة ≈25 كم. آخر أيام قليلة من نموذج التنبؤ لأن أرشيف ERA5 يتأخر نحو 5 أيام.",
+    river: "تصريف GloFAS v4 محسوب بنموذج هيدرولوجي لخلية النهر عند القضاء (≈5 كم)، وليس قراءة محطة قياس.",
+    water_rs: "مؤشرات نسبية من انعكاس الماء في أصفى مشهد Sentinel-2 كل شهر (بكسلات الماء فقط): كلما زادت دلّت على عكورة أو كلوروفيل أعلى، وليست تراكيز بالملغم/لتر."
+  };
+  const FEAT = {
+    pm10_lag0: "PM10 اليوم", dust_lag0: "الغبار اليوم", no2_lag0: "NO₂ اليوم", co_lag0: "CO اليوم", o3_lag0: "O₃ اليوم",
+    pm25_ma7: "متوسط PM2.5 لآخر أسبوع", pm25_ma30: "متوسط PM2.5 لآخر شهر", wind_lag0: "أقوى رياح اليوم",
+    t_max_target: "حرارة يوم التوقّع", wind_max_target: "رياح يوم التوقّع", precip_target: "أمطار يوم التوقّع", rh_mean_target: "رطوبة يوم التوقّع",
+    doy_sin: "الموسم (جيب)", doy_cos: "الموسم (جيب تمام)"
+  };
+  const featLabel = f => {
+    const m = /^pm25_lag(\d)$/.exec(f);
+    if (m) return m[1] === "0" ? "PM2.5 اليوم" : `PM2.5 قبل ${m[1] === "1" ? "يوم" : m[1] === "2" ? "يومين" : m[1] + " أيام"}`;
+    return FEAT[f] || f;
+  };
+  const PNAME = { pm2_5: "PM2.5", pm10: "PM10", dust: "الغبار", no2: "NO₂", so2: "SO₂", o3: "O₃", co: "CO" };
+  const tone = (v, lim) => !U.isNum(v) ? "none" : !lim ? "info" : (r => r < 0.5 ? "good" : r < 1 ? "fair" : r < 2 ? "warn" : r < 3 ? "bad" : r < 5 ? "severe" : "hazard")(v / lim);
+  const km = (a, b, c, d) => { const R = 6371, r = Math.PI / 180, x = Math.sin((c - a) * r / 2) ** 2 + Math.cos(a * r) * Math.cos(c * r) * Math.sin((d - b) * r / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(x)); };
+
+  /* ------------------------------------------------------------------
+     الحالة
+  ------------------------------------------------------------------ */
+  const S = { db: null, gz: null, meta: null, from: "", D: [], P: {}, d: null, tab: "overview", task: "pm25_d1",
+    ts: { p: "pm2_5", span: 365, cmp: "" }, cmpP: "pm2_5", map: null, mapG: null, tigris: null, sqlLast: null, painted: {} };
+  const TABS = [["overview", "لوحة القضاء", "i-home"], ["series", "السلاسل الزمنية", "i-layers"], ["ai", "الذكاء الاصطناعي", "i-brain"],
+    ["compare", "مقارنة الأقضية", "i-table"], ["studies", "البحوث ومصادر التلوث", "i-book"], ["sql", "استعلام SQL", "i-code"], ["about", "المخطط والمصادر", "i-info"]];
+  const DIST_TABS = new Set(["overview", "series", "ai", "studies"]);
+
+  /* ------------------------------------------------------------------
+     الاستعلام
+  ------------------------------------------------------------------ */
+  function q(sql, params) {
+    const st = S.db.prepare(sql);
+    try { if (params) st.bind(params); const out = []; while (st.step()) out.push(st.getAsObject()); return out; }
+    finally { st.free(); }
+  }
+  const q1 = (sql, p) => q(sql, p)[0] || null;
+  const dist = () => S.D.find(d => d.id === S.d) || S.D[0];
+
+  /* ------------------------------------------------------------------
+     التحميل: البيانات الوصفية ← النسخة المحفوظة أو التنزيل ← فك الضغط ← sql.js
+  ------------------------------------------------------------------ */
+  function loadScript(src) {
+    return new Promise((res, rej) => {
+      if (document.querySelector(`script[data-src="${src}"]`)) return res();
+      const s = document.createElement("script"); s.src = src; s.dataset.src = src; s.async = true;
+      s.onload = res; s.onerror = () => rej(new Error("تعذّر تحميل " + src)); document.head.appendChild(s);
+    });
+  }
+  let SQLp = null;
+  const initSQL = () => SQLp || (SQLp = loadScript("vendor/sqljs/sql-wasm.js").then(() => window.initSqlJs({ locateFile: f => "vendor/sqljs/" + f })).catch(e => { SQLp = null; throw e; }));
+
+  async function fetchMeta() {
+    try {
+      const r = await fetch(RAW + "ecobio-meta.json?t=" + Math.floor(Date.now() / 300000), { cache: "no-store" });
+      if (r.ok) return await r.json();
+      if (r.status === 404) return { missing: true };
+    } catch (e) { /* دون اتصال */ }
+    return null;
+  }
+  async function openCache() { try { return "caches" in window ? await caches.open(CACHE) : null; } catch (e) { return null; } }
+  async function getGz(meta, prog) {
+    const cache = await openCache(), key = RAW + "ecobio.db.gz";
+    const stamp = U.store.get("dbStamp", null);
+    if (cache) {
+      const hit = await cache.match(key);
+      if (hit && (!meta || meta.missing || stamp === meta.updated_at)) return { buf: await hit.arrayBuffer(), from: meta && !meta.missing ? "cache" : "offline" };
+    }
+    if (meta && meta.missing) { const e = new Error("missing"); e.code = 404; throw e; }
+    try {
+      const r = await fetch(key + "?v=" + encodeURIComponent(meta ? meta.updated_at : Date.now()));
+      if (!r.ok) { const e = new Error("HTTP " + r.status); e.code = r.status; throw e; }
+      const total = +r.headers.get("content-length") || (meta && meta.bytes_gz) || 0;
+      let buf;
+      if (r.body && r.body.getReader) {
+        const rd = r.body.getReader(), parts = []; let got = 0;
+        for (;;) { const { done, value } = await rd.read(); if (done) break; parts.push(value); got += value.length; if (total) prog(Math.min(1, got / total)); }
+        buf = new Uint8Array(got); let o = 0; parts.forEach(p => { buf.set(p, o); o += p.length; }); buf = buf.buffer;
+      } else buf = await r.arrayBuffer();
+      if (cache) { try { await cache.put(key, new Response(buf.slice(0))); U.store.set("dbStamp", meta ? meta.updated_at : null); } catch (e) { /* لا مساحة */ } }
+      return { buf, from: "net" };
+    } catch (e) {
+      if (cache) { const hit = await cache.match(key); if (hit) return { buf: await hit.arrayBuffer(), from: "offline" }; }
+      throw e;
+    }
+  }
+  async function gunzip(buf) {
+    if (!("DecompressionStream" in window)) throw new Error("متصفحك قديم ولا يدعم فك الضغط. حدّثه أو افتح المنصة في Chrome.");
+    return new Uint8Array(await new Response(new Blob([buf]).stream().pipeThrough(new DecompressionStream("gzip"))).arrayBuffer());
+  }
+
+  function setLoad(text, f) {
+    const t = U.$("#db-load-t"), b = U.$("#db-prog-bar");
+    if (t) t.textContent = text;
+    if (b && f != null) b.style.transform = `scaleX(${U.clamp(f, 0, 1)})`;
+  }
+  let loadP = null;
+  function load(force) {
+    if (loadP && !force) return loadP;
+    U.$("#db-load").hidden = false; U.$("#db-app").hidden = true;
+    U.$("#db-load").innerHTML = `<div class="db-load-box"><span class="db-load-ic">${ico("i-db")}</span><b id="db-load-t">جارٍ التحقق من آخر تحديث…</b><div class="db-prog" role="progressbar" aria-label="تحميل قاعدة البيانات"><i id="db-prog-bar"></i></div><small>القاعدة كاملة تنزل مرة واحدة (بضعة ميغابايت) وتُحفظ في جهازك، فتعمل بعدها حتى دون إنترنت.</small></div>`;
+    loadP = (async () => {
+      const meta = await fetchMeta();
+      setLoad("جارٍ تحميل محرّك SQLite…", 0.04);
+      const sqlP = initSQL();
+      const got = await getGz(meta, f => setLoad(`جارٍ تنزيل قاعدة البيانات… ${Math.round(f * 100)}%`, 0.06 + f * 0.84));
+      setLoad("جارٍ فك الضغط وفتح القاعدة…", 0.94);
+      const raw = await gunzip(got.buf);
+      const SQL = await sqlP;
+      if (S.db) try { S.db.close(); } catch (e) { /* */ }
+      S.db = new SQL.Database(raw); S.gz = got.buf; S.from = got.from; S.bytes = raw.length;
+      const m = q1("SELECT value FROM meta WHERE key = 'summary'");
+      S.meta = m ? JSON.parse(m.value) : (meta && !meta.missing ? meta : {});
+      S.painted = {};
+      boot();
+    })();
+    loadP.catch(e => { loadP = null; showError(e); });
+    return loadP;
+  }
+  function showError(e) {
+    console.error(e);
+    const first = e && e.code === 404;
+    U.$("#db-load").innerHTML = `<div class="db-load-box">${ico(first ? "i-refresh" : "i-info")}
+      <b>${first ? "قاعدة البيانات تُبنى الآن لأول مرة" : "تعذّر فتح قاعدة البيانات"}</b>
+      <p class="muted">${first ? "البناء الأول يجلب سجلاً كاملاً منذ عام 2000 ويدرّب نماذج الذكاء الاصطناعي، ويستغرق نحو ساعة. ارجع بعد قليل." : esc(e && e.message || e) + "<br>تأكد من اتصالك بالإنترنت ثم أعد المحاولة."}</p>
+      <button type="button" class="btn btn-primary" data-db-retry>${ico("i-refresh")}أعد المحاولة</button></div>`;
+  }
+
+  /* ------------------------------------------------------------------
+     الهيكل بعد التحميل
+  ------------------------------------------------------------------ */
+  function boot() {
+    S.P = {}; q("SELECT * FROM parameters").forEach(p => { S.P[p.code] = p; });
+    S.D = q("SELECT * FROM districts ORDER BY ord");
+    readHash();
+    if (!S.D.find(d => d.id === S.d)) S.d = U.store.get("dbDistrict", "tikrit");
+    if (!S.D.find(d => d.id === S.d)) S.d = S.D[0] && S.D[0].id;
+    U.$("#db-load").hidden = true; U.$("#db-app").hidden = false;
+    renderStatus(); renderRibbon(); renderTabs(); paint();
+    requestAnimationFrame(centerPressed);
+  }
+
+  function renderStatus() {
+    const m = S.meta || {}, from = { net: "نُزّلت الآن", cache: "محفوظة في جهازك", offline: "نسخة محفوظة (دون اتصال)" }[S.from] || "";
+    U.$("#db-status").innerHTML = `<span class="chip ${S.from === "offline" ? "tone-warn" : "tone-good"}">${ico(S.from === "offline" ? "i-info" : "i-check")}${from}</span>
+      <span class="updated">آخر تحديث: ${esc(fStamp(m.updated_at))} · ${U.fileSize(S.bytes || 0)}</span>
+      <button type="button" class="btn btn-ghost btn-sm" data-db-reload title="أعد التحقق من وجود تحديث">${ico("i-refresh")}تحديث</button>`;
+  }
+
+  function renderRibbon() {
+    const last = {};
+    q(`SELECT a.district_id id, a.pm2_5 v FROM air_daily a JOIN (SELECT district_id, MAX(date) m FROM air_daily GROUP BY district_id) l
+       ON l.district_id = a.district_id AND l.m = a.date`).forEach(r => { last[r.id] = r.v; });
+    U.$("#db-ribbon").innerHTML = `<span class="rb-end">شمال</span>
+      <ol>${S.D.map(d => `<li><button type="button" data-d="${d.id}" aria-pressed="${d.id === S.d}" style="--dc:${DCOL[d.id] || "var(--river)"}">
+        <i class="rb-dot" aria-hidden="true"></i><b>${esc(d.name_ar)}</b>
+        <span class="chip tone-${tone(last[d.id], 15)}" title="متوسط PM2.5 لآخر يوم مكتمل (µg/m³)">${U.isNum(last[d.id]) ? N(last[d.id], 0) : "—"}</span></button></li>`).join("")}</ol>
+      <span class="rb-end">جنوب</span>
+      <button type="button" class="btn btn-ghost btn-sm rb-near" data-db-near>${ico("i-gps")}أقرب قضاء لي</button>`;
+  }
+
+  function renderTabs() {
+    U.$("#db-tabs").innerHTML = TABS.map(([id, label, ic]) => `<button type="button" role="tab" id="db-t-${id}" aria-controls="db-p-${id}" aria-selected="${id === S.tab}" data-tab="${id}">${ico(ic)}${label}</button>`).join("");
+    U.$$("#db-panels > .an-panel").forEach(p => { p.hidden = p.id !== "db-p-" + S.tab; });
+    U.$("#view-districts").classList.toggle("db-no-dist", !DIST_TABS.has(S.tab));
+  }
+
+  /* يرسم التبويب الحالي إن تغيّر القضاء منذ آخر رسم */
+  function paint() {
+    const key = DIST_TABS.has(S.tab) ? S.d + (S.tab === "ai" ? ":" + S.task : "") : "all";
+    const el = U.$("#db-p-" + S.tab);
+    if (S.painted[S.tab] === key) { if (S.tab === "overview" && S.map) setTimeout(() => S.map.invalidateSize(), 50); return; }
+    S.painted[S.tab] = key;
+    try { ({ overview: rOverview, series: rSeries, ai: rAI, compare: rCompare, studies: rStudies, sql: rSQL, about: rAbout })[S.tab](el); }
+    catch (e) { console.error(e); el.innerHTML = `<div class="notice warn">${ico("i-info")}<span>تعذّر عرض هذا القسم: ${esc(e.message)}</span></div>`; }
+    writeHash();
+  }
+
+  function readHash() {
+    const h = decodeURIComponent(location.hash.slice(1)).split("&").slice(1);
+    h.forEach(kv => { const [k, v] = kv.split("="); if (k === "d" && v) S.d = v; if (k === "t" && TABS.some(t => t[0] === v)) S.tab = v; });
+  }
+  function writeHash() {
+    const h = `#districts&d=${S.d}&t=${S.tab}`;
+    if (location.hash !== h && ECO.router && ECO.router.current() === "districts") history.replaceState(null, "", h);
+  }
+
+  function centerPressed() {
+    const b = U.$('#db-ribbon [aria-pressed="true"]'), r = U.$("#db-ribbon");
+    if (b && r && r.scrollWidth > r.clientWidth + 4) { const bb = b.getBoundingClientRect(), rb = r.getBoundingClientRect(); r.scrollBy({ left: (bb.left + bb.width / 2) - (rb.left + rb.width / 2), behavior: "instant" in r ? "instant" : "auto" }); }
+  }
+  function setDistrict(id) {
+    if (!S.D.find(d => d.id === id) || id === S.d) return;
+    S.d = id; U.store.set("dbDistrict", id);
+    U.$$("#db-ribbon [data-d]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.d === id)));
+    centerPressed();
+    paint();
+  }
+  function setTab(id) {
+    S.tab = id; renderTabs(); paint();
+    const t = U.$("#db-t-" + id); if (t) t.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }
+
+  /* ------------------------------------------------------------------
+     الرسوم
+  ------------------------------------------------------------------ */
+  const CH = {};
+  function chart(panel, canvas, cfg) { const c = U.chart(canvas, cfg); if (c) (CH[panel] = CH[panel] || []).push(c); return c; }
+  function clearCharts(panel) { (CH[panel] || []).forEach(c => { try { c.destroy(); } catch (e) { /* */ } }); CH[panel] = []; }
+  const limitLine = (labels, v, text) => ({ type: "line", label: text, data: labels.map(() => v), borderColor: "rgba(239,90,100,.75)", borderDash: [6, 5], borderWidth: 1.2, pointRadius: 0, fill: false, tension: 0, order: 9 });
+  const xTicks = { maxTicksLimit: 8, maxRotation: 0, autoSkip: true };
+
+  /* ------------------------------------------------------------------
+     1) لوحة القضاء
+  ------------------------------------------------------------------ */
+  function rOverview(el) {
+    clearCharts("overview");
+    if (!el.dataset.built) {
+      el.innerHTML = `<div class="db-ov"><div class="db-ov-main" id="db-ov-main"></div>
+        <aside class="db-ov-side"><div class="panel db-map-panel"><div class="panel-h"><h3>الموقع ومصادر التلوث</h3><span class="sub">OpenStreetMap</span></div><div class="db-map" id="db-map" role="img" aria-label="خريطة القضاء ونهر دجلة ومصادر التلوث"></div><div class="db-map-leg" id="db-map-leg"></div></div>
+        <div class="panel" id="db-ov-facts"></div></aside></div>`;
+      el.dataset.built = "1";
+    }
+    const d = dist();
+    const air = q1("SELECT * FROM air_daily WHERE district_id = ? ORDER BY date DESC LIMIT 1", [d.id]);
+    const y = air ? q1(`SELECT COUNT(pm2_5) n, AVG(pm2_5) m, SUM(pm2_5 > 15) o, SUM(pm10 > 45) o10, MAX(pm2_5) mx FROM air_daily WHERE district_id = ? AND date > date(?, '-365 day')`, [d.id, air.date]) : null;
+    const fcs = air ? q("SELECT * FROM forecasts WHERE district_id = ? AND target = 'pm2_5' AND for_date > ? ORDER BY for_date", [d.id, air.date]) : [];
+    const FC = {}; fcs.forEach(f => { const o = FC[f.for_date] = FC[f.for_date] || {}; if (f.model === "cams") o.cams = f; else o.best = f; });
+    const fDates = Object.keys(FC).sort();
+    const riv = q1("SELECT date, discharge FROM river_daily WHERE district_id = ? ORDER BY date DESC LIMIT 1", [d.id]);
+    const rp = riv ? q1("SELECT 100.0 * SUM(discharge < ?) / COUNT(*) pct, AVG(discharge) avg, MIN(substr(date,1,4)) y0 FROM river_daily WHERE district_id = ? AND substr(date,6,2) = substr(?,6,2)", [riv.discharge, d.id, riv.date]) : null;
+    const rs = q1("SELECT * FROM water_rs_monthly WHERE district_id = ? AND ndti IS NOT NULL ORDER BY month DESC LIMIT 1", [d.id]);
+    const rsAvg = q1("SELECT AVG(ndti) a, COUNT(*) n FROM water_rs_monthly WHERE district_id = ? AND ndti IS NOT NULL", [d.id]);
+    const reg = q1("SELECT r.label_ar l, a.date FROM air_regime_daily a JOIN regimes r ON r.cluster = a.cluster WHERE a.district_id = ? ORDER BY a.date DESC LIMIT 1", [d.id]);
+    const wx = air ? q1("SELECT * FROM weather_daily WHERE district_id = ? AND date = ?", [d.id, air.date]) : null;
+
+    const kpi = (k, v, sub, t, extra = "") => `<div class="db-kpi${t ? " tone-b-" + t : ""}"><span class="k">${k}</span><span class="v">${v}</span><span class="d">${sub}</span>${extra}</div>`;
+    const f1 = fDates[0] && FC[fDates[0]];
+    const ratio = air && U.isNum(air.pm2_5) ? air.pm2_5 / 15 : NaN;
+    const kpis = [
+      air ? kpi("PM2.5 آخر يوم مكتمل", `${N(air.pm2_5, 1)}<small>µg/m³</small>`, `${fD(air.date)} · ${ratio >= 1 ? `${N(ratio, 1)} ضعف حد الصحة العالمية` : "ضمن حد الصحة العالمية (15)"}`, tone(air.pm2_5, 15)) : kpi("PM2.5", "—", "لا بيانات"),
+      f1 && f1.best ? kpi(`توقّع ${fD(fDates[0])}`, `${N(f1.best.value, 1)}<small>µg/m³</small>`, `${esc(MODEL[f1.best.model] || f1.best.model)} · المدى المرجّح ${N(f1.best.lo, 0)}–${N(f1.best.hi, 0)}${f1.cams ? ` · CAMS: ${N(f1.cams.value, 1)}` : ""}`, tone(f1.best.value, 15))
+        : f1 && f1.cams ? kpi(`توقّع ${fD(fDates[0])}`, `${N(f1.cams.value, 1)}<small>µg/m³</small>`, "توقّع CAMS (نموذجنا لم يُدرَّب بعد)", tone(f1.cams.value, 15)) : kpi("توقّع الغد", "—", "لا توقّع بعد"),
+      y && y.n ? kpi("أيام فوق حد الصحة العالمية", `${N(100 * y.o / y.n, 0)}<small>%</small>`, `${N(y.o, 0)} يوماً من آخر ${N(y.n, 0)} يوماً تجاوز فيها PM2.5 الحد 15`, y.o / y.n > 0.5 ? "bad" : y.o / y.n > 0.2 ? "warn" : "fair") : kpi("أيام فوق الحد", "—", ""),
+      riv ? kpi("تصريف دجلة", `${N(riv.discharge, 0)}<small>m³/s</small>`, `${fD(riv.date)} · ${rp && U.isNum(rp.pct) ? (rp.pct < 50 ? `أقل من ${N(100 - rp.pct, 0)}% من أيام ${MONTHS[+riv.date.slice(5, 7) - 1]} منذ ${rp.y0}` : `أعلى من ${N(rp.pct, 0)}% من أيام ${MONTHS[+riv.date.slice(5, 7) - 1]} منذ ${rp.y0}`) : ""}`, rp && rp.pct < 15 ? "warn" : "info") : kpi("تصريف دجلة", "—", "لا بيانات"),
+      rs ? kpi("عكورة الماء NDTI", N(rs.ndti, 3), `${fM(rs.month)} · ${rsAvg && rs.ndti > rsAvg.a ? "أعكر" : "أصفى"} من متوسط القضاء (${N(rsAvg.a, 3)})`, rsAvg && rs.ndti > rsAvg.a + 0.03 ? "warn" : "info") : kpi("عكورة الماء NDTI", "—", "لا مشهد صافٍ بعد"),
+      reg ? kpi("نمط الهواء", `<span class="db-kpi-t">${esc(reg.l)}</span>`, `${fD(reg.date)} · تصنيف K-Means`, "info") : kpi("نمط الهواء", "—", "")
+    ];
+
+    // الخلاصة بلغة بسيطة
+    const say = [];
+    if (air) say.push(`في آخر يوم مكتمل (${fD(air.date)}) كان متوسط الجسيمات الدقيقة PM2.5 في ${esc(d.name_ar)} ${N(air.pm2_5, 1)} µg/m³${ratio >= 1 ? `، أي ${N(ratio, 1)} ضعف حد منظمة الصحة العالمية` : "، ضمن حد منظمة الصحة العالمية"}${U.isNum(air.dust) && air.dust > 100 ? `، مع غبار مرتفع (${N(air.dust, 0)} µg/m³)` : ""}.`);
+    if (y && y.n) say.push(`خلال آخر سنة تجاوز PM2.5 الحد في ${N(100 * y.o / y.n, 0)}% من الأيام، وبلغ أعلاه ${N(y.mx, 0)} µg/m³.`);
+    if (f1 && f1.best) say.push(`يتوقّع نموذج ${esc(MODEL[f1.best.model] || f1.best.model)} ليوم ${fD(fDates[0])} قيمة ${N(f1.best.value, 0)} (بين ${N(f1.best.lo, 0)} و${N(f1.best.hi, 0)})${f1.cams ? `، ويتوقّع CAMS ${N(f1.cams.value, 0)}` : ""}.`);
+    if (riv && rp) say.push(`تصريف دجلة عند القضاء ${N(riv.discharge, 0)} م³/ثا، ${rp.pct < 50 ? `وهو أقل من المعتاد لهذا الشهر` : `وهو أعلى من المعتاد لهذا الشهر`} (متوسط الشهر منذ ${rp.y0}: ${N(rp.avg, 0)}).`);
+    if (wx && U.isNum(wx.t_max)) say.push(`الحرارة العظمى ${N(wx.t_max, 0)}° وأقوى رياح ${N(wx.wind_max, 0)} كم/ساعة.`);
+
+    U.$("#db-ov-main").innerHTML = `<div class="db-kpis">${kpis.join("")}</div>
+      <div class="panel db-say"><h3>${ico("i-spark")}الخلاصة بلغة بسيطة</h3><p>${say.join(" ") || "لا تتوفر بيانات كافية بعد."}</p></div>
+      <div class="panel"><div class="panel-h"><h3>PM2.5 في آخر 120 يوماً والتوقّع القادم</h3><span class="sub">µg/m³ · المتوسط اليومي</span></div><div class="chart-box"><canvas id="db-ov-c"></canvas></div>
+        <p class="db-cap">${esc(SRC_NOTE.air)}</p></div>
+      ${anomBlock(d.id, 4, "آخر الأيام الشاذة")}`;
+
+    // الرسم
+    if (air) {
+      const hist = q("SELECT date, pm2_5 FROM air_daily WHERE district_id = ? AND date > date(?, '-120 day') ORDER BY date", [d.id, air.date]);
+      const labels = hist.map(r => r.date).concat(fDates);
+      const pad = a => hist.map(() => null).concat(a);
+      chart("overview", U.$("#db-ov-c"), {
+        type: "line",
+        data: { labels, datasets: [
+          { label: "المقيس (CAMS)", data: hist.map(r => r.pm2_5).concat(fDates.map(() => null)), borderColor: ECO.COL.river, backgroundColor: "rgba(79,200,220,.12)", fill: true, borderWidth: 1.6 },
+          { label: "توقّع نموذجنا", data: pad(fDates.map(x => FC[x].best ? FC[x].best.value : null)), borderColor: ECO.COL.chloro, pointRadius: 4, pointBackgroundColor: ECO.COL.chloro, showLine: false },
+          { label: "مدى التوقّع 80%", data: pad(fDates.map(x => FC[x].best ? FC[x].best.hi : null)), borderColor: "rgba(147,221,138,.35)", pointRadius: 2, pointStyle: "line", showLine: false },
+          { label: " ", data: pad(fDates.map(x => FC[x].best ? FC[x].best.lo : null)), borderColor: "rgba(147,221,138,.35)", pointRadius: 2, pointStyle: "line", showLine: false },
+          { label: "توقّع CAMS", data: pad(fDates.map(x => FC[x].cams ? FC[x].cams.value : null)), borderColor: ECO.COL.silt, pointRadius: 4, pointStyle: "rectRot", pointBackgroundColor: ECO.COL.silt, showLine: false },
+          limitLine(labels, 15, "حد الصحة العالمية 15")
+        ] },
+        options: { interaction: { mode: "index", intersect: false }, scales: { x: { ticks: xTicks }, y: { beginAtZero: true } },
+          plugins: { legend: { labels: { filter: i => i.text.trim() } } } }
+      });
+    }
+
+    // الحقائق
+    const nSrc = q1("SELECT COUNT(*) n FROM pollution_sources WHERE district_id = ?", [d.id]).n;
+    const nSt = q1("SELECT COUNT(*) n FROM study_districts WHERE district_id = ?", [d.id]).n;
+    const ranges = q1(`SELECT (SELECT MIN(date) FROM air_daily WHERE district_id = :d) a0, (SELECT MIN(date) FROM weather_daily WHERE district_id = :d) w0,
+      (SELECT MIN(date) FROM river_daily WHERE district_id = :d) r0, (SELECT COUNT(*) FROM water_rs_monthly WHERE district_id = :d AND ndti IS NOT NULL) rsn`, { ":d": d.id });
+    U.$("#db-ov-facts").innerHTML = `<div class="panel-h"><h3>بطاقة ${esc(d.name_ar)}</h3><span class="sub">${esc(d.name_en)}</span></div>
+      <dl class="kv">
+        <dt>مركز القضاء</dt><dd>${LTR(d.lat.toFixed(4) + ", " + d.lon.toFixed(4))}</dd>
+        <dt>أقرب نقطة على دجلة</dt><dd>${d.river_lat != null ? `${LTR(d.river_lat.toFixed(4) + ", " + d.river_lon.toFixed(4))} · ${N(d.river_dist_km, 1)} كم` : "—"}</dd>
+        <dt>خلية تصريف GloFAS</dt><dd>${d.glofas_lat != null ? LTR(d.glofas_lat.toFixed(3) + ", " + d.glofas_lon.toFixed(3)) : "—"}</dd>
+        <dt>السجل</dt><dd>هواء منذ ${fD(ranges.a0)} · طقس منذ ${fD(ranges.w0)} · تصريف منذ ${fD(ranges.r0)} · ${N(ranges.rsn, 0)} شهراً من Sentinel-2</dd>
+        <dt>مصادر تلوث مرسومة</dt><dd>${N(nSrc, 0)} <button type="button" class="linkbtn" data-tab-go="studies">عرض القائمة</button></dd>
+        <dt>بحوث الجامعة</dt><dd>${N(nSt, 0)} ${nSt ? `<button type="button" class="linkbtn" data-tab-go="studies">عرض البحوث</button>` : ""}</dd>
+      </dl>`;
+    drawMap(d);
+  }
+
+  function anomBlock(did, limit, title) {
+    const rows = q(`SELECT an.*, a.pm2_5, a.pm10, a.dust, a.no2, a.so2, a.o3, a.co FROM anomalies an LEFT JOIN air_daily a ON a.district_id = an.district_id AND a.date = an.date
+      WHERE an.district_id = ? ORDER BY an.date DESC LIMIT ?`, [did, limit]);
+    if (!rows.length) return "";
+    const col = { pm2_5: "pm2_5", pm10: "pm10", dust: "dust", no2: "no2", so2: "so2", o3: "o3", co: "co" };
+    return `<div class="panel"><div class="panel-h"><h3>${title}</h3><span class="sub">Isolation Forest</span></div><div class="anom-list">${rows.map(r =>
+      `<div class="anom"><span class="z">${r.top_z > 0 ? "+" : ""}${U.fmt(r.top_z, 1)}σ</span><div><b>${fD(r.date)}</b><br><span class="muted">أبعد معيار عن المعتاد: ${esc(PNAME[r.top_param] || r.top_param)} = ${N(r[col[r.top_param]], 1)} µg/m³ (${r.top_z > 0 ? "أعلى" : "أقل"} من الوسيط بـ ${U.fmt(Math.abs(r.top_z), 1)} انحراف قوي)</span></div></div>`).join("")}</div></div>`;
+  }
+
+  async function drawMap(d) {
+    if (!window.L) return;
+    const box = U.$("#db-map");
+    if (!S.map) {
+      S.map = L.map(box, { zoomControl: true, attributionControl: true, scrollWheelZoom: false });
+      const b = ECO.BASEMAPS.find(x => x.id === "esri") || ECO.BASEMAPS[0];
+      L.tileLayer(b.url, { maxNativeZoom: b.max, maxZoom: 18, attribution: b.attr, crossOrigin: true }).addTo(S.map);
+      if (U.labelLayers) { const lab = U.labelLayers(); if (lab) lab.addTo(S.map); }
+      S.mapG = L.layerGroup().addTo(S.map);
+      S.riverG = L.layerGroup().addTo(S.map);
+    }
+    S.mapG.clearLayers();
+    const src = q("SELECT * FROM pollution_sources WHERE district_id = ? AND lat IS NOT NULL", [d.id]);
+    src.forEach(s => {
+      const k = KIND[s.kind] || [s.kind, "#c4d3cf"];
+      L.circleMarker([s.lat, s.lon], { radius: 5, color: "#041114", weight: 1, fillColor: k[1], fillOpacity: 0.95 })
+        .bindTooltip(`${esc(k[0])}${s.name ? " · " + esc(s.name) : ""}${U.isNum(s.dist_river_km) ? ` · ${U.fmt(s.dist_river_km, 1)} كم عن النهر` : ""}`).addTo(S.mapG);
+    });
+    L.circleMarker([d.lat, d.lon], { radius: 8, color: "#fff", weight: 2, fillColor: DCOL[d.id] || ECO.COL.river, fillOpacity: 1 }).bindTooltip("مركز " + esc(d.name_ar), { permanent: true, direction: "top", className: "db-tip" }).addTo(S.mapG);
+    if (d.river_lat != null) L.circleMarker([d.river_lat, d.river_lon], { radius: 5, color: ECO.COL.river, weight: 2, fillColor: "#041114", fillOpacity: 1 }).bindTooltip("نقطة النهر المعتمدة للقضاء").addTo(S.mapG);
+    const pts = [[d.lat, d.lon]].concat(d.river_lat != null ? [[d.river_lat, d.river_lon]] : []);
+    S.map.fitBounds(L.latLngBounds(pts).pad(0.5), { maxZoom: 12 });
+    if (S.map.getZoom() > 12) S.map.setZoom(12);
+    if (S.map.getZoom() < 10) S.map.setView([d.lat, d.lon], 11);
+    const kinds = {}; src.forEach(s => { kinds[s.kind] = (kinds[s.kind] || 0) + 1; });
+    U.$("#db-map-leg").innerHTML = Object.keys(kinds).length ? Object.entries(kinds).sort((a, b) => b[1] - a[1]).map(([k, c]) => `<span><i style="background:${(KIND[k] || [0, "#c4d3cf"])[1]}"></i>${esc((KIND[k] || [k])[0])} ${N(c, 0)}</span>`).join("")
+      : `<span class="muted">لا توجد مصادر تلوث مرسومة في OpenStreetMap ضمن 30 كم.</span>`;
+    setTimeout(() => S.map.invalidateSize(), 60);
+    if (!S.tigris) {
+      try {
+        const c = await openCache(), key = RAW + "tigris.json";
+        let r = c && await c.match(key);
+        if (!r) { r = await fetch(key); if (r.ok && c) c.put(key, r.clone()); }
+        if (r && r.ok !== false) S.tigris = await r.json();
+      } catch (e) { S.tigris = []; }
+      if (S.tigris && S.tigris.length) S.tigris.forEach(ln => L.polyline(ln, { color: ECO.COL.river, weight: 3, opacity: 0.85 }).addTo(S.riverG));
+    }
+  }
+
+  /* ------------------------------------------------------------------
+     2) السلاسل الزمنية
+  ------------------------------------------------------------------ */
+  function paramOptions(sel, only) {
+    const groups = {};
+    Object.keys(COLS).forEach(code => { const p = S.P[code]; if (!p || (only && !only.includes(code))) return; (groups[p.category] = groups[p.category] || []).push(p); });
+    return Object.keys(groups).map(c => `<optgroup label="${esc(CAT[c] || c)}">${groups[c].map(p => `<option value="${p.code}"${p.code === sel ? " selected" : ""}>${esc(p.name_ar)}${p.unit ? ` (${esc(p.unit)})` : ""}</option>`).join("")}</optgroup>`).join("");
+  }
+
+  function getSeries(p, did, span) {
+    const [t, c, monthly] = COLS[p];
+    const kc = monthly ? "month" : "date";
+    let where = `district_id = ? AND ${c} IS NOT NULL`; const args = [did];
+    if (t === "weather_daily") { where += " AND date <= ?"; args.push(today()); }
+    const last = (q1(`SELECT MAX(${kc}) m FROM ${t} WHERE ${where}`, args) || {}).m;
+    if (!last) return { pts: [], raw: [], agg: "day" };
+    if (span) {
+      if (monthly) { where += " AND month >= strftime('%Y-%m', date(?, ?))"; args.push(last + "-01", `-${span} day`); }
+      else { where += " AND date > date(?, ?)"; args.push(last, `-${span} day`); }
+    }
+    const raw = q(`SELECT ${kc} x, ${c} y FROM ${t} WHERE ${where} ORDER BY x`, args);
+    if (!monthly && raw.length > 1200) {
+      return { agg: "month", raw, pts: q(`SELECT substr(date, 1, 7) x, AVG(${c}) y FROM ${t} WHERE ${where} GROUP BY x ORDER BY x`, args) };
+    }
+    return { agg: monthly ? "monthly" : "day", raw, pts: raw };
+  }
+
+  function rSeries(el) {
+    if (!el.dataset.built) {
+      el.innerHTML = `<div class="db-ctrl">
+          <div class="field"><label for="db-ts-p">المعيار</label><select id="db-ts-p" class="input">${paramOptions(S.ts.p)}</select></div>
+          <div class="field"><span class="lbl" id="db-ts-span-l">المدة</span><div class="seg" id="db-ts-span" role="group" aria-labelledby="db-ts-span-l">${[[90, "3 أشهر"], [365, "سنة"], [1095, "3 سنوات"], [0, "كل السجل"]].map(([v, l]) => `<button type="button" data-span="${v}" class="${v === S.ts.span ? "on" : ""}">${l}</button>`).join("")}</div></div>
+          <div class="field"><label for="db-ts-cmp">قارن مع قضاء آخر</label><select id="db-ts-cmp" class="input"><option value="">بلا مقارنة</option>${S.D.map(d => `<option value="${d.id}">${esc(d.name_ar)}</option>`).join("")}</select></div>
+        </div>
+        <div class="panel"><div class="panel-h"><h3 id="db-ts-h"></h3><div class="row"><button type="button" class="btn btn-ghost btn-sm" data-db-csv>${ico("i-down")}CSV</button><button type="button" class="btn btn-ghost btn-sm" data-db-xlsx>${ico("i-table")}Excel للقضاء</button></div></div>
+          <div class="chart-box lg"><canvas id="db-ts-c"></canvas></div><p class="db-cap" id="db-ts-cap"></p></div>
+        <div class="db-stats" id="db-ts-stats"></div>
+        <div class="grid g-2 db-g2">
+          <div class="panel"><div class="panel-h"><h3>الدورة الموسمية</h3><span class="sub">متوسط كل شهر على كامل السجل</span></div><div class="chart-box sm"><canvas id="db-ts-clim"></canvas></div></div>
+          <div class="panel"><div class="panel-h"><h3>حسب السنة</h3></div><div class="tbl-wrap db-years" id="db-ts-years"></div></div>
+        </div>`;
+      el.dataset.built = "1";
+      U.$("#db-ts-p").onchange = e => { S.ts.p = e.target.value; drawSeries(); };
+      U.$("#db-ts-cmp").onchange = e => { S.ts.cmp = e.target.value; drawSeries(); };
+      U.$("#db-ts-span").onclick = e => { const b = e.target.closest("[data-span]"); if (!b) return; S.ts.span = +b.dataset.span; U.$$("#db-ts-span button").forEach(x => x.classList.toggle("on", x === b)); drawSeries(); };
+    }
+    U.$$("#db-ts-cmp option").forEach(o => { o.disabled = o.value === S.d; });
+    if (S.ts.cmp === S.d) { S.ts.cmp = ""; U.$("#db-ts-cmp").value = ""; }
+    drawSeries();
+  }
+
+  function drawSeries() {
+    clearCharts("series");
+    const d = dist(), p = S.ts.p, P = S.P[p] || {}, [t, c, monthly] = COLS[p], lim = P.limit_value;
+    const A = getSeries(p, d.id, S.ts.span), B = S.ts.cmp ? getSeries(p, S.ts.cmp, S.ts.span) : null;
+    const cmpD = B && S.D.find(x => x.id === S.ts.cmp);
+    const unit = P.unit ? ` (${P.unit})` : "";
+    U.$("#db-ts-h").textContent = `${P.name_ar || p} في ${d.name_ar}${cmpD ? " و" + cmpD.name_ar : ""}`;
+    const labels = Array.from(new Set(A.pts.map(r => r.x).concat(B ? B.pts.map(r => r.x) : []))).sort();
+    const map = arr => { const m = {}; arr.forEach(r => { m[r.x] = r.y; }); return labels.map(x => m[x] ?? null); };
+    const ds = [{ label: d.name_ar + unit, data: map(A.pts), borderColor: DCOL[d.id], backgroundColor: DCOL[d.id] + "22", fill: !B, borderWidth: 1.5, pointRadius: monthly ? 3 : 0, spanGaps: monthly }];
+    if (B) ds.push({ label: cmpD.name_ar + unit, data: map(B.pts), borderColor: DCOL[cmpD.id], borderWidth: 1.5, pointRadius: monthly ? 3 : 0, spanGaps: monthly });
+    if (lim && (A.agg === "day" || p === "aqi_pm25")) ds.push(limitLine(labels, lim, `الحد: ${lim} (${P.limit_ref || ""})`));
+    chart("series", U.$("#db-ts-c"), { type: "line", data: { labels, datasets: ds },
+      options: { interaction: { mode: "index", intersect: false }, scales: { x: { ticks: xTicks }, y: { beginAtZero: ["air", "river"].includes(P.category) } } } });
+    const cat = P.category;
+    U.$("#db-ts-cap").innerHTML = `${esc(SRC_NOTE[cat] || "")}${A.agg === "month" ? " المدة طويلة فعُرض المتوسط الشهري؛ الإحصاءات أدناه محسوبة على القيم اليومية." : ""}${p === "o3" ? " قيمة الأوزون هنا أعلى متوسط لثماني ساعات خلال اليوم، وهو ما يقارن به حد الصحة العالمية." : ""}`;
+
+    const ys = A.raw.map(r => r.y).filter(U.isNum);
+    const over = lim ? ys.filter(v => v > lim).length : null;
+    const stat = (k, v, dd) => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div>${dd ? `<div class="d">${dd}</div>` : ""}</div>`;
+    U.$("#db-ts-stats").innerHTML = ys.length ? [
+      stat("عدد القيم", N(ys.length, 0), `${A.raw.length ? (monthly ? fM(A.raw[0].x) : fD(A.raw[0].x)) : ""} ← ${A.raw.length ? (monthly ? fM(A.raw[A.raw.length - 1].x) : fD(A.raw[A.raw.length - 1].x)) : ""}`),
+      stat("المتوسط", N(U.mean(ys)), "الوسيط " + U.fmt(U.median(ys), "auto")),
+      stat("الأدنى", N(Math.min(...ys)), "الانحراف المعياري " + U.fmt(U.std(ys), "auto")),
+      stat("الأعلى", N(Math.max(...ys)), monthly ? fM(A.raw.find(r => r.y === Math.max(...ys)).x) : fD(A.raw.find(r => r.y === Math.max(...ys)).x)),
+      lim ? stat("فوق الحد", `${N(100 * over / ys.length, 0)}%`, `${N(over, 0)} ${monthly ? "شهراً" : "يوماً"} فوق ${lim}`) : ""
+    ].join("") : `<p class="empty">لا توجد قيم لهذا المعيار في هذه المدة.</p>`;
+
+    // الدورة الموسمية والسنوات (كامل السجل)
+    const kc = monthly ? "month" : "date";
+    const w = `district_id = ? AND ${c} IS NOT NULL${t === "weather_daily" ? " AND date <= ?" : ""}`, wa = t === "weather_daily" ? [d.id, today()] : [d.id];
+    const clim = q(`SELECT CAST(substr(${kc}, 6, 2) AS INTEGER) m, AVG(${c}) y FROM ${t} WHERE ${w} GROUP BY m ORDER BY m`, wa);
+    const cm = {}; clim.forEach(r => { cm[r.m] = r.y; });
+    chart("series", U.$("#db-ts-clim"), { type: "bar", data: { labels: MONTHS, datasets: [{ label: (P.name_ar || p) + unit, data: MONTHS.map((_, i) => cm[i + 1] ?? null), backgroundColor: DCOL[d.id] + "aa", borderRadius: 4 }] },
+      options: { plugins: { legend: { display: false } }, scales: { x: { ticks: { maxRotation: 60, minRotation: 45, font: { size: 10 } } } } } });
+    const yrs = q(`SELECT substr(${kc}, 1, 4) yr, COUNT(${c}) n, AVG(${c}) m, MIN(${c}) mn, MAX(${c}) mx${lim ? `, SUM(${c} > ${+lim}) o` : ""} FROM ${t} WHERE ${w} GROUP BY yr ORDER BY yr DESC`, wa);
+    U.$("#db-ts-years").innerHTML = `<table class="tbl"><thead><tr><th>السنة</th><th class="num">${monthly ? "أشهر" : "أيام"}</th><th class="num">المتوسط</th><th class="num">الأدنى</th><th class="num">الأعلى</th>${lim ? `<th class="num">فوق ${lim}</th>` : ""}</tr></thead>
+      <tbody>${yrs.map(r => `<tr><td>${esc(r.yr)}</td><td class="num">${U.fmt(r.n, 0)}</td><td class="num">${U.fmt(r.m, "auto")}</td><td class="num">${U.fmt(r.mn, "auto")}</td><td class="num">${U.fmt(r.mx, "auto")}</td>${lim ? `<td class="num">${U.fmt(r.o, 0)} <small class="muted">(${U.fmt(100 * r.o / r.n, 0)}%)</small></td>` : ""}</tr>`).join("")}</tbody></table>`;
+    S.tsLast = { labels, ds: ds.filter(x => !String(x.label).startsWith("الحد")), name: `${p}_${d.id}${cmpD ? "_" + cmpD.id : ""}` };
+  }
+
+  function csvOf(header, rows) {
+    const cell = v => v == null ? "" : /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v);
+    return "﻿" + [header].concat(rows).map(r => r.map(cell).join(",")).join("\n");
+  }
+  function save(blob, name) { if (ECO.native && ECO.native.save) return ECO.native.save(blob, name); ECO.xlsx.download(blob, name); }
+
+  function exportDistrictXlsx() {
+    const d = dist();
+    const sheet = (name, sql) => { const r = S.db.exec(sql, [d.id])[0]; return { name, rows: r ? [r.columns].concat(r.values) : [["لا بيانات"]] }; };
+    const blob = ECO.xlsx.write([
+      sheet("الهواء اليومي", "SELECT date, pm2_5, pm2_5_max, pm10, dust, no2, so2, o3, o3_max, co, aqi_pm25, aqi, hours FROM air_daily WHERE district_id = ? ORDER BY date"),
+      sheet("الطقس اليومي", "SELECT date, t_max, t_min, t_mean, precip, wind_max, wind_dir, rh_mean, et0, radiation, src FROM weather_daily WHERE district_id = ? ORDER BY date"),
+      sheet("تصريف دجلة", "SELECT date, discharge FROM river_daily WHERE district_id = ? ORDER BY date"),
+      sheet("Sentinel-2 شهري", "SELECT month, ndti, ndci, ndti_p90, ndci_p90, n_pixels, scene_date, cloud_pct, scene_id FROM water_rs_monthly WHERE district_id = ? ORDER BY month"),
+      sheet("توقعات", "SELECT for_date, model, value, lo, hi, run_at FROM forecasts WHERE district_id = ? ORDER BY for_date, model"),
+      { name: "المصادر", rows: [["المصدر", "المزوّد", "الدقة", "الترخيص", "المرجع"]].concat(q("SELECT * FROM sources").map(s => [s.name, s.provider, s.resolution, s.license, s.citation])) }
+    ]);
+    save(blob, `EcoBio-${d.id}-${today()}.xlsx`);
+  }
+
+  /* ------------------------------------------------------------------
+     3) الذكاء الاصطناعي
+  ------------------------------------------------------------------ */
+  function rAI(el) {
+    clearCharts("ai");
+    const d = dist();
+    const runAt = (q1("SELECT MAX(run_at) r FROM model_runs WHERE district_id = ?", [d.id]) || {}).r;
+    const head = `<div class="db-ai-head"><div class="seg" id="db-ai-task" role="group" aria-label="أفق التوقّع"><button type="button" data-task="pm25_d1" class="${S.task === "pm25_d1" ? "on" : ""}">توقّع اليوم التالي</button><button type="button" data-task="pm25_d2" class="${S.task === "pm25_d2" ? "on" : ""}">توقّع بعد يومين</button></div>
+      ${runAt ? `<span class="updated">آخر تدريب: ${esc(fStamp(runAt))}</span>` : ""}</div>`;
+    if (!runAt) { el.innerHTML = head + `<p class="empty">لم تُدرَّب النماذج لهذا القضاء بعد (تحتاج 300 يوم بيانات على الأقل).</p>` + regimesBlock(d.id) + relBlock(d.id); afterAI(d); return; }
+    const runs = q("SELECT * FROM model_runs WHERE district_id = ? AND run_at = ? AND task = ? ORDER BY rmse", [d.id, runAt, S.task]);
+    const best = runs.find(r => r.is_best), pers = runs.find(r => r.model === "persistence");
+    const h = S.task === "pm25_d2" ? 2 : 1;
+    const fi = best ? q("SELECT * FROM feature_importance WHERE run_id = ? ORDER BY importance DESC LIMIT 12", [best.id]) : [];
+    const hist = q("SELECT run_at, rmse, skill, model FROM model_runs WHERE district_id = ? AND task = ? AND is_best = 1 ORDER BY run_at", [d.id, S.task]);
+    const r0 = runs[0] || {};
+
+    el.innerHTML = head + `
+      <div class="db-ai-grid">
+        <div class="panel"><div class="panel-h"><h3>مقارنة خمسة نماذج على بيانات لم ترها</h3><span class="sub">${r0.test_from ? `اختبار: ${fD(r0.test_from)} ← ${fD(r0.test_to)} (${N(r0.n_test, 0)} يوماً) · تدريب على ${N(r0.n_train, 0)} يوماً قبلها` : ""}</span></div>
+          <div class="tbl-wrap"><table class="tbl db-models"><thead><tr><th>النموذج</th><th class="num" title="متوسط الخطأ المطلق">MAE</th><th class="num" title="جذر متوسط مربع الخطأ">RMSE</th><th class="num" title="معامل التحديد">R²</th><th class="num" title="التحسّن على خط الأساس">المهارة</th></tr></thead>
+          <tbody>${runs.map(r => `<tr class="${r.is_best ? "is-best" : ""}"><td>${esc(MODEL[r.model] || r.model)}${r.is_best ? ` <span class="chip tone-good">الأفضل</span>` : ""}</td><td class="num">${U.fmt(r.mae, 2)}</td><td class="num">${U.fmt(r.rmse, 2)}</td><td class="num">${U.fmt(r.r2, 3)}</td><td class="num">${r.model === "persistence" ? "—" : `${r.skill > 0 ? "+" : ""}${U.fmt(100 * r.skill, 1)}%`}</td></tr>`).join("")}</tbody></table></div>
+          <p class="db-cap"><b>كيف تُقرأ:</b> MAE بكم µg/m³ يخطئ النموذج في المتوسط، وRMSE مثله لكنه يعاقب الأخطاء الكبيرة أكثر، وR² نسبة التغيّر التي يفسّرها النموذج (1 مثالي)، والمهارة هي التحسّن على خط الأساس «الغد مثل اليوم». ${best && best.model === "persistence" ? "<b>لم يتفوق أي نموذج على خط الأساس هنا، فاعتمدناه بصدق.</b>" : best && pers ? `أفضل نموذج قلّل الخطأ بـ ${U.fmt(100 * best.skill, 0)}% مقارنة بخط الأساس.` : ""}</p>
+        </div>
+        <div class="panel"><div class="panel-h"><h3>أهمية المتغيرات في ${esc(best ? MODEL[best.model] || best.model : "")}</h3><span class="sub">طريقة التبديل (Permutation)</span></div>
+          ${fi.length ? `<div class="chart-box"><canvas id="db-ai-fi"></canvas></div><p class="db-cap">كل عمود: كم يزداد خطأ النموذج (RMSE) لو خلطنا قيم هذا المتغير عشوائياً. كلما طال كان المتغير أهم للتوقّع.</p>` : `<p class="empty">لا تُحسب الأهمية حين يكون خط الأساس هو الأفضل.</p>`}
+        </div>
+      </div>
+      <div class="panel"><div class="panel-h"><h3>التوقّع مقابل الواقع في فترة الاختبار</h3><span class="sub">PM2.5 · µg/m³</span></div><div class="chart-box lg"><canvas id="db-ai-pred"></canvas></div>
+        <p class="db-cap">أيام الاختبار لم يرها النموذج أثناء التدريب (تقسيم زمني: الماضي للتدريب والأحدث للاختبار، بلا خلط). المنحنى البرتقالي هو خط الأساس: قيمة اليوم نفسها توقّعاً لـ${h === 1 ? "الغد" : "بعد يومين"}.</p></div>
+      ${hist.length >= 3 ? `<div class="panel"><div class="panel-h"><h3>ثبات الأداء عبر التحديثات اليومية</h3><span class="sub">RMSE لأفضل نموذج في كل تدريب</span></div><div class="chart-box sm"><canvas id="db-ai-hist"></canvas></div></div>` : ""}
+      <div class="grid g-2 db-g2">${anomBlock(d.id, 10, "الأيام الشاذة في " + esc(d.name_ar)) || `<div class="panel"><p class="empty">لا أيام شاذة مسجلة.</p></div>`}${relBlock(d.id)}</div>
+      ${regimesBlock(d.id)}
+      <details class="panel db-method"><summary>${ico("i-info")}المنهجية بالتفصيل</summary><div class="prose">
+        <p><b>الهدف:</b> متوسط PM2.5 اليومي بعد ${h === 1 ? "يوم" : "يومين"} لكل قضاء على حدة (استراتيجية مباشرة: نموذج مستقل لكل أفق).</p>
+        <p><b>المدخلات (${N(fi.length ? q1("SELECT COUNT(*) n FROM feature_importance WHERE run_id = ?", [best.id]).n : 21, 0)} متغيراً):</b> قيم PM2.5 لآخر سبعة أيام، ومتوسطاها الأسبوعي والشهري، وPM10 والغبار وNO₂ وCO وO₃ اليوم، وأقوى رياح اليوم، وطقس يوم التوقّع من النموذج الجوي (الحرارة والرياح والأمطار والرطوبة)، والموسم بدالتي الجيب والجيب تمام ليوم السنة.</p>
+        <p><b>النماذج:</b> الاستمرارية خط أساس، وRidge (α = 1)، والغابة العشوائية (300 شجرة)، والتعزيز التدرّجي (HistGradientBoosting، 400 تكرار)، وشبكة عصبية MLP (64 و32 عصبونة مع إيقاف مبكر). كلها تتعلم لوغاريتم القيمة (log1p) لأن توزيع الملوثات ملتوٍ.</p>
+        <p><b>التقييم:</b> آخر 180 يوماً (أو 20% من السجل إن كان أقصر) للاختبار. يُختار النموذج الأقل RMSE، ولا يُعتمد إلا إذا تفوّق على خط الأساس. بعدها يُعاد تدريبه على كل البيانات ويُصدر التوقّع، ونطاق 80% من المئين العاشر والتسعين لأخطاء الاختبار.</p>
+        <p><b>الشذوذ:</b> Isolation Forest على لوغاريتم الملوثات السبعة (نسبة متوقعة 2%)، ويُذكر المعيار الأبعد عن الوسيط بمقياس الانحراف المطلق الوسيط.</p>
+        <p><b>الأنماط:</b> K-Means على كل أيام الأقضية معاً بعد التقييس، ويُختار عدد المجموعات (3–6) بأعلى معامل Silhouette، وتُسمّى المجموعات آلياً من مراكزها.</p>
+        <p><b>إعادة الإنتاج:</b> كل الشيفرة في مجلد <bdi dir="ltr">etl/</bdi> في مستودع المنصة، والبذرة العشوائية ثابتة (42).</p></div></details>`;
+
+    U.$("#db-ai-task").onclick = e => { const b = e.target.closest("[data-task]"); if (!b || b.dataset.task === S.task) return; S.task = b.dataset.task; paint(); };
+    if (fi.length) {
+      chart("ai", U.$("#db-ai-fi"), { type: "bar", data: { labels: fi.map(f => featLabel(f.feature)), datasets: [{ label: "زيادة RMSE", data: fi.map(f => Math.max(0, f.importance)), backgroundColor: ECO.COL.chloro + "bb", borderRadius: 3 }] },
+        options: { indexAxis: "y", plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => `+${U.fmt(fi[c.dataIndex].importance, 2)} ± ${U.fmt(fi[c.dataIndex].std, 2)} µg/m³` } } }, scales: { y: { position: "right", ticks: { font: { size: 10.5 } } } } } });
+    }
+    if (best) {
+      const pred = q("SELECT date, actual, predicted FROM model_test_predictions WHERE run_id = ? ORDER BY date", [best.id]);
+      if (pred.length) {
+        const prev = {}; q("SELECT date, pm2_5 FROM air_daily WHERE district_id = ? AND date BETWEEN date(?, ?) AND ?", [d.id, pred[0].date, `-${h} day`, pred[pred.length - 1].date]).forEach(r => { prev[r.date] = r.pm2_5; });
+        const back = x => { const t = new Date(x + "T12:00:00Z"); t.setUTCDate(t.getUTCDate() - h); return t.toISOString().slice(0, 10); };
+        chart("ai", U.$("#db-ai-pred"), { type: "line", data: { labels: pred.map(r => r.date), datasets: [
+          { label: "الواقع", data: pred.map(r => r.actual), borderColor: ECO.COL.text, borderWidth: 1.4 },
+          { label: MODEL[best.model] || best.model, data: pred.map(r => r.predicted), borderColor: ECO.COL.chloro, borderWidth: 1.6 },
+          ...(best.model !== "persistence" ? [{ label: "خط الأساس", data: pred.map(r => prev[back(r.date)] ?? null), borderColor: ECO.COL.silt + "aa", borderWidth: 1, borderDash: [4, 4] }] : [])
+        ] }, options: { interaction: { mode: "index", intersect: false }, scales: { x: { ticks: xTicks }, y: { beginAtZero: true } } } });
+      }
+    }
+    if (hist.length >= 3) chart("ai", U.$("#db-ai-hist"), { type: "line", data: { labels: hist.map(r => r.run_at.slice(0, 10)), datasets: [{ label: "RMSE", data: hist.map(r => r.rmse), borderColor: ECO.COL.river, pointRadius: 2 }] }, options: { plugins: { legend: { display: false } }, scales: { x: { ticks: xTicks } } } });
+    afterAI(d);
+  }
+
+  function relBlock(did) {
+    const rel = q("SELECT * FROM relationships WHERE district_id = ? ORDER BY x, y", [did]);
+    if (!rel.length) return `<div class="panel"><div class="panel-h"><h3>علاقات النهر والماء</h3></div><p class="empty">تحتاج 12 شهراً على الأقل من مشاهد Sentinel-2 الصافية.</p></div>`;
+    const L = { discharge: "تصريف دجلة", ndti: "العكورة NDTI", ndci: "الكلوروفيل NDCI", t_mean: "متوسط الحرارة" };
+    const strength = r => { const a = Math.abs(r); return a < 0.2 ? "ضعيفة جداً" : a < 0.4 ? "ضعيفة" : a < 0.6 ? "متوسطة" : a < 0.8 ? "قوية" : "قوية جداً"; };
+    return `<div class="panel"><div class="panel-h"><h3>علاقات النهر والماء</h3><span class="sub">ارتباط سبيرمان الشهري</span></div>
+      <div class="tbl-wrap"><table class="tbl"><thead><tr><th>العلاقة</th><th class="num">ρ</th><th class="num">p</th><th class="num">أشهر</th><th>القراءة</th></tr></thead><tbody>${rel.map(r =>
+        `<tr><td>${L[r.x] || r.x} و${L[r.y] || r.y}</td><td class="num">${U.fmt(r.coef, 2)}</td><td class="num">${r.p_value < 0.001 ? "&lt;0.001" : U.fmt(r.p_value, 3)}</td><td class="num">${U.fmt(r.n, 0)}</td>
+        <td>${r.p_value < 0.05 ? `${r.coef > 0 ? "طردية" : "عكسية"} ${strength(r.coef)}، دالة إحصائياً` : "غير دالة إحصائياً"}</td></tr>`).join("")}</tbody></table></div></div>`;
+  }
+
+  function regimesBlock(did) {
+    const R = q("SELECT * FROM regimes ORDER BY cluster");
+    if (!R.length) return "";
+    const share = {}; let tot = 0;
+    q("SELECT cluster, COUNT(*) n FROM air_regime_daily WHERE district_id = ? AND date > date((SELECT MAX(date) FROM air_regime_daily), '-365 day') GROUP BY cluster", [did]).forEach(r => { share[r.cluster] = r.n; tot += r.n; });
+    const pal = ["#4fc8dc", "#e6ae4f", "#93dd8a", "#ef5a64", "#b493ff", "#c4d3cf"];
+    S.regPal = pal;
+    return `<div class="panel"><div class="panel-h"><h3>أنماط الهواء اليومية</h3><span class="sub">K-Means على ${N(R.reduce((s, r) => s + r.n_days, 0), 0)} يوماً من كل الأقضية</span></div>
+      <div class="db-regs">${R.map(r => { const c = JSON.parse(r.centroid_json || "{}"); return `<div class="db-reg" style="--rc:${pal[r.cluster % pal.length]}"><b><i></i>${esc(r.label_ar)}</b>
+        <span class="muted">${N(share[r.cluster] || 0, 0)} يوماً في هذا القضاء خلال آخر سنة${tot ? ` (${U.fmt(100 * (share[r.cluster] || 0) / tot, 0)}%)` : ""}</span>
+        <span class="db-reg-v"><span>PM2.5 ${N(c.pm2_5, 0)}</span><span>غبار ${N(c.dust, 0)}</span><span>NO₂ ${N(c.no2, 1)}</span><span>O₃ ${N(c.o3, 0)}</span></span></div>`; }).join("")}</div>
+      <h4 class="db-h4">نمط كل يوم في آخر سنة</h4><div class="db-cal" id="db-cal" role="img" aria-label="تقويم أنماط الهواء لآخر سنة"></div></div>`;
+  }
+
+  function afterAI(d) {
+    const cal = U.$("#db-cal"); if (!cal) return;
+    const rows = q(`SELECT a.date, a.cluster, r.label_ar l FROM air_regime_daily a JOIN regimes r ON r.cluster = a.cluster WHERE a.district_id = ? AND a.date > date((SELECT MAX(date) FROM air_regime_daily), '-365 day') ORDER BY a.date`, [d.id]);
+    cal.innerHTML = rows.map(r => `<i style="background:${S.regPal[r.cluster % S.regPal.length]}" title="${esc(r.date)}: ${esc(r.l)}"></i>`).join("");
+  }
+
+  /* ------------------------------------------------------------------
+     4) مقارنة الأقضية
+  ------------------------------------------------------------------ */
+  function rCompare(el) {
+    clearCharts("compare");
+    const rows = q("SELECT * FROM v_district_summary");
+    const best = (k, hi) => { const v = rows.map(r => r[k]).filter(U.isNum); return v.length ? (hi ? Math.max(...v) : Math.min(...v)) : null; };
+    const mxPm = best("pm25_mean_365", true);
+    const same = q(`SELECT a.district_id x, b.district_id y, AVG(ABS(a.pm2_5 - b.pm2_5)) dif, COUNT(*) n FROM air_daily a JOIN air_daily b ON a.date = b.date AND a.district_id < b.district_id
+      WHERE a.date > date((SELECT MAX(date) FROM air_daily), '-365 day') GROUP BY x, y HAVING n > 30 AND dif < 0.05`);
+    const nm = id => (S.D.find(d => d.id === id) || {}).name_ar || id;
+    el.innerHTML = `<div class="panel"><div class="panel-h"><h3>الأقضية الستة في آخر سنة</h3><span class="sub">من أعلى النهر إلى أسفله</span></div>
+        <div class="tbl-wrap"><table class="tbl db-cmp"><thead><tr><th>القضاء</th><th class="num">متوسط PM2.5</th><th class="num">أيام فوق حد WHO</th><th class="num">متوسط التصريف m³/s</th><th class="num">متوسط NDTI</th><th class="num">مصادر تلوث</th><th class="num">بحوث</th></tr></thead>
+        <tbody>${rows.map(r => `<tr><td><button type="button" class="linkbtn" data-d="${r.id}" style="--dc:${DCOL[r.id]}"><i class="rb-dot"></i>${esc(r.name_ar)}</button></td>
+          <td class="num${r.pm25_mean_365 === mxPm ? " db-max" : ""}">${U.fmt(r.pm25_mean_365, 1)}</td><td class="num">${U.isNum(r.pct_days_over_who_365) ? U.fmt(r.pct_days_over_who_365, 0) + "%" : "—"}</td>
+          <td class="num">${U.fmt(r.discharge_mean_365, 0)}</td><td class="num">${U.fmt(r.ndti_mean_365, 3)}</td><td class="num">${U.fmt(r.n_sources, 0)}</td><td class="num">${U.fmt(r.n_studies, 0)}</td></tr>`).join("")}</tbody></table></div>
+        ${same.length ? `<div class="notice info">${ico("i-info")}<span>قيم الهواء متطابقة تقريباً بين ${same.map(s => `${esc(nm(s.x))} و${esc(nm(s.y))}`).join("، ")}، لأن الأقضية المتجاورة تقع في الخلية نفسها من شبكة CAMS (≈45 كم). هذا حد في دقة المصدر وليس خطأ في القاعدة؛ للتمييز بينها تلزم محطات رصد أرضية.</span></div>` : ""}
+      </div>
+      <div class="panel"><div class="panel-h"><h3>المتوسط الشهري لكل الأقضية</h3><div class="field db-inline"><label for="db-cmp-p" class="sr-only">المعيار</label><select id="db-cmp-p" class="input">${paramOptions(S.cmpP, ["pm2_5", "pm10", "dust", "no2", "so2", "o3", "co", "t_max", "precip", "discharge", "ndti", "ndci"])}</select></div></div>
+        <div class="chart-box lg"><canvas id="db-cmp-c"></canvas></div><p class="db-cap" id="db-cmp-cap"></p></div>`;
+    U.$("#db-cmp-p").onchange = e => { S.cmpP = e.target.value; drawCompare(); };
+    drawCompare();
+  }
+  function drawCompare() {
+    const p = S.cmpP, [t, c, monthly] = COLS[p], P = S.P[p] || {};
+    const kc = monthly ? "month" : "date";
+    const rows = q(`SELECT district_id id, substr(${kc}, 1, 7) m, AVG(${c}) y FROM ${t} WHERE ${c} IS NOT NULL AND ${kc} >= strftime('%Y-%m', date('now', '-36 months'))${t === "weather_daily" ? ` AND date <= '${today()}'` : ""} GROUP BY id, m ORDER BY m`);
+    const labels = Array.from(new Set(rows.map(r => r.m))).sort();
+    const by = {}; rows.forEach(r => { (by[r.id] = by[r.id] || {})[r.m] = r.y; });
+    chart("compare", U.$("#db-cmp-c"), { type: "line", data: { labels, datasets: S.D.map(d => ({ label: d.name_ar, data: labels.map(m => (by[d.id] || {})[m] ?? null), borderColor: DCOL[d.id], borderWidth: 1.6, pointRadius: monthly ? 2 : 0, spanGaps: true })) },
+      options: { interaction: { mode: "index", intersect: false }, scales: { x: { ticks: xTicks } } } });
+    U.$("#db-cmp-cap").textContent = `${P.name_ar || p}${P.unit ? " (" + P.unit + ")" : ""}، متوسط كل شهر لآخر 36 شهراً. ${SRC_NOTE[P.category] || ""}`;
+  }
+
+  /* ------------------------------------------------------------------
+     5) البحوث ومصادر التلوث
+  ------------------------------------------------------------------ */
+  function studyCard(s) {
+    const vals = q("SELECT table_id, item, col, stat, value, unit, note FROM study_values WHERE study_id = ? ORDER BY id LIMIT 80", [s.id]);
+    const nAll = q1("SELECT COUNT(*) n FROM study_values WHERE study_id = ?", [s.id]).n;
+    const ST = { min: "أدنى", max: "أعلى", value: "قيمة" };
+    return `<article class="db-study"><h4>${esc(s.title)}</h4>
+      <p class="muted">${esc(s.authors || "")}${s.journal ? ` · <i>${esc(s.journal)}</i>` : ""}${s.volume ? ` ${esc(s.volume)}` : ""}${s.year ? ` · ${esc(s.year)}` : ""}</p>
+      ${s.summary ? `<p>${esc(s.summary)}</p>` : ""}
+      <p class="db-study-m">${s.place ? `<span>${ico("i-pin")}${esc(s.place)}</span>` : ""}${s.medium ? `<span>${ico("i-drop")}${esc(s.medium)}</span>` : ""}${s.period ? `<span>${ico("i-layers")}${esc(s.period)}</span>` : ""}
+        ${s.doi ? `<a href="https://doi.org/${encodeURI(s.doi)}" target="_blank" rel="noopener">${ico("i-ext")}DOI</a>` : s.url ? `<a href="${esc(s.url)}" target="_blank" rel="noopener">${ico("i-ext")}رابط البحث</a>` : ""}</p>
+      ${vals.length ? `<details><summary>القيم المنشورة في القاعدة (${N(nAll, 0)})</summary><div class="tbl-wrap"><table class="tbl"><thead><tr><th>المعيار أو الصف</th><th>العمود</th><th>النوع</th><th class="num">القيمة</th><th>الوحدة</th></tr></thead><tbody>${vals.map(v =>
+        `<tr><td>${esc(v.item)}</td><td>${esc(v.col || "—")}</td><td>${ST[v.stat] || esc(v.stat)}</td><td class="num">${U.fmt(v.value, "auto")}</td><td><bdi>${esc(v.unit || "")}</bdi></td></tr>`).join("")}</tbody></table></div>
+        ${nAll > vals.length ? `<p class="db-cap">تعرض أول ${vals.length} قيمة؛ الباقي في تبويب «استعلام SQL».</p>` : ""}</details>` : ""}</article>`;
+  }
+  function rStudies(el) {
+    const d = dist();
+    const st = q("SELECT s.* FROM studies s JOIN study_districts sd ON sd.study_id = s.id WHERE sd.district_id = ? ORDER BY s.year DESC", [d.id]);
+    const gov = q("SELECT * FROM studies WHERE id NOT IN (SELECT study_id FROM study_districts) ORDER BY year DESC");
+    const src = q("SELECT * FROM pollution_sources WHERE district_id = ? ORDER BY dist_river_km IS NULL, dist_river_km", [d.id]);
+    const kinds = {}; src.forEach(s => { kinds[s.kind] = (kinds[s.kind] || 0) + 1; });
+    el.innerHTML = `<div class="grid db-st-grid">
+      <section class="panel"><div class="panel-h"><h3>بحوث جامعة تكريت في ${esc(d.name_ar)}</h3><a class="linkbtn" href="#research">كل البحوث على الخريطة</a></div>
+        ${st.length ? st.map(studyCard).join("") : `<p class="empty">لا يوجد بحث منشور مرتبط بهذا القضاء في المنصة بعد. هذه فجوة بحثية: <a href="#gaps">اقترح عنواناً</a>.</p>`}
+        ${gov.length ? `<h4 class="db-h4">بحوث على مستوى المحافظة</h4>${gov.map(studyCard).join("")}` : ""}</section>
+      <section class="panel"><div class="panel-h"><h3>مصادر التلوث المرسومة حول ${esc(d.name_ar)}</h3><span class="sub">OpenStreetMap · ضمن 30 كم</span></div>
+        ${src.length ? `<div class="db-kinds">${Object.entries(kinds).sort((a, b) => b[1] - a[1]).map(([k, c]) => `<span class="chip" style="--kc:${(KIND[k] || [0, "#c4d3cf"])[1]}"><i></i>${esc((KIND[k] || [k])[0])} ${N(c, 0)}</span>`).join("")}</div>
+        <div class="tbl-wrap"><table class="tbl"><thead><tr><th>النوع</th><th>الاسم</th><th class="num">عن النهر</th><th class="num">عن المركز</th><th></th></tr></thead><tbody>${src.map(s =>
+          `<tr><td><i class="db-kdot" style="background:${(KIND[s.kind] || [0, "#c4d3cf"])[1]}"></i>${esc((KIND[s.kind] || [s.kind])[0])}</td><td>${esc(s.name || "بلا اسم في الخريطة")}</td>
+          <td class="num">${U.isNum(s.dist_river_km) ? U.fmt(s.dist_river_km, 1) + " كم" : "—"}</td><td class="num">${U.isNum(s.lat) ? U.fmt(km(d.lat, d.lon, s.lat, s.lon), 1) + " كم" : "—"}</td>
+          <td><a href="https://www.openstreetmap.org/${esc(s.id)}" target="_blank" rel="noopener" aria-label="افتح في OpenStreetMap">${ico("i-ext")}</a></td></tr>`).join("")}</tbody></table></div>
+        <p class="db-cap">القائمة بقدر ما رسمه متطوعو OpenStreetMap؛ قد تنقصها منشآت غير مرسومة. ساهم بإضافتها في الخريطة لتظهر هنا بعد أسبوع.</p>`
+        : `<p class="empty">لا توجد منشآت ملوِّثة مرسومة في OpenStreetMap ضمن 30 كم من مركز القضاء.</p>`}</section></div>`;
+  }
+
+  /* ------------------------------------------------------------------
+     6) استعلام SQL
+  ------------------------------------------------------------------ */
+  const SAMPLES = [
+    ["متوسط PM2.5 الشهري لكل قضاء في آخر سنة", `SELECT d.name_ar AS district, substr(a.date, 1, 7) AS month,
+       ROUND(AVG(a.pm2_5), 1) AS pm25_mean,
+       SUM(a.pm2_5 > 15) AS days_over_who
+FROM air_daily a JOIN districts d ON d.id = a.district_id
+WHERE a.date >= date('now', '-12 months')
+GROUP BY d.id, month
+ORDER BY d.ord, month;`],
+    ["أشد 15 يوماً غباراً ومكانها", `SELECT a.date, d.name_ar AS district, ROUND(a.dust) AS dust,
+       ROUND(a.pm10) AS pm10, w.wind_max
+FROM air_daily a
+JOIN districts d ON d.id = a.district_id
+LEFT JOIN weather_daily w ON w.district_id = a.district_id AND w.date = a.date
+ORDER BY a.dust DESC
+LIMIT 15;`],
+    ["أيام تجاوز حد الصحة العالمية لكل قضاء وسنة", `SELECT d.name_ar AS district, substr(a.date, 1, 4) AS year,
+       COUNT(*) AS days, SUM(a.pm2_5 > 15) AS over_who,
+       ROUND(100.0 * SUM(a.pm2_5 > 15) / COUNT(*), 1) AS pct
+FROM air_daily a JOIN districts d ON d.id = a.district_id
+GROUP BY d.id, year
+ORDER BY d.ord, year;`],
+    ["تصريف دجلة السنوي عند بيجي", `SELECT substr(date, 1, 4) AS year,
+       ROUND(MIN(discharge)) AS q_min,
+       ROUND(AVG(discharge)) AS q_mean,
+       ROUND(MAX(discharge)) AS q_max
+FROM river_daily
+WHERE district_id = 'baiji'
+GROUP BY year
+ORDER BY year;`],
+    ["التصريف والعكورة شهرياً (Sentinel-2)", `SELECT w.district_id, w.month, w.ndti, w.ndci,
+  ROUND((SELECT AVG(discharge) FROM river_daily r
+         WHERE r.district_id = w.district_id
+           AND substr(r.date, 1, 7) = w.month)) AS discharge
+FROM water_rs_monthly w
+WHERE w.ndti IS NOT NULL
+ORDER BY w.district_id, w.month;`],
+    ["أداء نماذج الذكاء الاصطناعي في آخر تدريب", `SELECT district_id, task, model, mae, rmse, r2,
+       ROUND(100 * skill, 1) AS skill_pct, is_best
+FROM model_runs
+WHERE run_at = (SELECT MAX(run_at) FROM model_runs)
+ORDER BY district_id, task, rmse;`],
+    ["توقعات الأيام القادمة: نموذجنا مقابل CAMS", `SELECT f.for_date, d.name_ar AS district, f.model, f.value, f.lo, f.hi
+FROM forecasts f JOIN districts d ON d.id = f.district_id
+WHERE f.for_date > (SELECT MAX(date) FROM air_daily)
+ORDER BY f.for_date, d.ord, f.model;`],
+    ["مصادر التلوث على بعد أقل من 2 كم من النهر", `SELECT kind, name, district_id, dist_river_km, lat, lon
+FROM pollution_sources
+WHERE dist_river_km < 2
+ORDER BY dist_river_km;`],
+    ["القيم المنشورة في بحوث قضاء بيجي", `SELECT s.year, s.title, v.item, v.col, v.stat, v.value, v.unit
+FROM study_values v
+JOIN studies s ON s.id = v.study_id
+JOIN study_districts sd ON sd.study_id = s.id
+WHERE sd.district_id = 'baiji'
+ORDER BY s.year, v.id;`],
+    ["الأيام الشاذة التي كشفها Isolation Forest", `SELECT an.date, d.name_ar AS district, an.top_param, an.top_z,
+       ROUND(an.score, 3) AS score
+FROM anomalies an JOIN districts d ON d.id = an.district_id
+ORDER BY an.date DESC
+LIMIT 30;`],
+    ["الهواء والطقس والنهر في جدول واحد", `SELECT *
+FROM v_air_weather
+WHERE district_id = 'tikrit'
+ORDER BY date DESC
+LIMIT 60;`]
+  ];
+  function rSQL(el) {
+    if (el.dataset.built) return;
+    el.dataset.built = "1";
+    const tables = q("SELECT name, type FROM sqlite_master WHERE type IN ('table','view') AND name NOT LIKE 'sqlite_%' ORDER BY type, name");
+    el.innerHTML = `<div class="db-sql-grid">
+      <div class="db-sql-main">
+        <div class="panel"><div class="panel-h"><h3>اكتب استعلامك</h3><span class="sub">SQLite · يعمل في متصفحك</span></div>
+          <label for="db-sql" class="sr-only">نص الاستعلام</label>
+          <textarea id="db-sql" class="input db-sql" dir="ltr" spellcheck="false" autocapitalize="off" autocomplete="off" rows="9">${esc(SAMPLES[0][1])}</textarea>
+          <div class="row db-sql-act"><button type="button" class="btn btn-primary" data-sql-run>${ico("i-play")}نفّذ <kbd>Ctrl</kbd>+<kbd>Enter</kbd></button>
+            <button type="button" class="btn btn-ghost btn-sm" data-sql-csv disabled>${ico("i-down")}النتيجة CSV</button>
+            <button type="button" class="btn btn-ghost btn-sm" data-sql-xlsx disabled>${ico("i-table")}النتيجة Excel</button></div>
+          <div class="db-samples"><span class="muted">أمثلة جاهزة:</span>${SAMPLES.map((s, i) => `<button type="button" class="chip db-sample" data-sample="${i}">${esc(s[0])}</button>`).join("")}</div>
+        </div>
+        <div class="panel"><div id="db-sql-out" aria-live="polite"><p class="empty">اضغط «نفّذ» لرؤية النتيجة.</p></div></div>
+      </div>
+      <aside class="panel db-schema"><div class="panel-h"><h3>الجداول</h3><span class="sub">اضغط اسماً لإدراجه</span></div>${tables.map(t => {
+        const cols = q(`PRAGMA table_info("${t.name}")`), n = t.type === "table" ? q1(`SELECT COUNT(*) n FROM "${t.name}"`).n : null;
+        return `<details${t.name === "air_daily" ? " open" : ""}><summary><code dir="ltr" data-ins="${esc(t.name)}">${esc(t.name)}</code>${t.type === "view" ? `<span class="chip tone-info">عرض</span>` : `<small>${U.fmt(n, 0)}</small>`}</summary>
+          <ul>${cols.map(c => `<li><code dir="ltr" data-ins="${esc(c.name)}">${esc(c.name)}</code><small dir="ltr">${esc(c.type || "")}${c.pk ? " · PK" : ""}</small></li>`).join("")}</ul></details>`;
+      }).join("")}</aside></div>
+      <p class="db-cap">القاعدة كاملة في ذاكرة متصفحك، فأي تعديل (INSERT أو DELETE) يبقى في نسختك المؤقتة فقط ويزول عند إعادة التحميل.</p>`;
+    const ta = U.$("#db-sql");
+    ta.addEventListener("keydown", e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); runSQL(); } });
+    el.addEventListener("click", e => {
+      const s = e.target.closest("[data-sample]"); if (s) { ta.value = SAMPLES[+s.dataset.sample][1]; runSQL(); return; }
+      const ins = e.target.closest("[data-ins]"); if (ins) { e.preventDefault(); const a = ta.selectionStart, b = ta.selectionEnd; ta.value = ta.value.slice(0, a) + ins.dataset.ins + ta.value.slice(b); ta.focus(); ta.selectionStart = ta.selectionEnd = a + ins.dataset.ins.length; return; }
+      if (e.target.closest("[data-sql-run]")) runSQL();
+      if (e.target.closest("[data-sql-csv]") && S.sqlLast) save(new Blob([csvOf(S.sqlLast.columns, S.sqlLast.values)], { type: "text/csv;charset=utf-8" }), `ecobio-query-${today()}.csv`);
+      if (e.target.closest("[data-sql-xlsx]") && S.sqlLast) save(ECO.xlsx.write([{ name: "نتيجة الاستعلام", rows: [S.sqlLast.columns].concat(S.sqlLast.values) }]), `ecobio-query-${today()}.xlsx`);
+    });
+  }
+  function runSQL() {
+    const sql = U.$("#db-sql").value.trim(), out = U.$("#db-sql-out");
+    if (!sql) return;
+    const t0 = performance.now();
+    try {
+      const res = S.db.exec(sql), ms = Math.round(performance.now() - t0), last = res[res.length - 1];
+      S.sqlLast = last || null;
+      U.$$("[data-sql-csv],[data-sql-xlsx]").forEach(b => { b.disabled = !last; });
+      if (!last) { out.innerHTML = `<div class="notice ok">${ico("i-check")}<span>نُفِّذ الأمر خلال ${ms} ms دون نتائج للعرض${S.db.getRowsModified() ? `، وتأثّر ${S.db.getRowsModified()} صفاً في نسختك المحلية` : ""}.</span></div>`; return; }
+      const show = last.values.slice(0, 1000);
+      out.innerHTML = `<p class="updated">${N(last.values.length, 0)} صفاً · ${ms} ms${last.values.length > show.length ? ` · تُعرض أول ${show.length}، والتنزيل يشمل الكل` : ""}</p>
+        <div class="tbl-wrap db-res"><table class="tbl"><thead><tr>${last.columns.map(c => `<th dir="auto">${esc(c)}</th>`).join("")}</tr></thead>
+        <tbody>${show.map(r => `<tr>${r.map(v => typeof v === "number" ? `<td class="num">${esc(Number.isInteger(v) ? v : +v.toFixed(4))}</td>` : `<td dir="auto">${v == null ? '<span class="faint">NULL</span>' : esc(v)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+    } catch (e) {
+      S.sqlLast = null; U.$$("[data-sql-csv],[data-sql-xlsx]").forEach(b => { b.disabled = true; });
+      out.innerHTML = `<div class="notice warn">${ico("i-info")}<span><b>خطأ في الاستعلام:</b> <code dir="ltr">${esc(e.message)}</code></span></div>`;
+    }
+  }
+
+  /* ------------------------------------------------------------------
+     7) المخطط والمصادر
+  ------------------------------------------------------------------ */
+  const GROUPS = [["الجداول المرجعية", ["districts", "sources", "parameters"]], ["القياسات", ["air_daily", "weather_daily", "river_daily", "water_rs_monthly"]],
+    ["البحوث ومصادر التلوث", ["studies", "study_districts", "study_values", "pollution_sources"]],
+    ["الذكاء الاصطناعي", ["model_runs", "feature_importance", "model_test_predictions", "forecasts", "anomalies", "regimes", "air_regime_daily", "relationships"]], ["التشغيل", ["etl_log", "meta"]]];
+  const TDESC = { districts: "الأقضية الستة ومواقعها ونقطة النهر وخلية GloFAS", sources: "مصادر البيانات ومراجعها العلمية", parameters: "المعايير ووحداتها وحدودها",
+    air_daily: "متوسطات يومية لملوثات الهواء", weather_daily: "الطقس اليومي", river_daily: "تصريف دجلة اليومي", water_rs_monthly: "العكورة والكلوروفيل شهرياً من الفضاء",
+    studies: "بحوث جامعة تكريت المنشورة", study_districts: "ربط البحوث بالأقضية", study_values: "القيم المنشورة في البحوث", pollution_sources: "منشآت ملوِّثة من OpenStreetMap",
+    model_runs: "كل نموذج دُرِّب ودقته", feature_importance: "أهمية المتغيرات في النموذج الأفضل", model_test_predictions: "توقعات فترة الاختبار مقابل الواقع",
+    forecasts: "توقعات الأيام القادمة (نموذجنا وCAMS)", anomalies: "الأيام الشاذة", regimes: "أنماط الهواء (K-Means)", air_regime_daily: "نمط كل يوم في كل قضاء",
+    relationships: "علاقات سبيرمان الشهرية", etl_log: "سجل كل خطوة تحديث", meta: "معلومات آخر تحديث" };
+  function rAbout(el) {
+    const m = S.meta || {};
+    const card = t => {
+      const cols = q(`PRAGMA table_info("${t}")`); if (!cols.length) return "";
+      const fk = {}; q(`PRAGMA foreign_key_list("${t}")`).forEach(f => { fk[f.from] = f.table; });
+      const n = q1(`SELECT COUNT(*) n FROM "${t}"`).n;
+      return `<div class="db-ent"><div class="db-ent-h"><code dir="ltr">${t}</code><small>${U.fmt(n, 0)} صف</small></div><p>${esc(TDESC[t] || "")}</p>
+        <ul>${cols.map(c => `<li class="${c.pk ? "pk" : ""}${fk[c.name] ? " fk" : ""}"><code dir="ltr">${esc(c.name)}</code>${c.pk ? `<span class="db-key" title="مفتاح أساسي">PK</span>` : ""}${fk[c.name] ? `<span class="db-key fk" title="مفتاح أجنبي">→ <bdi dir="ltr">${esc(fk[c.name])}</bdi></span>` : ""}<small dir="ltr">${esc(c.type || "")}</small></li>`).join("")}</ul></div>`;
+    };
+    const runAt = (q1("SELECT MAX(run_at) r FROM etl_log") || {}).r;
+    const log = runAt ? q("SELECT step, status, rows, seconds, message FROM etl_log WHERE run_at = ? ORDER BY id", [runAt]) : [];
+    const steps = [["i-down", "الجلب", "كل يوم 05:17 بتوقيت بغداد يجلب خادم GitHub Actions الأيام الجديدة من CAMS وERA5 وGloFAS، والأشهر الجديدة من Sentinel-2، ومصادر التلوث من OpenStreetMap أسبوعياً."],
+      ["i-layers", "التنظيف والتجميع", "القراءات الساعية تُجمّع إلى متوسطات يومية بتوقيت بغداد (يُقبل اليوم إذا توفرت 18 ساعة على الأقل)، ومشاهد الأقمار تُصفّى من الغيوم وتُقرأ بكسلات الماء فقط."],
+      ["i-db", "التخزين", "كل قيمة تُكتب مرة واحدة بمفتاح (القضاء، التاريخ)، فلا تتكرر، وتُصحَّح آخر ثلاثة أيام عند كل تحديث."],
+      ["i-brain", "التدريب", "خمسة نماذج تُدرَّب وتُختبر لكل قضاء ولأفقين، ثم كشف الشذوذ والأنماط والعلاقات."],
+      ["i-share", "النشر", "القاعدة تُضغط وتُنشر في فرع db من المستودع، والمنصة والتطبيق ينزّلانها عند وجود نسخة أحدث."]];
+    el.innerHTML = `<div class="panel"><div class="panel-h"><h3>كيف تُبنى القاعدة كل يوم</h3><span class="sub">${runAt ? `آخر تشغيل ${esc(fStamp(runAt))} · ${N(m.seconds ? m.seconds / 60 : null, 0)} دقيقة` : ""}</span></div>
+        <ol class="db-pipe">${steps.map(([i, t, x]) => `<li><span class="tc-ic">${ico(i)}</span><b>${t}</b><p>${x}</p></li>`).join("")}</ol>
+        <div class="row db-dl"><button type="button" class="btn" data-db-dl>${ico("i-down")}نزّل القاعدة كاملة (SQLite)</button><a class="btn btn-ghost" href="${RAW}schema.sql" target="_blank" rel="noopener">${ico("i-file")}المخطط schema.sql</a>
+          <a class="btn btn-ghost" href="https://github.com/ibnsamh97-ai/moamin-ecobio/tree/main/etl" target="_blank" rel="noopener">${ico("i-ext")}شيفرة الجلب والتدريب</a></div>
+        <p class="db-cap">ملف SQLite يُفتح ببرنامج DB Browser for SQLite المجاني، أو بلغة Python وR مباشرة.</p></div>
+      <div class="panel"><div class="panel-h"><h3>مخطط القاعدة</h3><span class="sub">${GROUPS.reduce((s, g) => s + g[1].length, 0)} جدولاً وعرضان جاهزان · المفاتيح الأجنبية تربط كل قياس بالقضاء</span></div>
+        ${GROUPS.map(([g, ts]) => `<h4 class="db-h4">${g}</h4><div class="db-ents">${ts.map(card).join("")}</div>`).join("")}</div>
+      <div class="panel"><div class="panel-h"><h3>المصادر ومراجعها</h3></div><div class="tbl-wrap"><table class="tbl db-wrap-tbl"><thead><tr><th>المصدر</th><th>الدقة</th><th>الترخيص</th><th>المرجع العلمي</th></tr></thead><tbody>${q("SELECT * FROM sources").map(s =>
+        `<tr><td><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.name)}</a><br><small class="muted">${esc(s.provider)}</small></td><td>${esc(s.resolution)}</td><td>${esc(s.license)}</td><td dir="auto">${esc(s.citation)}</td></tr>`).join("")}</tbody></table></div></div>
+      <div class="panel"><div class="panel-h"><h3>المعايير وحدودها</h3></div><div class="tbl-wrap"><table class="tbl"><thead><tr><th>المعيار</th><th>الرمز</th><th>الوحدة</th><th class="num">الحد</th><th>مرجع الحد</th></tr></thead><tbody>${q("SELECT * FROM parameters").map(p =>
+        `<tr><td>${esc(p.name_ar)}</td><td><code dir="ltr">${esc(p.code)}</code></td><td><bdi>${esc(p.unit || "—")}</bdi></td><td class="num">${p.limit_value != null ? U.fmt(p.limit_value, 0) : "—"}</td><td>${esc(p.limit_ref || "—")}</td></tr>`).join("")}</tbody></table></div></div>
+      <div class="panel"><div class="panel-h"><h3>حدود البيانات</h3></div><ul class="prose">${Object.values(SRC_NOTE).map(x => `<li>${esc(x)}</li>`).join("")}
+        <li>مصادر التلوث بقدر ما رسمه متطوعو OpenStreetMap، والقيم البحثية كما نُشرت في مصادرها دون تعديل.</li>
+        <li>هذه القاعدة للبحث والتعليم والتوعية، ولا تحل محل محطات الرصد الرسمية لوزارة البيئة.</li></ul></div>
+      ${log.length ? `<details class="panel"><summary>سجل آخر تحديث (${log.length} خطوة${log.some(l => l.status === "error") ? `، ${log.filter(l => l.status === "error").length} منها فشلت` : ""})</summary><div class="tbl-wrap"><table class="tbl"><thead><tr><th>الخطوة</th><th>الحالة</th><th class="num">صفوف</th><th class="num">ثوانٍ</th><th>ملاحظة</th></tr></thead><tbody>${log.map(l =>
+        `<tr><td><code dir="ltr">${esc(l.step)}</code></td><td><span class="chip tone-${l.status === "ok" ? "good" : l.status === "warn" ? "warn" : "bad"}">${{ ok: "تم", warn: "تنبيه", error: "فشل" }[l.status] || esc(l.status)}</span></td><td class="num">${U.fmt(l.rows, 0)}</td><td class="num">${U.fmt(l.seconds, 1)}</td><td class="db-msg" dir="auto">${esc(l.message || "")}</td></tr>`).join("")}</tbody></table></div></details>` : ""}`;
+  }
+
+  async function downloadDb() {
+    try { const raw = await gunzip(S.gz); save(new Blob([raw], { type: "application/vnd.sqlite3" }), `ecobio-tigris-${today()}.db`); }
+    catch (e) { U.toast("تعذّر تجهيز الملف: " + e.message); }
+  }
+
+  /* ------------------------------------------------------------------
+     أقرب قضاء
+  ------------------------------------------------------------------ */
+  function nearest() {
+    const done = (lat, lon) => {
+      const best = S.D.map(d => [d, km(lat, lon, d.lat, d.lon)]).sort((a, b) => a[1] - b[1])[0];
+      if (!best) return;
+      setDistrict(best[0].id);
+      U.toast(best[1] > 60 ? `أنت على بعد ${Math.round(best[1])} كم من أقرب قضاء (${best[0].name_ar}).` : `أقرب قضاء إليك: ${best[0].name_ar} (${Math.round(best[1])} كم).`);
+    };
+    if (ECO.native && ECO.native.locate) { ECO.native.locate().then(p => done(p.lat, p.lon)).catch(() => U.toast("تعذّر تحديد موقعك.")); return; }
+    if (!navigator.geolocation) { U.toast("جهازك لا يدعم تحديد الموقع."); return; }
+    navigator.geolocation.getCurrentPosition(p => done(p.coords.latitude, p.coords.longitude), () => U.toast("لم يُسمح بتحديد الموقع أو تعذّر."), { timeout: 12000, maximumAge: 600000 });
+  }
+
+  /* ------------------------------------------------------------------
+     الأحداث
+  ------------------------------------------------------------------ */
+  function wire() {
+    const v = U.$("#view-districts");
+    v.addEventListener("click", e => {
+      if (e.target.closest("[data-db-retry]")) { load(true); return; }
+      if (e.target.closest("[data-db-reload]")) { load(true); return; }
+      if (e.target.closest("[data-db-near]")) { nearest(); return; }
+      if (e.target.closest("[data-db-dl]")) { downloadDb(); return; }
+      if (e.target.closest("[data-db-csv]") && S.tsLast) { const L = S.tsLast; save(new Blob([csvOf(["x"].concat(L.ds.map(d => d.label)), L.labels.map((x, i) => [x].concat(L.ds.map(d => d.data[i]))))], { type: "text/csv;charset=utf-8" }), `ecobio-${L.name}.csv`); return; }
+      if (e.target.closest("[data-db-xlsx]")) { exportDistrictXlsx(); return; }
+      const dB = e.target.closest("[data-d]"); if (dB) { setDistrict(dB.dataset.d); if (dB.closest(".db-cmp")) setTab("overview"); return; }
+      const t = e.target.closest("[data-tab]"); if (t) { setTab(t.dataset.tab); return; }
+      const tg = e.target.closest("[data-tab-go]"); if (tg) { setTab(tg.dataset.tabGo); return; }
+    });
+    U.$("#db-tabs").addEventListener("keydown", e => {
+      if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) return;
+      const ids = TABS.map(t => t[0]); let i = ids.indexOf(S.tab);
+      i = e.key === "Home" ? 0 : e.key === "End" ? ids.length - 1 : (i + (e.key === "ArrowLeft" ? 1 : -1) + ids.length) % ids.length; // RTL
+      e.preventDefault(); setTab(ids[i]); U.$("#db-t-" + ids[i]).focus();
+    });
+    window.addEventListener("hashchange", () => {
+      if (!S.db || !ECO.router || ECO.router.current() !== "districts") return;
+      const d0 = S.d, t0 = S.tab; readHash();
+      if (S.tab !== t0) renderTabs();
+      if (S.d !== d0) U.$$("#db-ribbon [data-d]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.d === S.d)));
+      if (S.d !== d0 || S.tab !== t0) paint();
+    });
+  }
+
+  /* واجهة للأدوات الأخرى والتطبيق (الإشعار اليومي): ملخص قضاء */
+  ECO.districtsDB = {
+    ready: () => !!S.db,
+    load: () => load(),
+    summary(id) {
+      if (!S.db) return null;
+      const d = S.D.find(x => x.id === id); if (!d) return null;
+      const air = q1("SELECT date, pm2_5, dust FROM air_daily WHERE district_id = ? ORDER BY date DESC LIMIT 1", [id]);
+      const fc = air ? q1("SELECT for_date, value, lo, hi, model FROM forecasts WHERE district_id = ? AND model != 'cams' AND for_date > ? ORDER BY for_date LIMIT 1", [id, air.date]) : null;
+      return { district: d, air, forecast: fc };
+    }
+  };
+
+  ECO.views.districts = {
+    init() { wire(); load(); },
+    show() {
+      if (S.db) { const d0 = S.d, t0 = S.tab; readHash(); if (S.tab !== t0) renderTabs(); if (S.d !== d0) renderRibbon(); paint(); writeHash(); }
+      if (S.map) setTimeout(() => S.map.invalidateSize(), 80);
+    }
+  };
+})();

@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS parameters (
 -- ---------- القياسات ----------
 CREATE TABLE IF NOT EXISTS air_daily (
   district_id TEXT NOT NULL REFERENCES districts(id),
-  date        TEXT NOT NULL,               -- YYYY-MM-DD (UTC)
+  date        TEXT NOT NULL,               -- YYYY-MM-DD بتوقيت بغداد
   pm2_5       REAL, pm2_5_max REAL, pm10 REAL, dust REAL,
   no2 REAL, so2 REAL, o3 REAL, o3_max REAL, co REAL,
   aqi_pm25    REAL,                        -- أعلى مؤشر AQI (PM2.5) خلال اليوم

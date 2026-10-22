@@ -43,9 +43,15 @@ jobs:
       - name: Build database and train models
         id: build
         continue-on-error: true
+        timeout-minutes: 140
         run: |
           set -o pipefail
           python etl/build.py --db out/ecobio.db ${{ github.event.inputs.full == 'true' && '--full' || '' }} --s2-limit 450 2>&1 | tee out/run.log
+      - name: Compress a partial database if the build stopped early
+        if: always()
+        run: |
+          if [ -f out/ecobio.db ] && [ ! -f out/ecobio.db.gz ]; then gzip -9 -k out/ecobio.db; fi
+          ls -la out
       - name: Publish log (db-log branch)
         if: always()
         env:
@@ -62,7 +68,7 @@ jobs:
         env:
           TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          mkdir -p pub && cp out/ecobio.db.gz out/ecobio-meta.json out/etl.log pub/ && cp out/tigris.json pub/ 2>/dev/null || true
+          mkdir -p pub && cp out/ecobio.db.gz pub/ && for f in ecobio-meta.json etl.log tigris.json; do cp out/$f pub/ 2>/dev/null || true; done
           cp etl/schema.sql pub/
           cd pub && git init -q && git checkout -q --orphan db && git add -A
           git -c user.name=ecobio-bot -c user.email=ecobio-bot@users.noreply.github.com commit -qm "database $(date -u +%F)"
