@@ -226,14 +226,19 @@ def regimes(con, log):
     names = {}
     for c in range(k):
         z = zc.iloc[c]
-        if max(z["dust"], z["pm10"]) >= 0.8:
-            base = ("غبار", "Dust episode")
-        elif max(z["no2"], z["co"]) >= 0.6:
-            base = ("احتراق ومرور", "Combustion / traffic")
-        elif z["o3"] >= 0.6:
-            base = ("أوزون صيفي", "Summer ozone")
-        elif z.mean() <= -0.3:
-            base = ("هواء أنظف نسبياً", "Relatively clean")
+        dust = (z["dust"] + z["pm10"]) / 2                     # الغبار والجسيمات الخشنة
+        comb = max(z["no2"], z["so2"], (z["no2"] + z["so2"] + z["co"]) / 3)  # غازات الاحتراق
+        ozone = z["o3"]
+        parts = (z["pm2_5"] + z["pm10"] + z["dust"]) / 3       # مستوى الجسيمات العام
+        best = max(dust, comb, ozone)
+        if best < 0.3 and parts <= -0.3:
+            base = ("هواء أنظف نسبياً", "Relatively clean air")
+        elif best == dust and dust >= 0.4:
+            base = ("غبار وأوزون صيفي", "Dust with summer ozone") if ozone >= 0.4 else ("غبار", "Dust")
+        elif best == comb and comb >= 0.4:
+            base = ("غازات احتراق (NO₂ وSO₂)", "Combustion gases (NO2, SO2)")
+        elif best == ozone and ozone >= 0.4:
+            base = ("أوزون مرتفع", "High ozone")
         else:
             base = ("معتدل مختلط", "Moderate mixed")
         names[c] = base
