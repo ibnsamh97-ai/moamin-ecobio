@@ -64,6 +64,58 @@ def start_for(con, table, did, first: dt.date, full: bool):
     return first if not m else max(first, dt.date.fromisoformat(m) - dt.timedelta(days=OVERLAP))
 
 
+def export_api(path: Path, run_at: str):
+    """بيانات مفتوحة: ملف CSV لكل قضاء ولكل جدول، وفهرس JSON يصف الروابط والأعمدة والمصادر."""
+    import csv
+    api = path.parent / "api"
+    if api.exists():
+        shutil.rmtree(api)
+    api.mkdir(parents=True)
+    con = sqlite3.connect(path)
+    TABLES = {
+        "air": ("air_daily", "date", "تقديرات CAMS اليومية للملوثات (µg/m³)", "cams"),
+        "weather": ("v_weather_corrected", "date", "الطقس اليومي من ERA5 والحرارة المصحّحة بالقياس الأرضي", "era5"),
+        "river": ("river_daily", "date", "تصريف دجلة اليومي من GloFAS (m³/s)", "glofas"),
+        "water": ("water_rs_monthly", "month", "عكورة الماء وكلوروفيله الشهرية من Sentinel-2", "s2"),
+        "dust": ("dust_prob", "date", "احتمال الغبار الفعلي من نموذجنا المتعلَّم من أرصاد المطارات", "iem"),
+    }
+    idx = {"name": "EcoBio AI open data – Tigris districts of Salah Al-Din", "updated_at": run_at, "license": "CC BY 4.0 (اذكر المصدر الأصلي لكل جدول)",
+           "base": "https://raw.githubusercontent.com/ibnsamh97-ai/moamin-ecobio/db/api/", "districts": [], "datasets": {}, "stations": []}
+    for t, (table, key, desc, src) in TABLES.items():
+        if not con.execute("SELECT 1 FROM sqlite_master WHERE name = ?", (table,)).fetchone():
+            continue
+        cols = [r[1] for r in con.execute(f"PRAGMA table_info({table})")]
+        idx["datasets"][t] = {"description": desc, "source": src, "columns": [c for c in cols if c != "district_id"], "files": {}}
+    for did, name_ar, name_en, lat, lon in con.execute("SELECT id, name_ar, name_en, lat, lon FROM districts ORDER BY ord").fetchall():
+        idx["districts"].append({"id": did, "name_ar": name_ar, "name_en": name_en, "lat": lat, "lon": lon})
+        for t, (table, key, desc, src) in TABLES.items():
+            if t not in idx["datasets"]:
+                continue
+            cur = con.execute(f"SELECT * FROM {table} WHERE district_id = ? ORDER BY {key}", (did,))
+            cols = [c[0] for c in cur.description]
+            fn = f"{did}/{t}.csv"
+            (api / did).mkdir(exist_ok=True)
+            with open(api / fn, "w", newline="", encoding="utf-8") as f:
+                w = csv.writer(f); keep = [i for i, c in enumerate(cols) if c != "district_id"]
+                w.writerow([cols[i] for i in keep]); n = 0
+                for r in cur:
+                    w.writerow([r[i] for i in keep]); n += 1
+            idx["datasets"][t]["files"][did] = {"path": fn, "rows": n}
+    if con.execute("SELECT 1 FROM sqlite_master WHERE name = 'station_daily'").fetchone():
+        (api / "stations").mkdir(exist_ok=True)
+        for sid, name_ar, icao, lat, lon, kind in con.execute("SELECT id, name_ar, icao, lat, lon, kind FROM stations").fetchall():
+            cur = con.execute("SELECT * FROM station_daily WHERE station_id = ? ORDER BY date", (sid,))
+            cols = [c[0] for c in cur.description]
+            with open(api / "stations" / f"{sid}.csv", "w", newline="", encoding="utf-8") as f:
+                w = csv.writer(f); w.writerow(cols[1:]); n = 0
+                for r in cur:
+                    w.writerow(r[1:]); n += 1
+            idx["stations"].append({"id": sid, "name_ar": name_ar, "icao": icao, "lat": lat, "lon": lon, "kind": kind, "path": f"stations/{sid}.csv", "rows": n})
+    idx["sources"] = [dict(zip(["id", "name", "provider", "url", "license", "citation"], r)) for r in con.execute("SELECT id, name, provider, url, license, citation FROM sources")]
+    con.close()
+    (api / "index.json").write_text(json.dumps(idx, ensure_ascii=False, indent=1), encoding="utf-8")
+
+
 def _station_now(con, did):
     """آخر رصد حقيقي من أقرب محطة تبث (للتطبيق دون إنترنت)."""
     r = con.execute("""SELECT s.id, s.name_ar, ds.dist_km, h.valid, h.t, h.rh, h.wind, h.vis, h.wx FROM district_stations ds
@@ -79,6 +131,7 @@ def main():
     ap.add_argument("--full", action="store_true")
     ap.add_argument("--skip", default="")
     ap.add_argument("--s2-limit", type=int, default=400)
+    ap.add_argument("--sat-budget", type=int, default=480)
     a = ap.parse_args()
     skip = set(filter(None, a.skip.split(",")))
     path = Path(a.db); path.parent.mkdir(parents=True, exist_ok=True)
@@ -165,6 +218,18 @@ def main():
             st.rows = upsert(con, "water_rs_monthly", rows)
             st.msg = f"{ntask} مهمة (قضاء × شهر)، {sum(1 for r in rows if r['ndti'] is not None)} شهراً بمشهد صافٍ"
 
+    # 5ب) رصد الأقمار: الحرائق، النبات، حرارة الماء، غازات Sentinel-5P (كل خطوة بميزانية زمنية وتكمل الأرشيف تدريجياً)
+    if "sat" not in skip:
+        import satellites as sat
+        lines = json.loads((path.parent / "tigris.json").read_text(encoding="utf-8")) if (path.parent / "tigris.json").exists() else []
+        for name, fn in (("sat.fires_modis", lambda: sat.fires(con, D, run_at, log, budget=a.sat_budget)),
+                         ("sat.ndvi_modis", lambda: sat.ndvi(con, D, run_at, log, budget=a.sat_budget)),
+                         ("sat.river_lst_landsat", lambda: sat.river_lst(con, D, lines, run_at, log, budget=a.sat_budget)),
+                         ("sat.gases_s5p", lambda: sat.s5p(con, D, run_at, log, budget=a.sat_budget * 1.5))):
+            with log.step(name) as st:
+                n, done_, total = fn()
+                st.rows = n; st.msg = f"عولج {done_} من {total} مشهداً متبقياً"
+
     # 6) مصادر التلوث (OSM) — أسبوعياً أو عند عدم وجودها
     if "osm" not in skip:
         last = con.execute("SELECT value FROM meta WHERE key='osm_at'").fetchone()
@@ -230,6 +295,7 @@ def main():
                                     "now": _station_now(con2, d["id"])})
     con2.close()
     (path.parent / "latest.json").write_text(json.dumps(latest, ensure_ascii=False), encoding="utf-8")
+    export_api(path, run_at)
     meta["bytes"] = path.stat().st_size
     meta["bytes_gz"] = Path(str(path) + ".gz").stat().st_size
     (path.parent / "ecobio-meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1), encoding="utf-8")

@@ -914,10 +914,33 @@
         ${same.length ? `<div class="notice info">${ico("i-info")}<span>قيم الهواء متطابقة تقريباً بين ${same.map(s => `${esc(nm(s.x))} و${esc(nm(s.y))}`).join("، ")}، لأن الأقضية المتجاورة تقع في الخلية نفسها من شبكة CAMS (≈45 كم). هذا حد في دقة المصدر وليس خطأ في القاعدة؛ للتمييز بينها تلزم محطات رصد أرضية.</span></div>` : ""}
       </div>
       <div class="panel"><div class="panel-h"><h3>المتوسط الشهري لكل الأقضية</h3><div class="field db-inline"><label for="db-cmp-p" class="sr-only">المعيار</label><select id="db-cmp-p" class="input">${paramOptions(S.cmpP, ["pm2_5", "pm10", "dust", "no2", "so2", "o3", "co", "t_max", "precip", "discharge", "ndti", "ndci"])}</select></div></div>
-        <div class="chart-box lg"><canvas id="db-cmp-c"></canvas></div><p class="db-cap" id="db-cmp-cap"></p></div>`;
+        <div class="chart-box lg"><canvas id="db-cmp-c"></canvas></div><p class="db-cap" id="db-cmp-cap"></p></div>
+      <div class="panel" id="db-api"><div class="panel-h"><h3>البيانات المفتوحة للباحثين</h3><span class="sub">CSV وJSON تتحدّث يومياً</span></div><p class="muted">جارٍ تحميل الفهرس…</p></div>`;
     U.$("#db-cmp-p").onchange = e => { S.cmpP = e.target.value; drawCompare(); };
     drawCompare();
+    renderApi();
   }
+  async function renderApi() {
+    const box = U.$("#db-api"); if (!box) return;
+    let I = null;
+    try { const r = await fetch(RAW + "api/index.json?t=" + Math.floor(Date.now() / 3600000), { cache: "no-store" }); if (r.ok) I = await r.json(); } catch (e) { /* دون اتصال */ }
+    if (!I) { box.querySelector("p").textContent = "الفهرس غير متاح الآن (يُنشر مع تحديث القاعدة القادم، أو أنك دون اتصال)."; return; }
+    const base = I.base, ds = Object.entries(I.datasets), L = (p, t) => `<a href="${base}${p}" target="_blank" rel="noopener" download>${t}</a>`;
+    box.innerHTML = `<div class="panel-h"><h3>البيانات المفتوحة للباحثين</h3><span class="sub">آخر تحديث ${fD(I.updated_at)}</span></div>
+      <p class="db-cap">كل جداول القاعدة متاحة كروابط ثابتة تتحدّث يومياً، يسحبها Excel وPython وR مباشرة. اذكر المنصة والمصدر الأصلي لكل جدول عند الاستعمال في بحثك.</p>
+      <div class="tbl-wrap"><table class="tbl"><thead><tr><th>القضاء</th>${ds.map(([k, v]) => `<th>${esc(k)}</th>`).join("")}</tr></thead><tbody>
+        ${I.districts.map(d => `<tr><td>${esc(d.name_ar)}</td>${ds.map(([k, v]) => `<td>${v.files[d.id] ? L(v.files[d.id].path, `CSV <small class="muted">(${U.fmt(v.files[d.id].rows, 0)})</small>`) : "—"}</td>`).join("")}</tr>`).join("")}</tbody></table></div>
+      <p class="db-cap">${ds.map(([k, v]) => `<b>${esc(k)}</b>: ${esc(v.description)}`).join(" · ")}</p>
+      <p class="db-cap"><b>محطات الرصد الأرضي:</b> ${I.stations.map(s => L(s.path, esc(s.name_ar))).join("، ")}. الفهرس الكامل بالأعمدة والمصادر: ${L("index.json", "index.json")}.</p>
+      <details class="db-method"><summary>${ico("i-code")}مثال: قراءة البيانات في Python وR وExcel</summary><pre class="db-code" dir="ltr">import pandas as pd
+df = pd.read_csv("${base}tikrit/air.csv", parse_dates=["date"])
+
+# R
+df &lt;- read.csv("${base}tikrit/air.csv")
+
+# Excel: Data → From Web → الصق الرابط</pre></details>`;
+  }
+
   function drawCompare() {
     const p = S.cmpP, [t, c, monthly] = COLS[p], P = S.P[p] || {};
     const kc = monthly ? "month" : "date";

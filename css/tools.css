@@ -346,3 +346,4 @@
 .db-plan-k { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-inline: 6px 4px; vertical-align: middle; }
 .db-plan-k.k-ref { background: #93dd8a; } .db-plan-k.k-up { background: #4fc8dc; } .db-plan-k.k-down { background: #ef5a64; } .db-plan-k.k-mix { background: #e6ae4f; } .db-plan-k.k-city { background: #b493ff; } .db-plan-k.k-end { background: #c4d3cf; }
 .db-plan-occ { margin: 0; padding-inline-start: 18px; display: grid; gap: 6px; font-size: var(--fs-sm); }
+.db-code { margin: 8px 0 0; padding: 12px; border-radius: var(--r-sm); background: var(--ink-1); border: 1px solid var(--line); font: .8rem/1.6 ui-monospace, Menlo, Consolas, monospace; white-space: pre-wrap; word-break: break-all; text-align: left; }

@@ -298,6 +298,67 @@ CREATE TABLE IF NOT EXISTS dust_prob (
   PRIMARY KEY (district_id, date)
 );
 
+-- ---------- رصد الأقمار الصناعية (Planetary Computer) ----------
+CREATE TABLE IF NOT EXISTS sat_items (            -- المشاهد التي عولجت (لإكمال الأرشيف تدريجياً)
+  collection   TEXT NOT NULL,
+  item_id      TEXT NOT NULL,
+  processed_at TEXT,
+  PRIMARY KEY (collection, item_id)
+);
+
+CREATE TABLE IF NOT EXISTS fire_pixels (          -- MODIS: كل بكسل حريق (1 كم) يوماً بيوم
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  date        TEXT NOT NULL,
+  sat         TEXT,                               -- Terra | Aqua
+  lat REAL, lon REAL,
+  frp         REAL,                               -- القدرة الإشعاعية للحريق MW
+  conf        INTEGER,                            -- 7 منخفضة، 8 متوسطة، 9 عالية
+  district_id TEXT REFERENCES districts(id),      -- أقرب قضاء ضمن 40 كم
+  near_kind   TEXT, near_name TEXT, dist_src_km REAL,   -- أقرب منشأة مرسومة ضمن 2 كم
+  UNIQUE (date, sat, lat, lon)
+);
+
+CREATE TABLE IF NOT EXISTS fire_hotspots (        -- مصادر حرارية دائمة: ≥ 20 يوم حريق خلال سنة (شعلات غاز ومنشآت)
+  lat REAL, lon REAL, days_365 INTEGER, last_date TEXT, mean_frp REAL,
+  district_id TEXT, near_kind TEXT, near_name TEXT
+);
+
+CREATE TABLE IF NOT EXISTS ndvi_16d (             -- MODIS NDVI ضمن 10 كم من مركز القضاء (اليابسة فقط)
+  district_id TEXT NOT NULL REFERENCES districts(id),
+  date        TEXT NOT NULL,
+  ndvi        REAL,
+  pct_green   REAL,                               -- نسبة البكسلات ذات NDVI ≥ 0.3 (غطاء نباتي فعلي)
+  n_pix       INTEGER,
+  PRIMARY KEY (district_id, date)
+);
+
+CREATE TABLE IF NOT EXISTS river_points (
+  id          TEXT PRIMARY KEY,
+  district_id TEXT REFERENCES districts(id),
+  kind        TEXT,                               -- district | pp_up | pp_down
+  label       TEXT,
+  lat REAL, lon REAL,
+  source_id   INTEGER                             -- محطة الكهرباء (pollution_sources.id)
+);
+
+CREATE TABLE IF NOT EXISTS river_lst (             -- Landsat 8/9: حرارة سطح الماء °C (وسيط بكسلات الماء ضمن ±500 م)
+  point_id TEXT NOT NULL REFERENCES river_points(id),
+  date     TEXT NOT NULL,
+  scene_id TEXT,
+  lst_c    REAL,
+  n_pix    INTEGER,
+  PRIMARY KEY (point_id, date)
+);
+
+CREATE TABLE IF NOT EXISTS s5p_daily (             -- Sentinel-5P TROPOMI ضمن 15 كم من مركز القضاء، µmol/m²
+  district_id TEXT NOT NULL REFERENCES districts(id),
+  date        TEXT NOT NULL,
+  gas         TEXT NOT NULL,                      -- no2 (عمود التروبوسفير) | so2 | co (العمود الكلي)
+  value       REAL,
+  n_pix       INTEGER,
+  PRIMARY KEY (district_id, date, gas)
+);
+
 -- ---------- سجل التحديث ----------
 CREATE TABLE IF NOT EXISTS etl_log (
   id      INTEGER PRIMARY KEY AUTOINCREMENT,

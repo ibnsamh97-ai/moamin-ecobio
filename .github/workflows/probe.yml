@@ -3,7 +3,7 @@ name: probe
 on:
   push:
     branches: [main]
-    paths: ['etl/probe/**']
+    paths: ['etl/probe/**', 'etl/satellites.py']
 permissions:
   contents: write
 jobs:
@@ -12,9 +12,10 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+        with: { fetch-depth: 1 }
       - uses: actions/setup-python@v5
         with: { python-version: '3.12' }
-      - run: pip install pystac-client planetary-computer rasterio numpy h5py fsspec aiohttp requests
+      - run: pip install -r etl/requirements.txt
       - run: python etl/probe/probe.py 2>&1 | tee probe.log
         continue-on-error: true
       - env: { TOKEN: '${{ secrets.GITHUB_TOKEN }}' }

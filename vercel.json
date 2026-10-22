@@ -3,7 +3,8 @@
     "deploymentEnabled": {
       "db": false,
       "db-log": false,
-      "app-build": false
+      "app-build": false,
+      "probe": false
     }
   },
   "headers": [

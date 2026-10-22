@@ -5,3 +5,7 @@ scikit-learn>=1.5
 pystac-client>=0.8
 planetary-computer>=1.0
 rasterio>=1.4
+h5py
+fsspec
+aiohttp
+requests
