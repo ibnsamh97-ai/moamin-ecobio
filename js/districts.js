@@ -14,6 +14,7 @@
   const esc = s => U.esc(s == null ? "" : String(s));
   const ico = id => `<svg aria-hidden="true"><use href="#${id}"/></svg>`;
   const N = (v, d = "auto") => `<bdi class="db-n">${U.fmt(v, d)}</bdi>`;
+  const NU = (v, d, u) => `<bdi class="db-n" dir="ltr">${U.fmt(v, d)} ${u}</bdi>`; // رقم ووحدته كتلة واحدة داخل النص العربي
   const LTR = s => `<bdi dir="ltr">${esc(s)}</bdi>`;
   const dayF = new Intl.DateTimeFormat("ar-IQ-u-nu-latn", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
   const monF = new Intl.DateTimeFormat("ar-IQ-u-nu-latn", { month: "long", year: "numeric", timeZone: "UTC" });
@@ -297,8 +298,8 @@
 
     // الخلاصة بلغة بسيطة
     const say = [];
-    if (air) say.push(`في آخر يوم مكتمل (${fD(air.date)}) كان متوسط الجسيمات الدقيقة PM2.5 في ${esc(d.name_ar)} ${N(air.pm2_5, 1)} µg/m³${ratio >= 1 ? `، أي ${N(ratio, 1)} ضعف حد منظمة الصحة العالمية` : "، ضمن حد منظمة الصحة العالمية"}${U.isNum(air.dust) && air.dust > 100 ? `، مع غبار مرتفع (${N(air.dust, 0)} µg/m³)` : ""}.`);
-    if (y && y.n) say.push(`خلال آخر سنة تجاوز PM2.5 الحد في ${N(100 * y.o / y.n, 0)}% من الأيام، وبلغ أعلاه ${N(y.mx, 0)} µg/m³.`);
+    if (air) say.push(`في آخر يوم مكتمل (${fD(air.date)}) كان متوسط الجسيمات الدقيقة PM2.5 في ${esc(d.name_ar)} ${NU(air.pm2_5, 1, "µg/m³")}${ratio >= 1 ? `، أي ${N(ratio, 1)} ضعف حد منظمة الصحة العالمية` : "، ضمن حد منظمة الصحة العالمية"}${U.isNum(air.dust) && air.dust > 100 ? `، مع غبار مرتفع (${NU(air.dust, 0, "µg/m³")})` : ""}.`);
+    if (y && y.n) say.push(`خلال آخر سنة تجاوز PM2.5 الحد في ${N(100 * y.o / y.n, 0)}% من الأيام، وبلغ أعلاه ${NU(y.mx, 0, "µg/m³")}.`);
     if (f1 && f1.best) say.push(`يتوقّع نموذج ${esc(MODEL[f1.best.model] || f1.best.model)} ليوم ${fD(fDates[0])} قيمة ${N(f1.best.value, 0)} (بين ${N(f1.best.lo, 0)} و${N(f1.best.hi, 0)})${f1.cams ? `، ويتوقّع CAMS ${N(f1.cams.value, 0)}` : ""}.`);
     if (riv && rp) say.push(`تصريف دجلة عند القضاء ${N(riv.discharge, 0)} م³/ثا، ${rp.pct < 50 ? `وهو أقل من المعتاد لهذا الشهر` : `وهو أعلى من المعتاد لهذا الشهر`} (متوسط الشهر منذ ${rp.y0}: ${N(rp.avg, 0)}).`);
     if (wx && U.isNum(wx.t_max)) say.push(`الحرارة العظمى ${N(wx.t_max, 0)}° وأقوى رياح ${N(wx.wind_max, 0)} كم/ساعة.`);
@@ -352,7 +353,7 @@
     if (!rows.length) return "";
     const col = { pm2_5: "pm2_5", pm10: "pm10", dust: "dust", no2: "no2", so2: "so2", o3: "o3", co: "co" };
     return `<div class="panel"><div class="panel-h"><h3>${title}</h3><span class="sub">Isolation Forest</span></div><div class="anom-list">${rows.map(r =>
-      `<div class="anom"><span class="z">${r.top_z > 0 ? "+" : ""}${U.fmt(r.top_z, 1)}σ</span><div><b>${fD(r.date)}</b><br><span class="muted">أبعد معيار عن المعتاد: ${esc(PNAME[r.top_param] || r.top_param)} = ${N(r[col[r.top_param]], 1)} µg/m³ (${r.top_z > 0 ? "أعلى" : "أقل"} من الوسيط بـ ${U.fmt(Math.abs(r.top_z), 1)} انحراف قوي)</span></div></div>`).join("")}</div></div>`;
+      `<div class="anom"><span class="z">${r.top_z > 0 ? "+" : ""}${U.fmt(r.top_z, 1)}σ</span><div><b>${fD(r.date)}</b><br><span class="muted">أبعد معيار عن المعتاد: ${esc(PNAME[r.top_param] || r.top_param)} = ${NU(r[col[r.top_param]], 1, "µg/m³")} (${r.top_z > 0 ? "أعلى" : "أقل"} من الوسيط بـ ${U.fmt(Math.abs(r.top_z), 1)} انحراف قوي)</span></div></div>`).join("")}</div></div>`;
   }
 
   async function drawMap(d) {

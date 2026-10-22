@@ -133,6 +133,7 @@
   if (window.Chart) {
     Chart.defaults.color = ECO.COL.muted;
     Chart.defaults.borderColor = ECO.COL.grid;
+    Chart.defaults.locale = "en-US"; // أرقام لاتينية في الرسوم مثل بقية المنصة
     Chart.defaults.font.family = '"IBM Plex Sans Arabic", "Readex Pro", Tahoma, sans-serif';
     Chart.defaults.font.size = 11;
     Chart.defaults.maintainAspectRatio = false;
