@@ -359,6 +359,28 @@ CREATE TABLE IF NOT EXISTS s5p_daily (             -- Sentinel-5P TROPOMI ضمن
   PRIMARY KEY (district_id, date, gas)
 );
 
+-- ---------- نماذج جودة ماء النهر الشهرية (من Sentinel-2 والتصريف والطقس) ----------
+CREATE TABLE IF NOT EXISTS river_eval (
+  task    TEXT NOT NULL,                  -- ndti (تقدير العكورة) | ndci_high (شهر كلوروفيل مرتفع)
+  model   TEXT NOT NULL,                  -- hgb | logistic | climatology | persistence
+  n_train INTEGER, n_test INTEGER, test_from TEXT, test_to TEXT,
+  mae REAL, auc REAL, skill REAL,         -- skill = 1 − MAE/MAE(المعدل الموسمي)
+  threshold REAL,
+  run_at TEXT,
+  PRIMARY KEY (task, model)
+);
+
+CREATE TABLE IF NOT EXISTS river_pred (
+  district_id TEXT NOT NULL REFERENCES districts(id),
+  month       TEXT NOT NULL,
+  task        TEXT NOT NULL,
+  value       REAL,                       -- NDTI المقدّر، أو احتمال شهر كلوروفيل مرتفع
+  lo REAL, hi REAL,
+  observed    REAL,                       -- القيمة المرصودة إن وُجدت
+  run_at      TEXT,
+  PRIMARY KEY (district_id, month, task)
+);
+
 -- ---------- سجل التحديث ----------
 CREATE TABLE IF NOT EXISTS etl_log (
   id      INTEGER PRIMARY KEY AUTOINCREMENT,

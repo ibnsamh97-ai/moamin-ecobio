@@ -390,3 +390,81 @@ def dust_events(con, D, run_at, today: dt.date):
     con.executemany("INSERT OR REPLACE INTO dust_prob VALUES (?,?,?,?,?,?,?)", out)
     con.commit()
     return len(out)
+
+
+# ---------------------------------------------------------------------------
+# 6) جودة ماء النهر الشهرية: تقدير العكورة واحتمال شهر كلوروفيل مرتفع
+# ---------------------------------------------------------------------------
+def river_quality(con, D, run_at, today: dt.date):
+    from sklearn.ensemble import HistGradientBoostingRegressor
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.metrics import mean_absolute_error, roc_auc_score
+    from sklearn.pipeline import make_pipeline
+    from sklearn.preprocessing import StandardScaler
+    w = pd.read_sql_query("SELECT district_id, month, ndti, ndci FROM water_rs_monthly", con)
+    qd = pd.read_sql_query("SELECT district_id, substr(date,1,7) month, AVG(discharge) q FROM river_daily GROUP BY 1, 2", con)
+    wx = pd.read_sql_query("SELECT district_id, substr(date,1,7) month, AVG(t_mean) t, SUM(precip) p FROM weather_daily GROUP BY 1, 2", con)
+    if w["ndti"].notna().sum() < 120:
+        return 0
+    df = qd.merge(wx, on=["district_id", "month"], how="left").merge(w, on=["district_id", "month"], how="left").sort_values(["district_id", "month"])
+    df["mo"] = df["month"].str[5:7].astype(int)
+    df["s"] = np.sin(2 * np.pi * df["mo"] / 12); df["c"] = np.cos(2 * np.pi * df["mo"] / 12)
+    df["lq"] = np.log(df["q"].clip(lower=1)); g = df.groupby("district_id")
+    df["dlq"] = df["lq"] - g["lq"].shift(1)
+    df["ndti_l1"] = g["ndti"].shift(1); df["ndci_l1"] = g["ndci"].shift(1)
+    cur = f"{today.year:04d}-{today.month:02d}"
+    months = sorted(df.loc[df["ndti"].notna(), "month"].unique())
+    cut = months[-24]
+    con.execute("DELETE FROM river_eval"); con.execute("DELETE FROM river_pred")
+    out = []
+
+    # (أ) تقدير العكورة NDTI من التصريف والطقس والموسم والشهر السابق
+    F = ["lq", "dlq", "t", "p", "s", "c", "ndti_l1"]
+    d = df.dropna(subset=["ndti", "lq"])
+    tr, te = d[d["month"] < cut], d[d["month"] >= cut]
+    hgb = HistGradientBoostingRegressor(max_iter=200, learning_rate=0.05, max_leaf_nodes=8, min_samples_leaf=10, random_state=SEED).fit(tr[F], tr["ndti"])
+    ph = hgb.predict(te[F])
+    clim = tr.groupby(["district_id", "mo"])["ndti"].mean()
+    pc = np.array([clim.get((a, b), tr["ndti"].mean()) for a, b in zip(te["district_id"], te["mo"])])
+    pp = te["ndti_l1"].fillna(pd.Series(pc, index=te.index)).values
+    mae = {"hgb": mean_absolute_error(te["ndti"], ph), "climatology": mean_absolute_error(te["ndti"], pc), "persistence": mean_absolute_error(te["ndti"], pp)}
+    res = te["ndti"].values - ph; lo_q, hi_q = np.quantile(res, [0.1, 0.9])
+    for m_, v in mae.items():
+        con.execute("INSERT INTO river_eval(task, model, n_train, n_test, test_from, test_to, mae, skill, run_at) VALUES (?,?,?,?,?,?,?,?,?)",
+                    ("ndti", m_, len(tr), len(te), cut, months[-1], round(float(v), 4), round(1 - float(v) / mae["climatology"], 3), run_at))
+    use_model = mae["hgb"] < mae["climatology"]
+    hgb.fit(d[F], d["ndti"])
+    recent = df[(df["month"] >= f"{today.year - 1:04d}-{today.month:02d}") & df["lq"].notna()]
+    for _, r in recent.iterrows():
+        if use_model:
+            v = float(hgb.predict(pd.DataFrame([r[F].values], columns=F))[0]); lo, hi = v + lo_q, v + hi_q
+        else:
+            v = float(clim.get((r["district_id"], r["mo"]), np.nan)); lo = hi = None
+        out.append((r["district_id"], r["month"], "ndti", round(v, 4), None if lo is None else round(lo, 4), None if hi is None else round(hi, 4),
+                    None if pd.isna(r["ndti"]) else float(r["ndti"]), run_at))
+
+    # (ب) احتمال شهر كلوروفيل مرتفع (أعلى 20% في سجل التدريب)
+    F2 = ["lq", "dlq", "t", "p", "s", "c", "ndci_l1"]
+    d2 = df.dropna(subset=["ndci", "lq"])
+    tr2, te2 = d2[d2["month"] < cut], d2[d2["month"] >= cut]
+    thr = float(tr2["ndci"].quantile(0.8))
+    med = tr2[F2].median()
+    lg = make_pipeline(StandardScaler(), LogisticRegression(max_iter=2000, C=0.5)).fit(tr2[F2].fillna(med), (tr2["ndci"] > thr).astype(int))
+    yte = (te2["ndci"] > thr).astype(int)
+    if 0 < yte.sum() < len(yte):
+        p2 = lg.predict_proba(te2[F2].fillna(med))[:, 1]
+        climp = tr2.assign(y=(tr2["ndci"] > thr).astype(int)).groupby("mo")["y"].mean()
+        pc2 = te2["mo"].map(climp).fillna(0.2).values
+        auc_m, auc_c = float(roc_auc_score(yte, p2)), float(roc_auc_score(yte, pc2))
+        for m_, a_ in (("logistic", auc_m), ("climatology", auc_c)):
+            con.execute("INSERT INTO river_eval(task, model, n_train, n_test, test_from, test_to, auc, skill, threshold, run_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
+                        ("ndci_high", m_, len(tr2), len(te2), cut, months[-1], round(a_, 3), round(a_ - auc_c, 3), round(thr, 4), run_at))
+        if auc_m > auc_c:
+            all2 = d2.copy(); lg.fit(all2[F2].fillna(med), (all2["ndci"] > thr).astype(int))
+            rec2 = df[(df["month"] >= f"{today.year - 1:04d}-{today.month:02d}") & df["lq"].notna()]
+            pr = lg.predict_proba(rec2[F2].fillna(med))[:, 1]
+            for (_, r), v in zip(rec2.iterrows(), pr):
+                out.append((r["district_id"], r["month"], "ndci_high", round(float(v), 3), None, None, None if pd.isna(r["ndci"]) else float(r["ndci"]), run_at))
+    con.executemany("INSERT OR REPLACE INTO river_pred VALUES (?,?,?,?,?,?,?,?)", out)
+    con.commit()
+    return len(out)

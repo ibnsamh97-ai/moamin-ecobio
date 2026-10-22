@@ -264,6 +264,8 @@ def main():
             ai.relationships(con, D, log)
         with log.step("ai.dust_events") as st:
             st.rows = ai.dust_events(con, D, run_at, T)
+        with log.step("ai.river_quality") as st:
+            st.rows = ai.river_quality(con, D, run_at, T)
 
     # 9) الملخص والضغط
     counts = {t: con.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0] for t in
