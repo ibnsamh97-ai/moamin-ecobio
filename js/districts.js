@@ -446,6 +446,51 @@
       wxText: P && P.wxText && P.wxText.length ? P.wxText.join("، ") : "", dust: !!(P && P.dust) });
   }
 
+
+  /* أين يتجه دخان المنشآت الكبيرة: نموذج الانتشار الغاوسي (Pasquill–Gifford، معاملات Briggs للمناطق المفتوحة)
+     برياح Open-Meteo الساعية الحقيقية عند كل منشأة. لا نعرف كميات الانبعاث، فنحسب متى يقع القضاء تحت مسار الدخان لا التركيز. */
+  function stab(u, sw, cc) {
+    const day = sw > 10;
+    if (day) { const k = sw > 600 ? 0 : sw > 300 ? 1 : 2; const T = [["A", "A", "B"], ["A", "B", "C"], ["B", "B", "C"], ["C", "C", "D"], ["C", "D", "D"]]; return T[u < 2 ? 0 : u < 3 ? 1 : u < 5 ? 2 : u < 6 ? 3 : 4][k]; }
+    const cl = cc >= 50 ? 0 : 1; const T = [["E", "F"], ["E", "F"], ["D", "E"], ["D", "D"], ["D", "D"]]; return T[u < 2 ? 0 : u < 3 ? 1 : u < 5 ? 2 : u < 6 ? 3 : 4][cl];
+  }
+  const BRIGGS = { A: [0.22, x => 0.20 * x], B: [0.16, x => 0.12 * x], C: [0.11, x => 0.08 * x / Math.sqrt(1 + 0.0002 * x)], D: [0.08, x => 0.06 * x / Math.sqrt(1 + 0.0015 * x)], E: [0.06, x => 0.03 * x / (1 + 0.0003 * x)], F: [0.04, x => 0.016 * x / (1 + 0.0003 * x)] };
+  async function plume(d) {
+    const box = U.$("#db-g-plume"); if (!box) return;
+    let src = q("SELECT kind, name, lat, lon FROM pollution_sources WHERE kind IN ('refinery','power_plant') AND lat IS NOT NULL").filter(s => !/سد/.test(s.name || "") && km(d.lat, d.lon, s.lat, s.lon) <= 80);
+    if (hasT("fire_hotspots")) q("SELECT lat, lon, days_365, near_name FROM fire_hotspots WHERE days_365 >= 60").forEach(h => { if (km(d.lat, d.lon, h.lat, h.lon) <= 80) src.push({ kind: "flare", name: h.near_name ? "شعلة غاز – " + h.near_name : "شعلة غاز دائمة", lat: h.lat, lon: h.lon }); });
+    const S2 = []; src.forEach(s => { if (!S2.some(x => km(x.lat, x.lon, s.lat, s.lon) < 3)) S2.push(s); }); src = S2.slice(0, 10);
+    if (!src.length) { box.innerHTML = `<div class="panel-h"><h3>اتجاه دخان المنشآت الكبيرة</h3></div><p class="empty">لا منشآت كبيرة مرسومة ضمن 80 كم.</p>`; return; }
+    box.innerHTML = `<div class="panel-h"><h3>هل يصل دخان المنشآت الكبيرة إلى ${esc(d.name_ar)} خلال 24 ساعة؟</h3><span class="sub">رياح Open-Meteo الساعية</span></div><p class="muted">جارٍ جلب الرياح…</p>`;
+    let J;
+    try {
+      const u = `https://api.open-meteo.com/v1/forecast?latitude=${src.map(s => s.lat.toFixed(3)).join(",")}&longitude=${src.map(s => s.lon.toFixed(3)).join(",")}&hourly=wind_speed_10m,wind_direction_10m,shortwave_radiation,cloud_cover&wind_speed_unit=ms&forecast_days=2&timezone=Asia%2FBaghdad`;
+      const r = await fetch(u); J = await r.json(); if (!Array.isArray(J)) J = [J];
+    } catch (e) { box.querySelector("p").textContent = "تعذّر جلب الرياح الآن (يحتاج اتصالاً بالإنترنت)."; return; }
+    const now = Date.now(), H = 60;   // ارتفاع انبعاث فعّال مفترض 60 م
+    const res = src.map((s, i) => {
+      const h = J[i] && J[i].hourly; if (!h) return null;
+      const dx = km(s.lat, s.lon, s.lat, d.lon) * Math.sign(d.lon - s.lon), dy = km(s.lat, s.lon, d.lat, s.lon) * Math.sign(d.lat - s.lat), D = Math.hypot(dx, dy);
+      const hrs = [];
+      h.time.forEach((t, k) => {
+        const ms = Date.parse(t + ":00+03:00"); if (ms < now - 3600e3 || ms > now + 24 * 3600e3) return;
+        const uu = Math.max(1, h.wind_speed_10m[k]), to = (h.wind_direction_10m[k] + 180) * Math.PI / 180, ux = Math.sin(to), uy = Math.cos(to);
+        const x = (dx * ux + dy * uy) * 1000, y = (-dx * uy + dy * ux) * 1000; if (x <= 100) return;
+        const st = stab(uu, h.shortwave_radiation[k], h.cloud_cover[k]), B = BRIGGS[st], sy = B[0] * x / Math.sqrt(1 + 0.0001 * x), sz = B[1](x);
+        if (Math.abs(y) < 2 * sy) hrs.push({ t, st, rel: Math.exp(-y * y / (2 * sy * sy)) * Math.exp(-H * H / (2 * sz * sz)) / (Math.PI * sy * sz * uu) });
+      });
+      return { s, D, hrs };
+    }).filter(Boolean).sort((a, b) => b.hrs.length - a.hrs.length || a.D - b.D);
+    const hit = res.filter(r => r.hrs.length);
+    const lbl = s => s.kind === "flare" ? s.name : `${(KIND[s.kind] || [s.kind])[0]}${s.name ? " «" + s.name + "»" : ""}`;
+    const hh = t => t.slice(11, 16);
+    box.innerHTML = `<div class="panel-h"><h3>هل يصل دخان المنشآت الكبيرة إلى ${esc(d.name_ar)} خلال 24 ساعة؟</h3><span class="sub">رياح Open-Meteo الساعية · نموذج غاوسي</span></div>
+      ${hit.length ? `<ul class="db-st-list">${hit.map(r => { const pk = r.hrs.slice().sort((a, b) => b.rel - a.rel)[0];
+        return `<li><b>${esc(lbl(r.s))}</b><span>على بعد ${N(r.D, 0)} كم · ${esc(d.name_ar)} تحت مسار دخانها <b>${N(r.hrs.length, 0)} ساعات</b>: ${r.hrs.map(x => hh(x.t)).join("، ")} · أشد تأثير متوقع الساعة ${hh(pk.t)} (استقرار جوي ${pk.st})</span></li>`; }).join("")}</ul>`
+        : `<p class="db-cap"><b>لا يتجه دخان أي منشأة كبيرة نحو ${esc(d.name_ar)} خلال الـ 24 ساعة القادمة</b> حسب توقع الرياح.</p>`}
+      <p class="db-cap">حُسب لـ ${N(res.length, 0)} منشآت (مصافٍ ومحطات كهرباء وشعلات غاز دائمة رصدها القمر) ضمن 80 كم، برياح كل منشأة الساعية وفئة الاستقرار الجوي (باسكويل–غيفورد) من سرعة الرياح والإشعاع الشمسي والغيوم. «تحت المسار» = داخل عرض العمود (±2σy). لا تتوفر كميات انبعاث رسمية، فالنتيجة اتجاه وتوقيت وليست تركيزاً. الساعات الليلية الهادئة (استقرار E أو F) يبقى فيها الدخان قريباً من الأرض.</p>`;
+  }
+
   function rGround(el) {
     clearCharts("ground");
     const d = dist();
@@ -464,6 +509,7 @@
       <div class="panel"><div class="panel-h"><h3 id="db-g-st-h"></h3><span class="sub">نفس المكان ونفس الأيام · °C</span></div><div class="chart-box"><canvas id="db-g-st"></canvas></div><p class="db-cap" id="db-g-st-cap"></p></div>
       <div class="grid g-2 db-g2">
         <div class="panel"><div class="panel-h"><h3 id="db-g-bias-h"></h3><span class="sub">المقاس − النموذج · °C</span></div><div class="chart-box sm"><canvas id="db-g-bias"></canvas></div><p class="db-cap" id="db-g-bias-cap"></p></div>
+        <div class="panel" id="db-g-plume"></div>
         <div class="panel" id="db-g-dm"></div>
         <div class="panel"><div class="panel-h"><h3 id="db-g-dust-h"></h3><span class="sub">أيام في الشهر</span></div><div class="chart-box sm"><canvas id="db-g-dust"></canvas></div><p class="db-cap" id="db-g-dust-cap"></p></div>
       </div>
@@ -535,6 +581,8 @@
         U.$("#db-g-dust-cap").innerHTML = T && T.obs ? `منذ آب 2022: رصدت المحطة غباراً أو رمالاً في ${N(T.obs, 0)} يوماً من ${N(T.n, 0)}. قدّر النموذج غباراً عالياً في ${N(100 * T.hit / T.obs, 0)}% من هذه الأيام، وقدّره في ${N(T.fa, 0)} يوماً لم يُرصد فيها غبار. هذا يبيّن لماذا نعامل أرقام غبار CAMS كتقدير لا كقياس.` : "";
       }
     }
+
+    plume(d);
 
     // 5ب) نموذجنا للغبار مقابل CAMS
     if (S.dustM) {
@@ -619,10 +667,11 @@
         ${F.length ? `<div class="chart-box sm"><canvas id="db-s-fc"></canvas></div><p class="db-cap">${N(T.n, 0)} رصد حريق ضمن 40 كم (${fD(T.a)} ← ${fD(T.b)})، منها ${N(T.nf, 0)} على بعد 2 كم أو أقل من منشأة نفطية أو صناعية مرسومة. الحرائق الصيفية المتفرقة غالباً حرق مخلفات زراعية أو نفايات.</p>` : `<p class="empty">لم تُرصد حرائق بعد في الأرشيف المعالَج.</p>`}`;
       if (F.length) chart("sat", U.$("#db-s-fc"), { type: "bar", data: { labels: F.map(r => fM(r.m)), datasets: [{ label: "قرب منشأة", data: F.map(r => r.nf), backgroundColor: "rgba(239,90,100,.8)", stack: "a" }, { label: "حرائق أخرى", data: F.map(r => r.n - r.nf), backgroundColor: "rgba(230,174,79,.7)", stack: "a" }] },
         options: { scales: { x: { stacked: true, ticks: xTicks }, y: { stacked: true } } } });
-      const H = q("SELECT * FROM fire_hotspots WHERE district_id = ? ORDER BY days_365 DESC", [d.id]);
-      U.$("#db-s-flare").innerHTML = `<div class="panel-h"><h3>مصادر حرارية دائمة (شعلات غاز ومنشآت)</h3><span class="sub">بكسل يحترق 20 يوماً أو أكثر خلال سنة</span></div>
-        ${H.length ? `<ul class="db-st-list">${H.map(h => `<li><b>${h.near_name ? esc(h.near_name) : h.near_kind ? esc((KIND[h.near_kind] || [h.near_kind])[0]) : "موقع غير مرسوم في الخرائط"}</b>
-          <span>${N(h.days_365, 0)} يوم احتراق في آخر سنة · متوسط القدرة ${U.isNum(h.mean_frp) ? NU(h.mean_frp, 0, "MW") : "—"} · آخر رصد ${fD(h.last_date)} · ${LTR(h.lat.toFixed(2) + ", " + h.lon.toFixed(2))}</span></li>`).join("")}</ul>
+      const H0 = q("SELECT * FROM fire_hotspots WHERE district_id = ? ORDER BY days_365 DESC", [d.id]), H = [];
+      H0.forEach(h => { const c = H.find(x => km(x.lat, x.lon, h.lat, h.lon) <= 4); if (c) { c.n++; c.mx = Math.max(c.mx, h.days_365); if (!c.name && h.near_name) c.name = h.near_name; if (h.last_date > c.last) c.last = h.last_date; c.frp.push(h.mean_frp); } else H.push({ lat: h.lat, lon: h.lon, n: 1, mx: h.days_365, name: h.near_name, kind: h.near_kind, last: h.last_date, frp: [h.mean_frp] }); });
+      U.$("#db-s-flare").innerHTML = `<div class="panel-h"><h3>مصادر حرارية دائمة (شعلات غاز ومنشآت)</h3><span class="sub">بكسل 1 كم يحترق 20 يوماً أو أكثر خلال سنة</span></div>
+        ${H.length ? `<ul class="db-st-list">${H.slice(0, 8).map(h => `<li><b>${h.name ? esc(h.name) : h.kind ? esc((KIND[h.kind] || [h.kind])[0]) : "موقع غير مرسوم في الخرائط"}</b>
+          <span>${N(h.n, 0)} ${h.n === 1 ? "بكسل" : "بكسلات"} مشتعلة بشكل دائم، أكثرها ${N(h.mx, 0)} يوماً في آخر سنة · متوسط القدرة ${NU(U.mean(h.frp.filter(U.isNum)), 0, "MW")} · آخر رصد ${fD(h.last)} · ${LTR(h.lat.toFixed(2) + ", " + h.lon.toFixed(2))}</span></li>`).join("")}</ul>
           <p class="db-cap">الاحتراق المستمر شبه اليومي في الموقع نفسه بصمة شعلات حرق الغاز المصاحب في الحقول والمصافي، وهي مصدر رئيسي لـ NO₂ والسخام وغازات الاحتباس.</p>`
         : `<p class="empty">لا مصادر حرارية دائمة ضمن 40 كم من ${esc(d.name_ar)} في الأرشيف المعالَج حتى الآن.</p>`}`;
     }
@@ -637,6 +686,27 @@
         <p class="db-cap">${tr ? `نسبة الأرض الخضراء (NDVI ≥ 0.3) ${tr.slope > 0 ? "تزداد" : "تتناقص"} بمعدل ${NU(Math.abs(tr.slope * 10), 1, "%")} كل عشر سنوات (ثيل–سن)، ${tr.p <= 0.05 ? `والاتجاه معنوي إحصائياً (مان–كندال p = ${U.fmt(tr.p, 3)}).` : `لكن الاتجاه غير معنوي إحصائياً (p = ${U.fmt(tr.p, 2)}).`} ` : `يحتاج الاتجاه 8 سنوات كاملة على الأقل؛ الأرشيف يكتمل تدريجياً (${N(all.length, 0)} صورة حتى الآن). `}تراجع الغطاء النباتي يزيد مصادر الغبار المحلية.</p>`;
       if (all.length) chart("sat", U.$("#db-s-nc"), { type: "line", data: { labels: all.map(r => r.date), datasets: [{ label: "NDVI", data: all.map(r => r.ndvi), borderColor: ECO.COL.chloro, borderWidth: 1.2, pointRadius: 0 }] },
         options: { plugins: { legend: { display: false } }, scales: { x: { ticks: xTicks } } } });
+    }
+
+    // 3ب) نماذج جودة الماء
+    if (has("river_pred")) {
+      const E = {}; q("SELECT * FROM river_eval").forEach(r => { E[r.task + ":" + r.model] = r; });
+      const R = q("SELECT * FROM river_pred WHERE district_id = ? AND task = 'ndti' ORDER BY month", [d.id]);
+      const A = q1("SELECT * FROM river_pred WHERE district_id = ? AND task = 'ndci_high' ORDER BY month DESC LIMIT 1", [d.id]);
+      const h = E["ndti:hgb"], c = E["ndti:climatology"], la = E["ndci_high:logistic"], lc = E["ndci_high:climatology"];
+      const box = document.createElement("div"); box.className = "panel";
+      box.innerHTML = `<div class="panel-h"><h3>عكورة دجلة وطحالبها عند ${esc(d.name_ar)}: تقدير بالذكاء الاصطناعي</h3><span class="sub">من التصريف والطقس والموسم</span></div>
+        <div class="chart-box sm"><canvas id="db-s-rq"></canvas></div>
+        <p class="db-cap">النقاط = عكورة مرصودة من Sentinel-2، والخط = تقدير النموذج حتى للأشهر الغائمة والشهر الجاري${h && c ? `. على آخر سنتين لم يرهما: خطأ النموذج ${U.fmt(h.mae, 3)} مقابل ${U.fmt(c.mae, 3)} للمعدل الموسمي (أفضل بـ ${N(100 * h.skill, 0)}%)` : ""}.</p>
+        ${A && la ? `<div class="db-gnow"><div><span class="k">احتمال شهر طحالب مرتفع (${fM(A.month)})</span><b>${N(100 * A.value, 0)}%</b></div><div><span class="k">دقة التنبؤ AUC</span><b>${U.fmt(la.auc, 2)}</b></div></div>
+          <p class="db-cap">«مرتفع» = أعلى 20% من مؤشر الكلوروفيل NDCI في السجل. النموذج (AUC ${U.fmt(la.auc, 2)}) أفضل من المعدل الموسمي (${U.fmt(lc.auc, 2)}). تنبيه علمي: في الماء العكر قد يرتفع NDCI بسبب الطمي لا الطحالب وحدها، فأكّده بعيّنة.</p>` : ""}`;
+      U.$("#db-s-ndvi").parentNode.after(box);
+      if (R.length) chart("sat", U.$("#db-s-rq"), { type: "line", data: { labels: R.map(r => fM(r.month)), datasets: [
+        { label: "تقدير النموذج", data: R.map(r => r.value), borderColor: ECO.COL.silt, borderWidth: 1.6, pointRadius: 0 },
+        { label: "مدى 80%", data: R.map(r => r.hi), borderColor: "rgba(230,174,79,.25)", pointRadius: 0, borderWidth: 1, fill: "+1", backgroundColor: "rgba(230,174,79,.1)" },
+        { label: " ", data: R.map(r => r.lo), borderColor: "rgba(230,174,79,.25)", pointRadius: 0, borderWidth: 1 },
+        { label: "مرصود (Sentinel-2)", data: R.map(r => r.observed), borderColor: ECO.COL.river, backgroundColor: ECO.COL.river, showLine: false, pointRadius: 4 }] },
+        options: { plugins: { legend: { labels: { filter: i => i.text.trim() } } }, scales: { x: { ticks: xTicks } } } });
     }
 
     // 4) حرارة ماء دجلة
