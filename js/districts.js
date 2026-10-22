@@ -289,12 +289,17 @@
     const reg = q1("SELECT r.label_ar l, a.date FROM air_regime_daily a JOIN regimes r ON r.cluster = a.cluster WHERE a.district_id = ? ORDER BY a.date DESC LIMIT 1", [d.id]);
     const wx = air ? q1(S.ground ? "SELECT * FROM v_weather_corrected WHERE district_id = ? AND date = ?" : "SELECT * FROM weather_daily WHERE district_id = ? AND date = ?", [d.id, air.date]) : null;
     const gn = S.ground ? groundNow(d) : null;
+    /* هل أكّد الرصد الأرضي غبار ذلك اليوم؟ */
+    const gd = S.ground && air ? q1(`SELECT s.name_ar, x.dust_hours, x.haze_hours, x.vis_min FROM district_stations ds JOIN stations s ON s.id = ds.station_id
+      JOIN station_daily x ON x.station_id = s.id AND x.date = ? WHERE ds.district_id = ? AND ds.role = 'now'`, [air.date, d.id]) : null;
+    const camsHigh = air && ((U.isNum(air.dust) && air.dust >= 100) || (U.isNum(air.pm2_5) && air.pm2_5 >= 75));
+    const unconfirmed = camsHigh && gd && gd.dust_hours === 0 && U.isNum(gd.vis_min) && gd.vis_min >= 8;
 
     const kpi = (k, v, sub, t, extra = "") => `<div class="db-kpi${t ? " tone-b-" + t : ""}"><span class="k">${k}</span><span class="v">${v}</span><span class="d">${sub}</span>${extra}</div>`;
     const f1 = fDates[0] && FC[fDates[0]];
     const ratio = air && U.isNum(air.pm2_5) ? air.pm2_5 / 15 : NaN;
     const kpis = [
-      air ? kpi("PM2.5 آخر يوم مكتمل", `${N(air.pm2_5, 1)}<small>µg/m³</small>`, `تقدير نموذج CAMS · ${fD(air.date)} · ${ratio >= 1 ? `${N(ratio, 1)} ضعف حد الصحة العالمية` : "ضمن حد الصحة العالمية (15)"}`, tone(air.pm2_5, 15)) : kpi("PM2.5", "—", "لا بيانات"),
+      air ? kpi("PM2.5 آخر يوم مكتمل", `${N(air.pm2_5, 1)}<small>µg/m³</small>`, `تقدير نموذج CAMS${unconfirmed ? " (لم يؤكده الرصد الأرضي)" : gd && gd.dust_hours > 0 ? " · الرصد الأرضي أكّد غباراً" : ""} · ${fD(air.date)} · ${ratio >= 1 ? `${N(ratio, 1)} ضعف حد الصحة العالمية` : "ضمن حد الصحة العالمية (15)"}`, tone(air.pm2_5, 15)) : kpi("PM2.5", "—", "لا بيانات"),
       gn ? kpi("مقاس فعلاً · آخر رصد", `${N(gn.t, 0)}<small>°C</small>`, `${esc(gn.name_ar)} على بعد ${N(gn.dist_km, 0)} كم · ${esc(gn.ago)}${gn.wxText ? " · " + esc(gn.wxText) : gn.vis != null ? " · رؤية " + esc(visKm(gn.vis)) : ""}`, gn.dust ? "warn" : "info",
         `<button type="button" class="linkbtn db-kpi-go" data-tab-go="ground">التفاصيل والمقارنة</button>`) : "",
       f1 && f1.best ? kpi(`توقّع ${fD(fDates[0])}`, `${N(f1.best.value, 1)}<small>µg/m³</small>`, `${esc(MODEL[f1.best.model] || f1.best.model)} · المدى المرجّح ${N(f1.best.lo, 0)}–${N(f1.best.hi, 0)}${f1.cams ? ` · CAMS: ${N(f1.cams.value, 1)}` : ""}`, tone(f1.best.value, 15))
@@ -307,6 +312,7 @@
 
     // الخلاصة بلغة بسيطة
     const say = [];
+    if (unconfirmed) say.push(`<b>تنبيه:</b> نموذج CAMS يقدّر غباراً وجسيمات عالية في ${fD(air.date)}، لكن محطة ${esc(gd.name_ar)} لم ترصد أي غبار ذلك اليوم وكانت الرؤية ${N(gd.vis_min, 0)} كم فأكثر، فالرقم على الأرجح مبالغ فيه. قياساتنا تبيّن أن CAMS يقدّر غباراً في كثير من الأيام التي لا يُرصد فيها غبار فعلاً.`);
     if (air) say.push(`في آخر يوم مكتمل (${fD(air.date)}) كان متوسط الجسيمات الدقيقة PM2.5 في ${esc(d.name_ar)} ${NU(air.pm2_5, 1, "µg/m³")}${ratio >= 1 ? `، أي ${N(ratio, 1)} ضعف حد منظمة الصحة العالمية` : "، ضمن حد منظمة الصحة العالمية"}${U.isNum(air.dust) && air.dust > 100 ? `، مع غبار مرتفع (${NU(air.dust, 0, "µg/m³")})` : ""}.`);
     if (y && y.n) say.push(`خلال آخر سنة تجاوز PM2.5 الحد في ${N(100 * y.o / y.n, 0)}% من الأيام، وبلغ أعلاه ${NU(y.mx, 0, "µg/m³")}.`);
     if (f1 && f1.best) say.push(`يتوقّع نموذج ${esc(MODEL[f1.best.model] || f1.best.model)} ليوم ${fD(fDates[0])} قيمة ${N(f1.best.value, 0)} (بين ${N(f1.best.lo, 0)} و${N(f1.best.hi, 0)})${f1.cams ? `، ويتوقّع CAMS ${N(f1.cams.value, 0)}` : ""}.`);

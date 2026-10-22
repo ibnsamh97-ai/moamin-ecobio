@@ -250,7 +250,7 @@ def regimes(con, log):
             for i, c in enumerate(cs):
                 tag = ("شديد", "strong") if i == 0 else ("خفيف", "mild")
                 names[c] = (f"{base[0]} {tag[0]}", f"{base[1]} ({tag[1]})")
-    con.execute("DELETE FROM regimes"); con.execute("DELETE FROM air_regime_daily")
+    con.execute("DELETE FROM air_regime_daily"); con.execute("DELETE FROM regimes")  # الأبناء قبل الآباء (مفتاح أجنبي)
     for c in range(k):
         m = df.loc[labels == c, POLL].mean()
         con.execute("INSERT INTO regimes VALUES (?,?,?,?,?,?)", (int(c), names[c][0], names[c][1], int((labels == c).sum()),
