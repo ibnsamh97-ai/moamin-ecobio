@@ -365,8 +365,60 @@
         <dt>السجل</dt><dd>هواء منذ ${fD(ranges.a0)} · طقس منذ ${fD(ranges.w0)} · تصريف منذ ${fD(ranges.r0)} · ${N(ranges.rsn, 0)} شهراً من Sentinel-2</dd>
         <dt>مصادر تلوث مرسومة</dt><dd>${N(nSrc, 0)} <button type="button" class="linkbtn" data-tab-go="studies">عرض القائمة</button></dd>
         <dt>بحوث الجامعة</dt><dd>${N(nSt, 0)} ${nSt ? `<button type="button" class="linkbtn" data-tab-go="studies">عرض البحوث</button>` : ""}</dd>
-      </dl>`;
+      </dl>
+      <div class="db-rep"><label for="db-rep-m" class="lbl">التقرير الشهري للقضاء</label><div class="row"><select id="db-rep-m" class="input">${q("SELECT DISTINCT substr(date,1,7) m FROM air_daily WHERE district_id = ? ORDER BY m DESC LIMIT 24", [d.id]).map(r => `<option value="${r.m}">${fM(r.m)}</option>`).join("")}</select>
+        <button type="button" class="btn btn-sm" id="db-rep-go">${ico("i-file")}PDF</button></div></div>`;
+    U.$("#db-rep-go").onclick = () => monthlyReport(d, U.$("#db-rep-m").value);
     drawMap(d);
+  }
+
+
+  /* ------------------------------------------------------------------
+     التقرير الشهري للقضاء (PDF): كل الأرقام من القاعدة لذلك الشهر
+  ------------------------------------------------------------------ */
+  function monthlyReport(d, ym) {
+    if (!ym || !ECO.report) return;
+    const has = t => hasT(t);
+    const A = q1("SELECT COUNT(pm2_5) n, AVG(pm2_5) m, MAX(pm2_5) mx, SUM(pm2_5 > 15) o, AVG(dust) du, AVG(no2) no2 FROM air_daily WHERE district_id = ? AND substr(date,1,7) = ?", [d.id, ym]);
+    const W = q1("SELECT AVG(t_max) tx, MAX(t_max) txm, AVG(t_min) tn, SUM(precip) pr, MAX(wind_max) wm FROM weather_daily WHERE district_id = ? AND substr(date,1,7) = ?", [d.id, ym]) || {};
+    if (S.ground) { const c = q1("SELECT AVG(t_max_adj) txa FROM v_weather_corrected WHERE district_id = ? AND substr(date,1,7) = ?", [d.id, ym]); W.txa = c && c.txa; }
+    const Rv = q1("SELECT AVG(discharge) q FROM river_daily WHERE district_id = ? AND substr(date,1,7) = ?", [d.id, ym]);
+    const Rc = q1("SELECT AVG(discharge) q FROM river_daily WHERE district_id = ? AND substr(date,6,2) = ? AND substr(date,1,7) < ?", [d.id, ym.slice(5), ym]);
+    const Ws = q1("SELECT ndti, ndci FROM water_rs_monthly WHERE district_id = ? AND month = ?", [d.id, ym]);
+    const st = S.ground ? q1(`SELECT s.name_ar, ds.dist_km, COUNT(x.date) n, SUM(x.dust_hours > 0) dd, AVG(x.t_max) tx, MIN(x.vis_min) vm FROM district_stations ds JOIN stations s ON s.id = ds.station_id
+      LEFT JOIN station_daily x ON x.station_id = s.id AND substr(x.date,1,7) = ? WHERE ds.district_id = ? AND ds.role = 'now'`, [ym, d.id]) : null;
+    const dp = has("dust_prob") ? q1("SELECT AVG(prob) p, SUM(prob >= 0.2) n FROM dust_prob WHERE district_id = ? AND substr(date,1,7) = ?", [d.id, ym]) : null;
+    const fi = has("fire_pixels") ? q1("SELECT COUNT(*) n, SUM(near_kind IS NOT NULL) nf FROM fire_pixels WHERE district_id = ? AND substr(date,1,7) = ?", [d.id, ym]) : null;
+    const gs = has("s5p_daily") ? q("SELECT gas, AVG(value) v, COUNT(*) n FROM s5p_daily WHERE district_id = ? AND substr(date,1,7) = ? GROUP BY gas", [d.id, ym]) : [];
+    const nd = has("ndvi_16d") ? q1("SELECT AVG(ndvi) v FROM ndvi_16d WHERE district_id = ? AND substr(date,1,7) = ?", [d.id, ym]) : null;
+    const f = (v, k = 1) => U.isNum(v) ? U.fmt(v, k) : "—";
+    const daily = has("dust_prob") ? q("SELECT a.date, a.pm2_5, p.prob FROM air_daily a LEFT JOIN dust_prob p ON p.district_id = a.district_id AND p.date = a.date WHERE a.district_id = ? AND substr(a.date,1,7) = ? ORDER BY a.date", [d.id, ym])
+      : q("SELECT date, pm2_5, NULL prob FROM air_daily WHERE district_id = ? AND substr(date,1,7) = ? ORDER BY date", [d.id, ym]);
+    const qd = q("SELECT date, discharge FROM river_daily WHERE district_id = ? AND substr(date,1,7) = ? ORDER BY date", [d.id, ym]);
+    const ch1 = ECO.report.chartImage({ type: "line", data: { labels: daily.map(r => r.date.slice(8)), datasets: [{ label: "PM2.5 (تقدير CAMS) µg/m³", data: daily.map(r => r.pm2_5), borderColor: "#127d8f", borderWidth: 2, pointRadius: 2 }, { label: "حد الصحة العالمية 15", data: daily.map(() => 15), borderColor: "#c0392b", borderDash: [6, 4], pointRadius: 0 }].concat(has("dust_prob") ? [{ label: "احتمال غبار فعلي %", data: daily.map(r => r.prob == null ? null : 100 * r.prob), borderColor: "#b77b13", borderWidth: 1.5, pointRadius: 0, yAxisID: "y2" }] : []) },
+      options: { scales: { y: { beginAtZero: true }, y2: { position: "left", min: 0, max: 100, grid: { display: false } } } } }, 680, 260);
+    const ch2 = qd.length ? ECO.report.chartImage({ type: "line", data: { labels: qd.map(r => r.date.slice(8)), datasets: [{ label: "تصريف دجلة m³/s", data: qd.map(r => r.discharge), borderColor: "#127d8f", borderWidth: 2, pointRadius: 0 }, { label: `متوسط ${MONTHS[+ym.slice(5) - 1]} في السنوات السابقة`, data: qd.map(() => Rc && Rc.q), borderColor: "#7a8c90", borderDash: [5, 4], pointRadius: 0 }] }, options: { scales: { y: { beginAtZero: true } } } }, 680, 220) : null;
+    const pct = Rv && Rc && Rc.q ? 100 * (Rv.q - Rc.q) / Rc.q : NaN;
+    const GN = { no2: "NO₂", so2: "SO₂", co: "CO" };
+    ECO.report.run({
+      title: `التقرير البيئي الشهري: ${d.name_ar}`, subtitle: fM(ym), file: `تقرير-${d.id}-${ym}`,
+      blocks: [
+        { type: "text", html: `ملخص بيئي لقضاء ${U.esc(d.name_ar)} على نهر دجلة لشهر ${fM(ym)}، مولَّد آلياً من قاعدة بيانات EcoBio AI. يميّز التقرير بين <b>القياس الحقيقي</b> (محطات الأرصاد في المطارات والأقمار الصناعية) و<b>تقدير النماذج</b> (CAMS وERA5 وGloFAS).` },
+        { type: "h", text: "الهواء" },
+        { type: "kv", items: [["متوسط PM2.5 (تقدير CAMS)", `${f(A && A.m)} µg/m³ · أعلى يوم ${f(A && A.mx, 0)}`], ["أيام فوق حد الصحة العالمية (15)", A && A.n ? `${A.o} من ${A.n} يوماً` : "—"],
+          ...(dp && dp.p != null ? [["احتمال الغبار الفعلي (نموذجنا)", `متوسط ${f(100 * dp.p, 0)}% · ${dp.n} أيام مرجّحة`]] : []),
+          ...(st && st.n ? [[`الرصد الأرضي في ${st.name_ar} (${f(st.dist_km, 0)} كم)`, `غبار مرصود في ${st.dd || 0} أيام · أقل رؤية ${f(st.vm)} كم`]] : []),
+          ...gs.map(g => [`${GN[g.gas]} من Sentinel-5P`, `${f(g.v, 1)} µmol/m² (${g.n} يوماً)`]),
+          ...(fi && fi.n ? [["حرائق رصدها القمر (MODIS)", `${fi.n} رصد، منها ${fi.nf || 0} قرب منشآت نفطية أو صناعية`]] : [])] },
+        ch1 ? { type: "chart", src: ch1, caption: "PM2.5 اليومي واحتمال الغبار الفعلي" } : null,
+        { type: "h", text: "الطقس" },
+        { type: "kv", items: [["متوسط العظمى", `${f(W && (W.txa ?? W.tx))}°م${W && U.isNum(W.txa) ? " (مصحّحة بالقياس الأرضي)" : ""} · أعلى ${f(W && W.txm, 0)}°م`], ["متوسط الصغرى", `${f(W && W.tn)}°م`], ["مجموع الأمطار", `${f(W && W.pr)} مم`], ["أقوى رياح", `${f(W && W.wm, 0)} كم/ساعة`], ...(st && st.n ? [[`العظمى المقاسة في ${st.name_ar}`, `${f(st.tx)}°م`]] : [])] },
+        { type: "h", text: "النهر والماء" },
+        { type: "kv", items: [["متوسط تصريف دجلة (GloFAS)", `${f(Rv && Rv.q, 0)} m³/s${U.isNum(pct) ? ` · ${pct >= 0 ? "أعلى" : "أقل"} من معدل الشهر بـ ${f(Math.abs(pct), 0)}%` : ""}`], ["عكورة الماء NDTI (Sentinel-2)", Ws && U.isNum(Ws.ndti) ? f(Ws.ndti, 3) : "لا مشهد صافٍ"], ["مؤشر الكلوروفيل NDCI", Ws && U.isNum(Ws.ndci) ? f(Ws.ndci, 3) : "—"], ...(nd && U.isNum(nd.v) ? [["الغطاء النباتي NDVI ضمن 10 كم", f(nd.v, 3)]] : [])] },
+        ch2 ? { type: "chart", src: ch2, caption: "تصريف دجلة اليومي مقابل معدل الشهر" } : null,
+        { type: "refs", items: ["Copernicus CAMS, ERA5, GloFAS عبر Open-Meteo.", "Iowa Environmental Mesonet – METAR (القياس الأرضي).", "ESA Sentinel-2 وSentinel-5P، NASA MODIS، USGS Landsat عبر Microsoft Planetary Computer.", "WHO (2021) Global Air Quality Guidelines."] }
+      ].filter(Boolean)
+    }, "pdf");
   }
 
   function anomBlock(did, limit, title) {

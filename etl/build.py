@@ -116,6 +116,20 @@ def export_api(path: Path, run_at: str):
     (api / "index.json").write_text(json.dumps(idx, ensure_ascii=False, indent=1), encoding="utf-8")
 
 
+def _dust_next(con, did):
+    if not con.execute("SELECT 1 FROM sqlite_master WHERE name = 'dust_prob'").fetchone():
+        return []
+    return [{"date": r[0], "prob": r[1]} for r in con.execute("SELECT date, prob FROM dust_prob WHERE district_id = ? AND kind = 'forecast' ORDER BY date", (did,))]
+
+
+def _river_now(con, did):
+    r = con.execute("SELECT date, discharge FROM river_daily WHERE district_id = ? ORDER BY date DESC LIMIT 1", (did,)).fetchone()
+    if not r:
+        return None
+    p = con.execute("SELECT 100.0 * SUM(discharge < ?) / COUNT(*) FROM river_daily WHERE district_id = ? AND substr(date,6,2) = substr(?,6,2)", (r[1], did, r[0])).fetchone()[0]
+    return {"date": r[0], "q": r[1], "pct": round(p, 1) if p is not None else None}
+
+
 def _station_now(con, did):
     """آخر رصد حقيقي من أقرب محطة تبث (للتطبيق دون إنترنت)."""
     r = con.execute("""SELECT s.id, s.name_ar, ds.dist_km, h.valid, h.t, h.rh, h.wind, h.vis, h.wx FROM district_stations ds
@@ -294,7 +308,9 @@ def main():
                                     "air": dict(zip(["date", "pm2_5", "pm10", "dust", "aqi_pm25"], a_)) if a_ else None,
                                     "forecast": [dict(zip(["for_date", "model", "value", "lo", "hi"], r)) for r in fc if r[1] != "cams"],
                                     "cams": [dict(zip(["for_date", "model", "value"], r[:3])) for r in fc if r[1] == "cams"],
-                                    "now": _station_now(con2, d["id"])})
+                                    "now": _station_now(con2, d["id"]),
+                                    "dust": _dust_next(con2, d["id"]),
+                                    "river": _river_now(con2, d["id"])})
     con2.close()
     (path.parent / "latest.json").write_text(json.dumps(latest, ensure_ascii=False), encoding="utf-8")
     export_api(path, run_at)
