@@ -28,7 +28,7 @@ Tools for researchers and students
 • Water quality lab: WQI, HPI and compliance with Iraqi standard 417
 • Environmental data analyser: upload Excel and get ANOVA, Duncan's test, correlations and charts
 • Treatment plant simulator and scientific calculators
-• Live SQL queries on the database, Excel and CSV export
+• Export each district’s data to Excel and CSV
 • Optional daily air forecast notification for your district
 
 Privacy

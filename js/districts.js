@@ -72,7 +72,7 @@
   const S = { db: null, gz: null, meta: null, from: "", D: [], P: {}, d: null, tab: "overview", task: "pm25_d1",
     ts: { p: "pm2_5", span: 365, cmp: "" }, cmpP: "pm2_5", map: null, mapG: null, tigris: null, sqlLast: null, painted: {} };
   const TABS = [["overview", "لوحة القضاء", "i-home"], ["series", "السلاسل الزمنية", "i-layers"], ["ai", "الذكاء الاصطناعي", "i-brain"],
-    ["compare", "مقارنة الأقضية", "i-table"], ["studies", "البحوث ومصادر التلوث", "i-book"], ["sql", "استعلام SQL", "i-code"], ["about", "المخطط والمصادر", "i-info"]];
+    ["compare", "مقارنة الأقضية", "i-table"], ["studies", "البحوث ومصادر التلوث", "i-book"]];
   const DIST_TABS = new Set(["overview", "series", "ai", "studies"]);
 
   /* ------------------------------------------------------------------
@@ -150,7 +150,7 @@
     U.$("#db-load").innerHTML = `<div class="db-load-box"><span class="db-load-ic">${ico("i-db")}</span><b id="db-load-t">جارٍ التحقق من آخر تحديث…</b><div class="db-prog" role="progressbar" aria-label="تحميل قاعدة البيانات"><i id="db-prog-bar"></i></div><small>القاعدة كاملة تنزل مرة واحدة (بضعة ميغابايت) وتُحفظ في جهازك، فتعمل بعدها حتى دون إنترنت.</small></div>`;
     loadP = (async () => {
       const meta = await fetchMeta();
-      setLoad("جارٍ تحميل محرّك SQLite…", 0.04);
+      setLoad("جارٍ التحضير…", 0.04);
       const sqlP = initSQL();
       const got = await getGz(meta, f => setLoad(`جارٍ تنزيل قاعدة البيانات… ${Math.round(f * 100)}%`, 0.06 + f * 0.84));
       setLoad("جارٍ فك الضغط وفتح القاعدة…", 0.94);
@@ -220,7 +220,7 @@
     const el = U.$("#db-p-" + S.tab);
     if (S.painted[S.tab] === key) { if (S.tab === "overview" && S.map) setTimeout(() => S.map.invalidateSize(), 50); return; }
     S.painted[S.tab] = key;
-    try { ({ overview: rOverview, series: rSeries, ai: rAI, compare: rCompare, studies: rStudies, sql: rSQL, about: rAbout })[S.tab](el); }
+    try { ({ overview: rOverview, series: rSeries, ai: rAI, compare: rCompare, studies: rStudies })[S.tab](el); }
     catch (e) { console.error(e); el.innerHTML = `<div class="notice warn">${ico("i-info")}<span>تعذّر عرض هذا القسم: ${esc(e.message)}</span></div>`; }
     writeHash();
   }
@@ -639,7 +639,7 @@
      5) البحوث ومصادر التلوث
   ------------------------------------------------------------------ */
   function studyCard(s) {
-    const vals = q("SELECT table_id, item, col, stat, value, unit, note FROM study_values WHERE study_id = ? ORDER BY id LIMIT 80", [s.id]);
+    const vals = q("SELECT table_id, item, col, stat, value, unit, note FROM study_values WHERE study_id = ? ORDER BY id", [s.id]);
     const nAll = q1("SELECT COUNT(*) n FROM study_values WHERE study_id = ?", [s.id]).n;
     const ST = { min: "أدنى", max: "أعلى", value: "قيمة" };
     return `<article class="db-study"><h4>${esc(s.title)}</h4>
@@ -649,7 +649,7 @@
         ${s.doi ? `<a href="https://doi.org/${encodeURI(s.doi)}" target="_blank" rel="noopener">${ico("i-ext")}DOI</a>` : s.url ? `<a href="${esc(s.url)}" target="_blank" rel="noopener">${ico("i-ext")}رابط البحث</a>` : ""}</p>
       ${vals.length ? `<details><summary>القيم المنشورة في القاعدة (${N(nAll, 0)})</summary><div class="tbl-wrap"><table class="tbl"><thead><tr><th>المعيار أو الصف</th><th>العمود</th><th>النوع</th><th class="num">القيمة</th><th>الوحدة</th></tr></thead><tbody>${vals.map(v =>
         `<tr><td>${esc(v.item)}</td><td>${esc(v.col || "—")}</td><td>${ST[v.stat] || esc(v.stat)}</td><td class="num">${U.fmt(v.value, "auto")}</td><td><bdi>${esc(v.unit || "")}</bdi></td></tr>`).join("")}</tbody></table></div>
-        ${nAll > vals.length ? `<p class="db-cap">تعرض أول ${vals.length} قيمة؛ الباقي في تبويب «استعلام SQL».</p>` : ""}</details>` : ""}</article>`;
+</details>` : ""}</article>`;
   }
   function rStudies(el) {
     const d = dist();
@@ -669,177 +669,6 @@
           <td><a href="https://www.openstreetmap.org/${esc(s.id)}" target="_blank" rel="noopener" aria-label="افتح في OpenStreetMap">${ico("i-ext")}</a></td></tr>`).join("")}</tbody></table></div>
         <p class="db-cap">القائمة بقدر ما رسمه متطوعو OpenStreetMap؛ قد تنقصها منشآت غير مرسومة. ساهم بإضافتها في الخريطة لتظهر هنا بعد أسبوع.</p>`
         : `<p class="empty">لا توجد منشآت ملوِّثة مرسومة في OpenStreetMap ضمن 30 كم من مركز القضاء.</p>`}</section></div>`;
-  }
-
-  /* ------------------------------------------------------------------
-     6) استعلام SQL
-  ------------------------------------------------------------------ */
-  const SAMPLES = [
-    ["متوسط PM2.5 الشهري لكل قضاء في آخر سنة", `SELECT d.name_ar AS district, substr(a.date, 1, 7) AS month,
-       ROUND(AVG(a.pm2_5), 1) AS pm25_mean,
-       SUM(a.pm2_5 > 15) AS days_over_who
-FROM air_daily a JOIN districts d ON d.id = a.district_id
-WHERE a.date >= date('now', '-12 months')
-GROUP BY d.id, month
-ORDER BY d.ord, month;`],
-    ["أشد 15 يوماً غباراً ومكانها", `SELECT a.date, d.name_ar AS district, ROUND(a.dust) AS dust,
-       ROUND(a.pm10) AS pm10, w.wind_max
-FROM air_daily a
-JOIN districts d ON d.id = a.district_id
-LEFT JOIN weather_daily w ON w.district_id = a.district_id AND w.date = a.date
-ORDER BY a.dust DESC
-LIMIT 15;`],
-    ["أيام تجاوز حد الصحة العالمية لكل قضاء وسنة", `SELECT d.name_ar AS district, substr(a.date, 1, 4) AS year,
-       COUNT(*) AS days, SUM(a.pm2_5 > 15) AS over_who,
-       ROUND(100.0 * SUM(a.pm2_5 > 15) / COUNT(*), 1) AS pct
-FROM air_daily a JOIN districts d ON d.id = a.district_id
-GROUP BY d.id, year
-ORDER BY d.ord, year;`],
-    ["تصريف دجلة السنوي عند بيجي", `SELECT substr(date, 1, 4) AS year,
-       ROUND(MIN(discharge)) AS q_min,
-       ROUND(AVG(discharge)) AS q_mean,
-       ROUND(MAX(discharge)) AS q_max
-FROM river_daily
-WHERE district_id = 'baiji'
-GROUP BY year
-ORDER BY year;`],
-    ["التصريف والعكورة شهرياً (Sentinel-2)", `SELECT w.district_id, w.month, w.ndti, w.ndci,
-  ROUND((SELECT AVG(discharge) FROM river_daily r
-         WHERE r.district_id = w.district_id
-           AND substr(r.date, 1, 7) = w.month)) AS discharge
-FROM water_rs_monthly w
-WHERE w.ndti IS NOT NULL
-ORDER BY w.district_id, w.month;`],
-    ["أداء نماذج الذكاء الاصطناعي في آخر تدريب", `SELECT district_id, task, model, mae, rmse, r2,
-       ROUND(100 * skill, 1) AS skill_pct, is_best
-FROM model_runs
-WHERE run_at = (SELECT MAX(run_at) FROM model_runs)
-ORDER BY district_id, task, rmse;`],
-    ["توقعات الأيام القادمة: نموذجنا مقابل CAMS", `SELECT f.for_date, d.name_ar AS district, f.model, f.value, f.lo, f.hi
-FROM forecasts f JOIN districts d ON d.id = f.district_id
-WHERE f.for_date > (SELECT MAX(date) FROM air_daily)
-ORDER BY f.for_date, d.ord, f.model;`],
-    ["مصادر التلوث على بعد أقل من 2 كم من النهر", `SELECT kind, name, district_id, dist_river_km, lat, lon
-FROM pollution_sources
-WHERE dist_river_km < 2
-ORDER BY dist_river_km;`],
-    ["القيم المنشورة في بحوث قضاء بيجي", `SELECT s.year, s.title, v.item, v.col, v.stat, v.value, v.unit
-FROM study_values v
-JOIN studies s ON s.id = v.study_id
-JOIN study_districts sd ON sd.study_id = s.id
-WHERE sd.district_id = 'baiji'
-ORDER BY s.year, v.id;`],
-    ["الأيام الشاذة التي كشفها Isolation Forest", `SELECT an.date, d.name_ar AS district, an.top_param, an.top_z,
-       ROUND(an.score, 3) AS score
-FROM anomalies an JOIN districts d ON d.id = an.district_id
-ORDER BY an.date DESC
-LIMIT 30;`],
-    ["الهواء والطقس والنهر في جدول واحد", `SELECT *
-FROM v_air_weather
-WHERE district_id = 'tikrit'
-ORDER BY date DESC
-LIMIT 60;`]
-  ];
-  function rSQL(el) {
-    if (el.dataset.built) return;
-    el.dataset.built = "1";
-    const tables = q("SELECT name, type FROM sqlite_master WHERE type IN ('table','view') AND name NOT LIKE 'sqlite_%' ORDER BY type, name");
-    el.innerHTML = `<div class="db-sql-grid">
-      <div class="db-sql-main">
-        <div class="panel"><div class="panel-h"><h3>اكتب استعلامك</h3><span class="sub">SQLite · يعمل في متصفحك</span></div>
-          <label for="db-sql" class="sr-only">نص الاستعلام</label>
-          <textarea id="db-sql" class="input db-sql" dir="ltr" spellcheck="false" autocapitalize="off" autocomplete="off" rows="9">${esc(SAMPLES[0][1])}</textarea>
-          <div class="row db-sql-act"><button type="button" class="btn btn-primary" data-sql-run>${ico("i-play")}نفّذ <kbd>Ctrl</kbd>+<kbd>Enter</kbd></button>
-            <button type="button" class="btn btn-ghost btn-sm" data-sql-csv disabled>${ico("i-down")}النتيجة CSV</button>
-            <button type="button" class="btn btn-ghost btn-sm" data-sql-xlsx disabled>${ico("i-table")}النتيجة Excel</button></div>
-          <div class="db-samples"><span class="muted">أمثلة جاهزة:</span>${SAMPLES.map((s, i) => `<button type="button" class="chip db-sample" data-sample="${i}">${esc(s[0])}</button>`).join("")}</div>
-        </div>
-        <div class="panel"><div id="db-sql-out" aria-live="polite"><p class="empty">اضغط «نفّذ» لرؤية النتيجة.</p></div></div>
-      </div>
-      <aside class="panel db-schema"><div class="panel-h"><h3>الجداول</h3><span class="sub">اضغط اسماً لإدراجه</span></div>${tables.map(t => {
-        const cols = q(`PRAGMA table_info("${t.name}")`), n = t.type === "table" ? q1(`SELECT COUNT(*) n FROM "${t.name}"`).n : null;
-        return `<details${t.name === "air_daily" ? " open" : ""}><summary><code dir="ltr" data-ins="${esc(t.name)}">${esc(t.name)}</code>${t.type === "view" ? `<span class="chip tone-info">عرض</span>` : `<small>${U.fmt(n, 0)}</small>`}</summary>
-          <ul>${cols.map(c => `<li><code dir="ltr" data-ins="${esc(c.name)}">${esc(c.name)}</code><small dir="ltr">${esc(c.type || "")}${c.pk ? " · PK" : ""}</small></li>`).join("")}</ul></details>`;
-      }).join("")}</aside></div>
-      <p class="db-cap">القاعدة كاملة في ذاكرة متصفحك، فأي تعديل (INSERT أو DELETE) يبقى في نسختك المؤقتة فقط ويزول عند إعادة التحميل.</p>`;
-    const ta = U.$("#db-sql");
-    ta.addEventListener("keydown", e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); runSQL(); } });
-    el.addEventListener("click", e => {
-      const s = e.target.closest("[data-sample]"); if (s) { ta.value = SAMPLES[+s.dataset.sample][1]; runSQL(); return; }
-      const ins = e.target.closest("[data-ins]"); if (ins) { e.preventDefault(); const a = ta.selectionStart, b = ta.selectionEnd; ta.value = ta.value.slice(0, a) + ins.dataset.ins + ta.value.slice(b); ta.focus(); ta.selectionStart = ta.selectionEnd = a + ins.dataset.ins.length; return; }
-      if (e.target.closest("[data-sql-run]")) runSQL();
-      if (e.target.closest("[data-sql-csv]") && S.sqlLast) save(new Blob([csvOf(S.sqlLast.columns, S.sqlLast.values)], { type: "text/csv;charset=utf-8" }), `ecobio-query-${today()}.csv`);
-      if (e.target.closest("[data-sql-xlsx]") && S.sqlLast) save(ECO.xlsx.write([{ name: "نتيجة الاستعلام", rows: [S.sqlLast.columns].concat(S.sqlLast.values) }]), `ecobio-query-${today()}.xlsx`);
-    });
-  }
-  function runSQL() {
-    const sql = U.$("#db-sql").value.trim(), out = U.$("#db-sql-out");
-    if (!sql) return;
-    const t0 = performance.now();
-    try {
-      const res = S.db.exec(sql), ms = Math.round(performance.now() - t0), last = res[res.length - 1];
-      S.sqlLast = last || null;
-      U.$$("[data-sql-csv],[data-sql-xlsx]").forEach(b => { b.disabled = !last; });
-      if (!last) { out.innerHTML = `<div class="notice ok">${ico("i-check")}<span>نُفِّذ الأمر خلال ${ms} ms دون نتائج للعرض${S.db.getRowsModified() ? `، وتأثّر ${S.db.getRowsModified()} صفاً في نسختك المحلية` : ""}.</span></div>`; return; }
-      const show = last.values.slice(0, 1000);
-      out.innerHTML = `<p class="updated">${N(last.values.length, 0)} صفاً · ${ms} ms${last.values.length > show.length ? ` · تُعرض أول ${show.length}، والتنزيل يشمل الكل` : ""}</p>
-        <div class="tbl-wrap db-res"><table class="tbl"><thead><tr>${last.columns.map(c => `<th dir="auto">${esc(c)}</th>`).join("")}</tr></thead>
-        <tbody>${show.map(r => `<tr>${r.map(v => typeof v === "number" ? `<td class="num">${esc(Number.isInteger(v) ? v : +v.toFixed(4))}</td>` : `<td dir="auto">${v == null ? '<span class="faint">NULL</span>' : esc(v)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
-    } catch (e) {
-      S.sqlLast = null; U.$$("[data-sql-csv],[data-sql-xlsx]").forEach(b => { b.disabled = true; });
-      out.innerHTML = `<div class="notice warn">${ico("i-info")}<span><b>خطأ في الاستعلام:</b> <code dir="ltr">${esc(e.message)}</code></span></div>`;
-    }
-  }
-
-  /* ------------------------------------------------------------------
-     7) المخطط والمصادر
-  ------------------------------------------------------------------ */
-  const GROUPS = [["الجداول المرجعية", ["districts", "sources", "parameters"]], ["القياسات", ["air_daily", "weather_daily", "river_daily", "water_rs_monthly"]],
-    ["البحوث ومصادر التلوث", ["studies", "study_districts", "study_values", "pollution_sources"]],
-    ["الذكاء الاصطناعي", ["model_runs", "feature_importance", "model_test_predictions", "forecasts", "anomalies", "regimes", "air_regime_daily", "relationships"]], ["التشغيل", ["etl_log", "meta"]]];
-  const TDESC = { districts: "الأقضية الستة ومواقعها ونقطة النهر وخلية GloFAS", sources: "مصادر البيانات ومراجعها العلمية", parameters: "المعايير ووحداتها وحدودها",
-    air_daily: "متوسطات يومية لملوثات الهواء", weather_daily: "الطقس اليومي", river_daily: "تصريف دجلة اليومي", water_rs_monthly: "العكورة والكلوروفيل شهرياً من الفضاء",
-    studies: "بحوث جامعة تكريت المنشورة", study_districts: "ربط البحوث بالأقضية", study_values: "القيم المنشورة في البحوث", pollution_sources: "منشآت ملوِّثة من OpenStreetMap",
-    model_runs: "كل نموذج دُرِّب ودقته", feature_importance: "أهمية المتغيرات في النموذج الأفضل", model_test_predictions: "توقعات فترة الاختبار مقابل الواقع",
-    forecasts: "توقعات الأيام القادمة (نموذجنا وCAMS)", anomalies: "الأيام الشاذة", regimes: "أنماط الهواء (K-Means)", air_regime_daily: "نمط كل يوم في كل قضاء",
-    relationships: "علاقات سبيرمان الشهرية", etl_log: "سجل كل خطوة تحديث", meta: "معلومات آخر تحديث" };
-  function rAbout(el) {
-    const m = S.meta || {};
-    const card = t => {
-      const cols = q(`PRAGMA table_info("${t}")`); if (!cols.length) return "";
-      const fk = {}; q(`PRAGMA foreign_key_list("${t}")`).forEach(f => { fk[f.from] = f.table; });
-      const n = q1(`SELECT COUNT(*) n FROM "${t}"`).n;
-      return `<div class="db-ent"><div class="db-ent-h"><code dir="ltr">${t}</code><small>${U.fmt(n, 0)} صف</small></div><p>${esc(TDESC[t] || "")}</p>
-        <ul>${cols.map(c => `<li class="${c.pk ? "pk" : ""}${fk[c.name] ? " fk" : ""}"><code dir="ltr">${esc(c.name)}</code>${c.pk ? `<span class="db-key" title="مفتاح أساسي">PK</span>` : ""}${fk[c.name] ? `<span class="db-key fk" title="مفتاح أجنبي">→ <bdi dir="ltr">${esc(fk[c.name])}</bdi></span>` : ""}<small dir="ltr">${esc(c.type || "")}</small></li>`).join("")}</ul></div>`;
-    };
-    const runAt = (q1("SELECT MAX(run_at) r FROM etl_log") || {}).r;
-    const log = runAt ? q("SELECT step, status, rows, seconds, message FROM etl_log WHERE run_at = ? ORDER BY id", [runAt]) : [];
-    const steps = [["i-down", "الجلب", "كل يوم 05:17 بتوقيت بغداد يجلب خادم GitHub Actions الأيام الجديدة من CAMS وERA5 وGloFAS، والأشهر الجديدة من Sentinel-2، ومصادر التلوث من OpenStreetMap أسبوعياً."],
-      ["i-layers", "التنظيف والتجميع", "القراءات الساعية تُجمّع إلى متوسطات يومية بتوقيت بغداد (يُقبل اليوم إذا توفرت 18 ساعة على الأقل)، ومشاهد الأقمار تُصفّى من الغيوم وتُقرأ بكسلات الماء فقط."],
-      ["i-db", "التخزين", "كل قيمة تُكتب مرة واحدة بمفتاح (القضاء، التاريخ)، فلا تتكرر، وتُصحَّح آخر ثلاثة أيام عند كل تحديث."],
-      ["i-brain", "التدريب", "خمسة نماذج تُدرَّب وتُختبر لكل قضاء ولأفقين، ثم كشف الشذوذ والأنماط والعلاقات."],
-      ["i-share", "النشر", "القاعدة تُضغط وتُنشر في فرع db من المستودع، والمنصة والتطبيق ينزّلانها عند وجود نسخة أحدث."]];
-    el.innerHTML = `<div class="panel"><div class="panel-h"><h3>كيف تُبنى القاعدة كل يوم</h3><span class="sub">${runAt ? `آخر تشغيل ${esc(fStamp(runAt))} · ${N(m.seconds ? m.seconds / 60 : null, 0)} دقيقة` : ""}</span></div>
-        <ol class="db-pipe">${steps.map(([i, t, x]) => `<li><span class="tc-ic">${ico(i)}</span><b>${t}</b><p>${x}</p></li>`).join("")}</ol>
-        <div class="row db-dl"><button type="button" class="btn" data-db-dl>${ico("i-down")}نزّل القاعدة كاملة (SQLite)</button><a class="btn btn-ghost" href="${RAW}schema.sql" target="_blank" rel="noopener">${ico("i-file")}المخطط schema.sql</a>
-          <a class="btn btn-ghost" href="https://github.com/ibnsamh97-ai/moamin-ecobio/tree/main/etl" target="_blank" rel="noopener">${ico("i-ext")}شيفرة الجلب والتدريب</a></div>
-        <p class="db-cap">ملف SQLite يُفتح ببرنامج DB Browser for SQLite المجاني، أو بلغة Python وR مباشرة.</p></div>
-      <div class="panel"><div class="panel-h"><h3>مخطط القاعدة</h3><span class="sub">${GROUPS.reduce((s, g) => s + g[1].length, 0)} جدولاً وعرضان جاهزان · المفاتيح الأجنبية تربط كل قياس بالقضاء</span></div>
-        ${GROUPS.map(([g, ts]) => `<h4 class="db-h4">${g}</h4><div class="db-ents">${ts.map(card).join("")}</div>`).join("")}</div>
-      <div class="panel"><div class="panel-h"><h3>المصادر ومراجعها</h3></div><div class="tbl-wrap"><table class="tbl db-wrap-tbl"><thead><tr><th>المصدر</th><th>الدقة</th><th>الترخيص</th><th>المرجع العلمي</th></tr></thead><tbody>${q("SELECT * FROM sources").map(s =>
-        `<tr><td><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.name)}</a><br><small class="muted">${esc(s.provider)}</small></td><td>${esc(s.resolution)}</td><td>${esc(s.license)}</td><td dir="auto">${esc(s.citation)}</td></tr>`).join("")}</tbody></table></div></div>
-      <div class="panel"><div class="panel-h"><h3>المعايير وحدودها</h3></div><div class="tbl-wrap"><table class="tbl"><thead><tr><th>المعيار</th><th>الرمز</th><th>الوحدة</th><th class="num">الحد</th><th>مرجع الحد</th></tr></thead><tbody>${q("SELECT * FROM parameters").map(p =>
-        `<tr><td>${esc(p.name_ar)}</td><td><code dir="ltr">${esc(p.code)}</code></td><td><bdi>${esc(p.unit || "—")}</bdi></td><td class="num">${p.limit_value != null ? U.fmt(p.limit_value, 0) : "—"}</td><td>${esc(p.limit_ref || "—")}</td></tr>`).join("")}</tbody></table></div></div>
-      <div class="panel"><div class="panel-h"><h3>حدود البيانات</h3></div><ul class="prose">${Object.values(SRC_NOTE).map(x => `<li>${esc(x)}</li>`).join("")}
-        <li>مصادر التلوث بقدر ما رسمه متطوعو OpenStreetMap، والقيم البحثية كما نُشرت في مصادرها دون تعديل.</li>
-        <li>هذه القاعدة للبحث والتعليم والتوعية، ولا تحل محل محطات الرصد الرسمية لوزارة البيئة.</li></ul></div>
-      ${log.length ? `<details class="panel"><summary>سجل آخر تحديث (${log.length} خطوة${log.some(l => l.status === "error") ? `، ${log.filter(l => l.status === "error").length} منها فشلت` : ""})</summary><div class="tbl-wrap"><table class="tbl"><thead><tr><th>الخطوة</th><th>الحالة</th><th class="num">صفوف</th><th class="num">ثوانٍ</th><th>ملاحظة</th></tr></thead><tbody>${log.map(l =>
-        `<tr><td><code dir="ltr">${esc(l.step)}</code></td><td><span class="chip tone-${l.status === "ok" ? "good" : l.status === "warn" ? "warn" : "bad"}">${{ ok: "تم", warn: "تنبيه", error: "فشل" }[l.status] || esc(l.status)}</span></td><td class="num">${U.fmt(l.rows, 0)}</td><td class="num">${U.fmt(l.seconds, 1)}</td><td class="db-msg" dir="auto">${esc(l.message || "")}</td></tr>`).join("")}</tbody></table></div></details>` : ""}`;
-  }
-
-  async function downloadDb() {
-    try { const raw = await gunzip(S.gz); save(new Blob([raw], { type: "application/vnd.sqlite3" }), `ecobio-tigris-${today()}.db`); }
-    catch (e) { U.toast("تعذّر تجهيز الملف: " + e.message); }
   }
 
   /* ------------------------------------------------------------------
@@ -866,7 +695,6 @@ LIMIT 60;`]
       if (e.target.closest("[data-db-retry]")) { load(true); return; }
       if (e.target.closest("[data-db-reload]")) { load(true); return; }
       if (e.target.closest("[data-db-near]")) { nearest(); return; }
-      if (e.target.closest("[data-db-dl]")) { downloadDb(); return; }
       if (e.target.closest("[data-db-csv]") && S.tsLast) { const L = S.tsLast; save(new Blob([csvOf(["x"].concat(L.ds.map(d => d.label)), L.labels.map((x, i) => [x].concat(L.ds.map(d => d.data[i]))))], { type: "text/csv;charset=utf-8" }), `ecobio-${L.name}.csv`); return; }
       if (e.target.closest("[data-db-xlsx]")) { exportDistrictXlsx(); return; }
       const dB = e.target.closest("[data-d]"); if (dB) { setDistrict(dB.dataset.d); if (dB.closest(".db-cmp")) setTab("overview"); return; }
