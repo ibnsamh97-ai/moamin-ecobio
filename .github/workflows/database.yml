@@ -1,0 +1,69 @@
+name: database
+# يبني قاعدة بيانات أقضية دجلة في صلاح الدين ويحدّثها يومياً، ويعيد تدريب نماذج الذكاء الاصطناعي.
+# الناتج يُنشر في فرع db (ملف واحد يُستبدل كل يوم حتى لا يكبر سجل المستودع)، والسجل في فرع db-log.
+on:
+  schedule:
+    - cron: '17 2 * * *'   # 05:17 بتوقيت بغداد
+  push:
+    branches: [main]
+    paths: ['etl/**', '.github/workflows/database.yml', 'js/data-research.js']
+  workflow_dispatch:
+    inputs:
+      full:
+        description: 'إعادة بناء كاملة'
+        type: boolean
+        default: false
+permissions:
+  contents: write
+concurrency:
+  group: database
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 170
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: etl/requirements.txt
+      - name: Install
+        run: pip install -r etl/requirements.txt
+      - name: Restore current database
+        run: |
+          mkdir -p out
+          if git ls-remote --exit-code --heads origin db >/dev/null; then
+            git fetch --depth 1 origin db
+            git show origin/db:ecobio.db.gz > out/ecobio.db.gz && gunzip -f out/ecobio.db.gz || rm -f out/ecobio.db.gz
+            git show origin/db:tigris.json > out/tigris.json || rm -f out/tigris.json
+          fi
+          ls -la out
+      - name: Build database and train models
+        id: build
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          python etl/build.py --db out/ecobio.db ${{ github.event.inputs.full == 'true' && '--full' || '' }} --s2-limit 450 2>&1 | tee out/run.log
+      - name: Publish log (db-log branch)
+        if: always()
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p logpub && cp out/run.log logpub/ 2>/dev/null || echo "no log" > logpub/run.log
+          cp out/ecobio-meta.json logpub/ 2>/dev/null || true
+          echo "outcome=${{ steps.build.outcome }} sha=${GITHUB_SHA} at=$(date -u +%FT%TZ)" > logpub/status.txt
+          cd logpub && git init -q && git checkout -q --orphan db-log && git add -A
+          git -c user.name=ecobio-bot -c user.email=ecobio-bot@users.noreply.github.com commit -qm "log $(date -u +%F)"
+          git push -qf "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" db-log
+      - name: Publish database (db branch)
+        if: always() && hashFiles('out/ecobio.db.gz') != ''
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p pub && cp out/ecobio.db.gz out/ecobio-meta.json out/etl.log pub/ && cp out/tigris.json pub/ 2>/dev/null || true
+          cp etl/schema.sql pub/
+          cd pub && git init -q && git checkout -q --orphan db && git add -A
+          git -c user.name=ecobio-bot -c user.email=ecobio-bot@users.noreply.github.com commit -qm "database $(date -u +%F)"
+          git push -qf "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" db
