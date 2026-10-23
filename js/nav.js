@@ -329,7 +329,9 @@
     document.title = titleOf(v);
     U.$("#drawer").hidden = true;
     closePalette();
-    if (window.scrollY > 0) window.scrollTo({ top: 0, behavior: "instant" in window ? "instant" : "auto" });
+    // مع التمرير الناعم (motion.js) نوقف أي تمرير جارٍ ونصعد فوراً
+    if (ECO.motion && ECO.motion.top) ECO.motion.top();
+    else if (window.scrollY > 0) window.scrollTo({ top: 0, behavior: "instant" in window ? "instant" : "auto" });
   }
   ECO.go = id => { if (location.hash === "#" + id) route(); else location.hash = id; };
 
@@ -432,7 +434,14 @@
     document.addEventListener("click", e => {
       const op = e.target.closest("[data-open-search]"); if (op) { e.preventDefault(); openPalette(); return; }
       const sc = e.target.closest("[data-scroll]");
-      if (sc) { e.preventDefault(); const t = U.$(sc.dataset.scroll); if (t) { t.scrollIntoView({ behavior: U.reduced ? "auto" : "smooth", block: "start" }); const f = t.querySelector("h2, a"); if (f) f.focus({ preventScroll: true }); } return; }
+      if (sc) {
+        e.preventDefault(); const t = U.$(sc.dataset.scroll);
+        if (t) {
+          if (ECO.motion && ECO.motion.scrollTo) ECO.motion.scrollTo(t); else t.scrollIntoView({ behavior: U.reduced ? "auto" : "smooth", block: "start" });
+          const f = t.querySelector("h2, a"); if (f) f.focus({ preventScroll: true });
+        }
+        return;
+      }
       const sk = e.target.closest("[data-skip]");
       if (sk) { e.preventDefault(); const m = U.$(".view.active h1, .view.active h2"); if (m) { m.setAttribute("tabindex", "-1"); m.focus(); } return; }
       const st = e.target.closest("[data-open-settings]"); if (st) { U.$("#drawer").hidden = true; const b = U.$("#open-settings"); if (b) b.click(); return; }
