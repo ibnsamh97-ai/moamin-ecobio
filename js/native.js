@@ -103,26 +103,40 @@
   // التطبيق لا يطلب هذا الإذن أصلاً (مُزال من AndroidManifest) فيبقى زرّها معطّلاً، والرجوع منها يُطلق
   // resume فجدولة فصفحة الإعدادات من جديد بلا نهاية. لذلك نطلب تنبيهاً غير دقيق (isExactNotification: false):
   // يصل في موعده تقريباً، ولا يحتاج أي إذن إضافي.
-  let scheduling = null, lastRun = 0;
+  // تحديث نص إشعار الغد بآخر الأرقام يجري بصمت عند فتح التطبيق: لا نافذة ولا صوت ولا إذن،
+  // وبحد أقصى مرة كل 3 ساعات، ولا يُعاد ضبطه أصلاً إذا لم تتغيّر رسالته
+  const EVERY = 3 * 3600000;
+  let scheduling = null;
   function schedule(force) {
     if (scheduling) return force ? scheduling.catch(() => {}).then(() => schedule(true)) : scheduling;
-    if (!force && Date.now() - lastRun < 10 * 60000) return Promise.resolve();
-    lastRun = Date.now();
-    scheduling = doSchedule().finally(() => { scheduling = null; });
+    const last = U.store.get("alertRun", 0);
+    if (!force && Date.now() - last < EVERY) return Promise.resolve();
+    U.store.set("alertRun", Date.now());
+    scheduling = doSchedule(force).finally(() => { scheduling = null; });
     return scheduling;
   }
-  async function doSchedule() {
-    const cfg = getCfg();
+  const cancelPending = async () => {
     try { await P.LocalNotifications.cancel({ notifications: [{ id: NID }] }); } catch (e) { /* */ }
-    if (!cfg.on) return;
+    U.store.set("alertSched", "");
+  };
+  async function doSchedule(force) {
+    const cfg = getCfg();
+    if (!cfg.on) { if (force || U.store.get("alertSched", "")) await cancelPending(); return; }
     let L = null;
     try { const r = await fetch(LATEST + "?t=" + Math.floor(Date.now() / 600000), { cache: "no-store" }); if (r.ok) { L = await r.json(); U.store.set("latestCache", L); } } catch (e) { /* دون اتصال */ }
     if (!L) L = U.store.get("latestCache", null);
     if (!L || !L.districts) return;
     const d = L.districts.find(x => x.id === cfg.d) || L.districts[0];
     const at = new Date(); at.setDate(at.getDate() + 1); at.setHours(cfg.h, 30, 0, 0);
-    const m = message(d, cfg, U.isoDate(at)); if (!m) return;
+    const m = message(d, cfg, U.isoDate(at));
+    // وضع «الشروط» ولا شرط متحقق: لا إشعار للغد (ونلغي أي إشعار سابق لم يصل بعد)
+    if (!m) { if (U.store.get("alertSched", "")) await cancelPending(); return; }
+    // نفس الإشعار مضبوط أصلاً: لا نلمسه
+    const key = JSON.stringify([at.getTime(), d.id, m.title, m.body]);
+    if (!force && U.store.get("alertSched", "") === key) return;
+    // الجدولة بنفس الرقم تستبدل المنبّه السابق، ولا تمسّ إشعاراً ظاهراً في الشريط
     await P.LocalNotifications.schedule({ notifications: [{ id: NID, title: m.title, body: m.body, schedule: { at, allowWhileIdle: true }, isExactNotification: false, extra: { d: d.id }, smallIcon: "ic_stat_ecobio", iconColor: "#4FC8DC" }] });
+    U.store.set("alertSched", key);
   }
   async function setAlert(patch) {
     const cfg = Object.assign(getCfg(), patch);
