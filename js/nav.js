@@ -31,6 +31,10 @@
       lead: "بحوث جامعة تكريت المنشورة على الخريطة، والمواقع والملوثات التي لم تُدرس بعد، وتقارير PDF جاهزة للعرض على المشرف.",
       photo: { src: "assets/photos/board.webp", alt: "لوحة جامعة تكريت – كلية التربية للعلوم الصرفة" },
       tools: ["research", "scholar", "gaps", "reports"] },
+    { id: "help", n: 0, label: "الدليل", icon: "i-learn", hue: "#f0a6c8",
+      q: "كيف تستعمل المنصة في بحثك؟",
+      lead: "درس لكل أداة بمنهجيتها ومراجعها وحدود دقتها، ومسارات جاهزة حسب نوع بحثك، وأسئلة يجيب عنها Gemini من دليل المنصة نفسه.",
+      tools: ["learn", "faq", "assistant"] },
     { id: "department", n: 0, label: "القسم", icon: "i-building", hue: "#c4d3cf",
       q: "قسم علوم الحياة – جامعة تكريت",
       lead: "تجوّل في القسم ومختبراته بثلاثة أبعاد، وتعرّف على أهداف المنصة ومنهجيتها وحدود دقتها.",
@@ -122,6 +126,14 @@
       desc: "تجوّل داخل قسم علوم الحياة بطابقيه، وادخل المختبرات واضغط على الأجهزة لتعرف ما تقيسه.",
       need: "لا شيء", get: "معرفة مختبرات القسم وأجهزته",
       kw: "جوله قسم مختبرات اجهزه ثلاثي الابعاد كليه" },
+    learn: { label: "دليل المنصة", icon: "i-learn", isNew: true,
+      desc: "درس عملي لكل أداة: لمن هي، وخطوات العمل، وكيف تقرأ النتيجة، والمنهجية ومراجعها، وحدود الدقة، مع مسارات حسب نوع بحثك.",
+      need: "لا شيء", get: "طريقة صحيحة لاستعمال كل أداة في رسالتك",
+      kw: "دليل تعليم شرح درس دروس طريقة الاستخدام كيف استخدم خطوات منهجية مراجع حدود الدقة مسار استشهاد" },
+    faq: { label: "الأسئلة والأجوبة", icon: "i-qa", isNew: true,
+      desc: "اسأل عن أي أداة أو بيانات أو منهجية، فيجيبك Gemini من دليل المنصة مع روابط الأدوات، وأسئلة شائعة بإجابات موثقة.",
+      need: "سؤالك", get: "إجابة مبنية على دليل المنصة",
+      kw: "اسئلة اجوبة سؤال شائع مساعدة استفسار مشكلة دعم Gemini" },
     about: { label: "عن المشروع", icon: "i-info",
       desc: "أهداف المنصة ومنهجيتها وحدود دقتها ومصادر بياناتها.",
       need: "", get: "",
@@ -153,6 +165,8 @@
     research: [["gaps", "اعرف ماذا بقي دون دراسة"], ["analyzer", "قارن نتائجك بالمنشور"]],
     gaps: [["samples", "خطّط مواقع عيّناتك"], ["research", "اقرأ البحوث السابقة"]],
     reports: [["research", "راجع بحوث الجامعة"], ["analyzer", "حلّل جدول نتائجك"]],
+    learn: [["faq", "اسأل عما لم تجده في الدليل"], ["analyzer", "ابدأ بتحليل جدول نتائجك"]],
+    faq: [["learn", "اقرأ درس الأداة كاملاً"], ["scholar", "اجمع المراجع المنشورة لموضوعك"]],
     campus: [["about", "اعرف أهداف المنصة ومنهجيتها"]],
     about: [["campus", "تجوّل في القسم ثلاثي الأبعاد"]]
   };
@@ -185,8 +199,7 @@
       <a href="#home" data-v="home">${ico("i-home")}<span>الرئيسية</span></a>
       ${SECTIONS.map(s => `<div class="dr-group" style="--hue:${s.hue}"><a class="dr-title" href="#${s.id}" data-sec-link="${s.id}">${ico(s.icon)}<span>${s.label}<small>${esc(s.q)}</small></span></a>
         ${s.tools.map(t => `<a href="#${t}" data-v="${t}" class="dr-item"><span>${esc(TOOLS[t].label)}${TOOLS[t].isNew ? ` <i class="tag-new">جديد</i>` : ""}</span></a>`).join("")}</div>`).join("")}
-      <div class="dr-group"><a href="#assistant" data-v="assistant">${ico("i-chat")}<span>المساعد الذكي<small>اسأل عن التلوث والمعالجة</small></span></a>
-      <button type="button" class="dr-btn" data-open-settings>${ico("i-gear")}<span>إعدادات المساعد</span></button></div>`;
+      <div class="dr-group"><button type="button" class="dr-btn" data-open-settings>${ico("i-gear")}<span>إعدادات المساعد</span></button></div>`;
   }
 
   function bottomHTML() {
@@ -252,7 +265,7 @@
       </div>
       ${SECTIONS.map(s => `<nav class="foot-col" aria-label="${s.label}" style="--hue:${s.hue}"><a class="fc-h" href="#${s.id}">${s.label}</a>${s.tools.map(t => `<a href="#${t}">${esc(TOOLS[t].label)}</a>`).join("")}</nav>`).join("")}
     </div>
-    <div class="wrap foot-bar"><span id="foot-l"></span><span class="foot-links"><a href="privacy.html">سياسة الخصوصية</a><a href="#assistant">المساعد الذكي</a></span></div>`;
+    <div class="wrap foot-bar"><span id="foot-l"></span><span class="foot-links"><a href="#learn">دليل المنصة</a><a href="#faq">الأسئلة والأجوبة</a><a href="privacy.html">سياسة الخصوصية</a></span></div>`;
   }
 
   function buildShell() {
@@ -275,6 +288,7 @@
   /* ------------------------------------------------------------------
      «أنت هنا» + أدوات القسم نفسه + الخطوة التالية (تُضاف لكل أداة مرة واحدة)
   ------------------------------------------------------------------ */
+  const NO_LESSON = new Set(["learn", "faq", "about", "review"]);
   function decorate(v) {
     const view = document.getElementById("view-" + v), s = SEC_OF[v];
     if (!view || view.dataset.decorated) return;
@@ -284,7 +298,8 @@
       const sibs = s.tools.length > 1 ? `<div class="sibs" role="list">${s.tools.map(t => `<a role="listitem" href="#${t}"${t === v ? ' aria-current="page"' : ""}>${ico(TOOLS[t].icon)}<span>${esc(TOOLS[t].label)}</span></a>`).join("")}</div>` : "";
       const cr = document.createElement("nav");
       cr.className = "crumbs"; cr.setAttribute("aria-label", "أنت هنا");
-      cr.innerHTML = `<div class="crumbs-in"><ol class="crumb-trail"><li><a href="#home">الرئيسية</a></li><li><a class="c-sec" href="#${s.id}">${ico(s.icon)}${s.label}</a></li><li aria-current="page">${esc(TOOLS[v].label)}</li></ol>${sibs}</div>`;
+      const lesson = !NO_LESSON.has(v) ? `<a class="c-learn" href="#learn&t=${v}">${ico("i-learn")}<span>دليل الأداة</span></a>` : "";
+      cr.innerHTML = `<div class="crumbs-in"><ol class="crumb-trail"><li><a href="#home">الرئيسية</a></li><li><a class="c-sec" href="#${s.id}">${ico(s.icon)}${s.label}</a></li><li aria-current="page">${esc(TOOLS[v].label)}</li></ol>${lesson}${sibs}</div>`;
       view.insertBefore(cr, view.firstChild);
     }
     const nx = (NEXT[v] || []).filter(([t]) => has(t));
