@@ -76,7 +76,15 @@
     };
     U.$(`#${id}-go`).onclick = () => done(TB.parseText(U.$(`#${id}-paste`).value), "بيانات ملصوقة");
     if (o.template) U.$(`#${id}-tpl`).onclick = () => ECO.xlsx.download(ECO.xlsx.write([{ name: o.templateSheet || "بياناتي", rows: o.template }]), o.templateName || "قالب-EcoBio.xlsx");
-    host.querySelectorAll("[data-demo]").forEach(b => b.onclick = () => { const d = o.demos[+b.dataset.demo]; done(d.rows(), d.label, { demo: d }); });
+    /* البيانات التجريبية قد تُجلب من الشبكة (دالة غير متزامنة) */
+    host.querySelectorAll("[data-demo]").forEach(b => b.onclick = async () => {
+      const d = o.demos[+b.dataset.demo];
+      if (b.disabled) return;
+      b.disabled = true; b.setAttribute("aria-busy", "true");
+      try { done(await d.rows(), d.label, { demo: d }); }
+      catch (x) { U.toast("تعذّر جلب البيانات التجريبية: " + (x && x.message ? x.message : "تحقق من الاتصال")); }
+      finally { b.disabled = false; b.removeAttribute("aria-busy"); }
+    });
   };
 
   /* تنزيل أوراق Excel */
