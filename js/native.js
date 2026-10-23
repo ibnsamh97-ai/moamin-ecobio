@@ -99,7 +99,19 @@
     const title = dusty && cfg.dust ? "غبار مرجّح اليوم" : unhealthy ? "هواء غير صحي متوقّع اليوم" : low && cfg.low ? "تصريف دجلة منخفض" : "حالة البيئة اليوم";
     return { title, body: `${d.name_ar}: ${out.join(" · ")}. اضغط للتفاصيل.` };
   }
-  async function schedule() {
+  // الإضافة (local-notifications 8.3) تطلب «المنبهات الدقيقة» افتراضياً، وتفتح صفحة إعداداتها في كل جدولة.
+  // التطبيق لا يطلب هذا الإذن أصلاً (مُزال من AndroidManifest) فيبقى زرّها معطّلاً، والرجوع منها يُطلق
+  // resume فجدولة فصفحة الإعدادات من جديد بلا نهاية. لذلك نطلب تنبيهاً غير دقيق (isExactNotification: false):
+  // يصل في موعده تقريباً، ولا يحتاج أي إذن إضافي.
+  let scheduling = null, lastRun = 0;
+  function schedule(force) {
+    if (scheduling) return force ? scheduling.catch(() => {}).then(() => schedule(true)) : scheduling;
+    if (!force && Date.now() - lastRun < 10 * 60000) return Promise.resolve();
+    lastRun = Date.now();
+    scheduling = doSchedule().finally(() => { scheduling = null; });
+    return scheduling;
+  }
+  async function doSchedule() {
     const cfg = getCfg();
     try { await P.LocalNotifications.cancel({ notifications: [{ id: NID }] }); } catch (e) { /* */ }
     if (!cfg.on) return;
@@ -110,7 +122,7 @@
     const d = L.districts.find(x => x.id === cfg.d) || L.districts[0];
     const at = new Date(); at.setDate(at.getDate() + 1); at.setHours(cfg.h, 30, 0, 0);
     const m = message(d, cfg, U.isoDate(at)); if (!m) return;
-    await P.LocalNotifications.schedule({ notifications: [{ id: NID, title: m.title, body: m.body, schedule: { at, allowWhileIdle: true }, extra: { d: d.id }, smallIcon: "ic_stat_ecobio", iconColor: "#4FC8DC" }] });
+    await P.LocalNotifications.schedule({ notifications: [{ id: NID, title: m.title, body: m.body, schedule: { at, allowWhileIdle: true }, isExactNotification: false, extra: { d: d.id }, smallIcon: "ic_stat_ecobio", iconColor: "#4FC8DC" }] });
   }
   async function setAlert(patch) {
     const cfg = Object.assign(getCfg(), patch);
@@ -120,7 +132,8 @@
       if (p.display !== "granted") { U.toast("لم يُسمح بالإشعارات. فعّلها من إعدادات الجهاز."); cfg.on = false; }
     }
     U.store.set("dailyAlert", cfg);
-    await schedule();
+    try { await schedule(true); }
+    catch (e) { cfg.on = false; U.store.set("dailyAlert", cfg); U.toast("تعذّر ضبط التنبيه. تأكد أن إشعارات التطبيق مسموحة من إعدادات الجهاز."); }
     paintAlert();
   }
   function paintAlert() {
