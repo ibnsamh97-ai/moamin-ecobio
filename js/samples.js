@@ -177,18 +177,37 @@
   function checkShared() {
     const m = location.hash.match(/samples=([A-Za-z0-9_-]+)/); if (!m) return;
     try {
+      /* رابط المشاركة قد يصنعه أي شخص: نقبل مصفوفة فقط، ونعرض العدد رقماً */
       const arr = JSON.parse(b64d(m[1]));
-      U.$("#smp-import-bar").innerHTML = `<div class="notice info" style="margin-bottom:14px"><span>وصلك رابط فيه <b>${arr.length}</b> عينة مشتركة.</span><button class="btn btn-sm btn-primary" type="button" id="smp-imp-ok">أضفها إلى خريطتي</button><button class="btn btn-sm btn-ghost" type="button" id="smp-imp-no">تجاهل</button></div>`;
-      U.$("#smp-imp-ok").onclick = () => { addMany(arr.map(o => ({ code: o.c, site: o.s, type: o.t, date: o.d, lat: o.la, lon: o.lo, v: o.v || {}, notes: o.n, by: o.b }))); U.$("#smp-import-bar").innerHTML = ""; history.replaceState(null, "", "#samples"); };
+      if (!Array.isArray(arr) || !arr.length) return;
+      const list = arr.slice(0, 500).filter(o => o && typeof o === "object");
+      U.$("#smp-import-bar").innerHTML = `<div class="notice info" style="margin-bottom:14px"><span>وصلك رابط فيه <b>${list.length}</b> عينة مشتركة.</span><button class="btn btn-sm btn-primary" type="button" id="smp-imp-ok">أضفها إلى خريطتي</button><button class="btn btn-sm btn-ghost" type="button" id="smp-imp-no">تجاهل</button></div>`;
+      U.$("#smp-imp-ok").onclick = () => { addMany(list.map(o => ({ code: o.c, site: o.s, type: o.t, date: o.d, lat: o.la, lon: o.lo, v: o.v, notes: o.n, by: o.b }))); U.$("#smp-import-bar").innerHTML = ""; history.replaceState(null, "", "#samples"); };
       U.$("#smp-imp-no").onclick = () => { U.$("#smp-import-bar").innerHTML = ""; history.replaceState(null, "", "#samples"); };
     } catch (e) { console.warn(e); }
   }
+  /* تنظيف أي عيّنة واردة من رابط أو ملف: الحقول المعروفة فقط، نصوص محدودة الطول، وأرقام صحيحة */
+  const txt = (v, max) => (v == null ? "" : String(v)).replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, max);
+  function cleanImport(o) {
+    const lat = Number(o.lat), lon = Number(o.lon);
+    if (!isFinite(lat) || !isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) return null;
+    const v = {};
+    if (o.v && typeof o.v === "object") PARAMS().forEach(p => { const x = Number(o.v[p.key]); if (o.v[p.key] !== "" && o.v[p.key] != null && isFinite(x)) v[p.key] = x; });
+    const temp = Number(o.temp);
+    const c = { code: txt(o.code, 24), site: txt(o.site, 120), type: ECO.SAMPLE_TYPES && ECO.SAMPLE_TYPES.includes(o.type) ? o.type : "مياه نهر",
+      date: /^\d{4}-\d{2}-\d{2}$/.test(String(o.date || "")) ? String(o.date) : "", time: /^\d{2}:\d{2}$/.test(String(o.time || "")) ? String(o.time) : "",
+      by: txt(o.by, 80), notes: txt(o.notes, 800), lat, lon, v };
+    if (isFinite(temp) && o.temp !== "" && o.temp != null) c.temp = temp;
+    if (!c.code) delete c.code;
+    return c;
+  }
   function addMany(arr) {
     let n = 0;
-    arr.forEach(o => {
-      if (!U.isNum(o.lat) || !U.isNum(o.lon)) return;
-      const s = evalSample({ id: "s" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), created: Date.now(), ...o });
-      if (S.list.some(x => x.code === s.code)) s.code = nextCode();
+    arr.forEach(raw => {
+      const o = raw && typeof raw === "object" ? cleanImport(raw) : null;
+      if (!o) return;
+      const s = evalSample({ ...o, id: "s" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), created: Date.now() });
+      if (!s.code || S.list.some(x => x.code === s.code)) s.code = nextCode();
       S.list.push(s); n++;
     });
     save(); render(); fit(); U.toast(`أُضيفت ${n} عينة`);

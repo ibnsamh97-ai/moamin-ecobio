@@ -234,7 +234,7 @@
     if (!c.time) {
       // لا نعرض أرقاماً بديلة: إما انتظار أول جلب، أو رسالة واضحة عند انقطاع الاتصال
       box.innerHTML = head + (ECO.state.mode === "offline"
-        ? `<p class="hl-empty">القراءات الحية غير متاحة الآن، ولا تعرض المنصة أرقاماً تقديرية بدلها.</p><button type="button" class="btn btn-sm" onclick="ECO.data.refreshAll()"><svg aria-hidden="true"><use href="#i-refresh"/></svg>إعادة المحاولة</button>`
+        ? `<p class="hl-empty">القراءات الحية غير متاحة الآن، ولا تعرض المنصة أرقاماً تقديرية بدلها.</p><button type="button" class="btn btn-sm" data-refresh-all><svg aria-hidden="true"><use href="#i-refresh"/></svg>إعادة المحاولة</button>`
         : `<div class="hl-skel" aria-hidden="true"><i></i><i></i><i></i></div><p class="hl-empty">جارٍ جلب القراءات من Copernicus CAMS…</p>`);
       box.classList.toggle("is-empty", true);
     } else {

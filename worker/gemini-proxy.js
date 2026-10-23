@@ -18,6 +18,7 @@
                                      https://username.github.io
                                      (عدة روابط تُفصل بفاصلة)          (إلزامي)
      RATE_PER_MIN     نوعه Text    — أقصى طلبات للزائر الواحد في الدقيقة (اختياري، الافتراضي 10)
+     RATE_PER_HOUR    نوعه Text    — أقصى طلبات للزائر الواحد في الساعة (اختياري، الافتراضي 120)
      MODEL            نوعه Text    — فرض نموذج واحد لكل الطلبات (اختياري)
      FALLBACK_MODELS  نوعه Text    — نماذج بديلة عند نفاد حصة النموذج الأول،
                                      مفصولة بفاصلة (اختياري، الافتراضي gemini-flash-lite-latest)
@@ -29,7 +30,13 @@
 
 const UPSTREAM = "https://generativelanguage.googleapis.com";
 const MAX_BODY = 14 * 1024 * 1024;           // حد حجم الطلب (صور وملفات PDF)
-const MODEL_RE = /^gemini-[a-z0-9.\-]+$/i;   // نماذج Gemini النصية فقط
+// نماذج Flash وFlash-Lite النصية فقط: أرخص النماذج وأعلاها حصة مجانية، فلا يستهلك أحد المفتاح في نماذج Pro
+// أو توليد الصور والصوت حتى لو تجاوز فحص الأصل بأداة مثل curl
+const MODEL_RE = /^gemini-(?:[0-9.]+-)?flash(?:-lite)?(?:-latest|-preview(?:-[0-9a-z-]+)?|-[0-9]{3})?$/i;
+const MODEL_BAD = /image|tts|audio|live|native|embed/i;
+const modelOk = m => MODEL_RE.test(m || "") && !MODEL_BAD.test(m || "");
+const PENDING_MAX = 300;                      // أقصى عدد مساهمات تنتظر المراجعة (حماية من الإغراق)
+const hourly = new Map();                     // سقف الطلبات لكل زائر في الساعة
 const hits = new Map();                       // عدّاد الطلبات لكل زائر (تقريبي)
 
 function list(v) {
@@ -125,6 +132,8 @@ async function sites(req, env, path, ip, reply, fail) {
     if (over(subs, ip, 6, 3600000)) return fail(429, "TOO_MANY_SUBMISSIONS", "Too many submissions from this visitor. Try again later.");
     const { s, errors } = cleanSite(b.data);
     if (errors.length) return reply(400, { error: { code: 400, status: "INVALID_FIELDS", message: "Some fields are invalid.", fields: errors } });
+    const queued = await env.SITES.list({ prefix: "p:", limit: PENDING_MAX + 1 });
+    if (queued.keys.length > PENDING_MAX) return fail(503, "QUEUE_FULL", "The review queue is full. Try again after the supervisor reviews pending submissions.");
     mark(subs, ip);
     s.id = crypto.randomUUID().replace(/-/g, "").slice(0, 12);
     s.submitted = new Date().toISOString();
@@ -297,11 +306,11 @@ export default {
       "Vary": "Origin"
     };
     const reply = (status, obj) => new Response(JSON.stringify(obj), {
-      status, headers: { ...cors, "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" }
+      status, headers: { ...cors, "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" }
     });
     const fail = (status, code, message) => reply(status, { error: { code: status, status: code, message } });
     const raw = (status, text) => new Response(text, {
-      status, headers: { ...cors, "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" }
+      status, headers: { ...cors, "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" }
     });
     // تمرير صورة كما هي مع رؤوس CORS حتى تعمل داخل WebGL
     const bin = up => new Response(up.body, {
@@ -347,24 +356,29 @@ export default {
     /* قائمة النماذج */
     if (req.method === "GET" && path === "/v1beta/models") {
       const up = await fetch(`${UPSTREAM}/v1beta/models?pageSize=200`, { headers: { "x-goog-api-key": env.GEMINI_KEY } });
-      return new Response(up.body, { status: up.status, headers: { ...cors, "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" } });
+      if (!up.ok) return new Response(up.body, { status: up.status, headers: { ...cors, "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" } });
+      // نعرض للزائر النماذج المسموحة على هذا الخادم فقط
+      const j = await up.json().catch(() => ({ models: [] }));
+      return reply(200, { models: (j.models || []).filter(x => modelOk(String(x.name || "").replace(/^models\//, ""))) });
     }
 
     /* التوليد */
     const m = path.match(/^\/v1beta\/models\/([^/:]+):(generateContent|streamGenerateContent)$/);
     if (req.method !== "POST" || !m) return fail(404, "NOT_ALLOWED", "Only model listing and content generation are available.");
     const asked = decodeURIComponent(m[1]);
-    if (!MODEL_RE.test(asked)) return fail(400, "MODEL_NOT_ALLOWED", "Only Gemini text models are available on this server.");
+    if (!modelOk(asked)) return fail(400, "MODEL_NOT_ALLOWED", "Only Gemini Flash text models are available on this server.");
 
     if (limited(ip, Number(env.RATE_PER_MIN) || 10)) return fail(429, "VISITOR_RATE_LIMIT", "Too many requests from this visitor. Wait a minute.");
+    if (over(hourly, ip, Number(env.RATE_PER_HOUR) || 120, 3600000)) return fail(429, "VISITOR_RATE_LIMIT", "Too many requests from this visitor this hour. Try again later.");
+    mark(hourly, ip);
 
     const len = Number(req.headers.get("Content-Length") || 0);
     if (len > MAX_BODY) return fail(413, "TOO_LARGE", "The attached file is too large.");
     const body = await req.arrayBuffer();
     if (body.byteLength > MAX_BODY) return fail(413, "TOO_LARGE", "The attached file is too large.");
 
-    const first = MODEL_RE.test(env.MODEL || "") ? env.MODEL : asked;
-    const fallbacks = (env.FALLBACK_MODELS === undefined ? ["gemini-flash-lite-latest"] : list(env.FALLBACK_MODELS)).filter(x => MODEL_RE.test(x));
+    const first = modelOk(env.MODEL) ? env.MODEL : asked;
+    const fallbacks = (env.FALLBACK_MODELS === undefined ? ["gemini-flash-lite-latest"] : list(env.FALLBACK_MODELS)).filter(modelOk);
     const models = [first, ...fallbacks.filter(x => x !== first)];
     const query = m[2] === "streamGenerateContent" ? "?alt=sse" : "";
 

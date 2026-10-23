@@ -234,7 +234,7 @@
 
   function readHash() {
     const h = decodeURIComponent(location.hash.slice(1)).split("&").slice(1);
-    h.forEach(kv => { const [k, v] = kv.split("="); if (k === "d" && v) S.d = v; if (k === "t" && TABS.some(t => t[0] === v)) S.tab = v; });
+    h.forEach(kv => { const [k, v] = kv.split("="); if (k === "d" && /^[a-z_]{2,24}$/.test(v || "") && (!S.D || S.D.some(d => d.id === v))) S.d = v; if (k === "t" && TABS.some(t => t[0] === v)) S.tab = v; });
   }
   function writeHash() {
     const h = `#districts&d=${S.d}&t=${S.tab}`;

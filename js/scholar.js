@@ -24,7 +24,7 @@
     const j = await r.json();
     return (j.results || []).map((w, i) => ({
       n: i + 1, title: w.title || "", year: w.publication_year, doi: w.doi ? w.doi.replace("https://doi.org/", "") : "",
-      url: w.doi || w.id, cites: w.cited_by_count || 0,
+      url: /^https:\/\//.test(w.doi || w.id || "") ? (w.doi || w.id) : "", cites: w.cited_by_count || 0,
       journal: (w.primary_location && w.primary_location.source && w.primary_location.source.display_name) || "",
       authors: (w.authorships || []).slice(0, 3).map(a => a.author && a.author.display_name).filter(Boolean).join("، ") + ((w.authorships || []).length > 3 ? " وآخرون" : ""),
       abstract: abstractOf(w.abstract_inverted_index).slice(0, 1800)

@@ -282,7 +282,11 @@
   G.proxy = () => String(ECO.GEMINI_PROXY || "").trim().replace(/\/+$/, "");
   /* personal = مفتاح المستخدم في متصفحه، shared = الخادم المشترك، "" = غير مفعّل */
   G.mode = () => G.key() ? "personal" : (G.proxy() ? "shared" : "");
-  G.model = () => U.store.get("gemini_model", ECO.GEMINI_DEFAULT_MODEL) || ECO.GEMINI_DEFAULT_MODEL;
+  /* الخادم المشترك يقبل نماذج Flash فقط؛ من اختار نموذجاً آخر بلا مفتاح شخصي يُعاد إلى الافتراضي */
+  G.model = () => {
+    const m = U.store.get("gemini_model", ECO.GEMINI_DEFAULT_MODEL) || ECO.GEMINI_DEFAULT_MODEL;
+    return !G.key() && !/flash/i.test(m) ? ECO.GEMINI_DEFAULT_MODEL : m;
+  };
   G.ready = () => !!G.mode();
   G.label = () => G.mode() === "shared" ? "متاح للجميع · Gemini" : G.mode() === "personal" ? "مفتاحك · " + G.model() : "غير مفعّل";
   const API = "https://generativelanguage.googleapis.com/v1beta";
@@ -317,7 +321,8 @@
         ? "المساعد المشترك لا يعمل عند فتح الموقع من ملف على الجهاز. افتح الموقع من رابطه على GitHub Pages."
         : `خادم المساعد لا يقبل الطلبات من هذا الرابط: ${location.origin} (لصاحب الموقع: أضف هذا الرابط إلى ALLOWED_ORIGINS في إعدادات الـ Worker)`;
       if (code === "GEMINI_KEY_MISSING") return "خادم المساعد يعمل لكن مفتاح Gemini لم يُضَف إليه بعد (GEMINI_KEY).";
-      if (code === "VISITOR_RATE_LIMIT") return "أرسلت طلبات كثيرة خلال دقيقة واحدة. انتظر قليلاً ثم أعد المحاولة.";
+      if (code === "VISITOR_RATE_LIMIT") return "أرسلت طلبات كثيرة في وقت قصير. انتظر قليلاً ثم أعد المحاولة.";
+      if (code === "MODEL_NOT_ALLOWED") return "الخادم المشترك يعمل بنماذج Gemini Flash فقط. اختر نموذج Flash من الإعدادات، أو أضف مفتاحك الشخصي لاستعمال غيره.";
       if (status === 429) return "استُهلكت الحصة المجانية للمساعد مؤقتاً بسبب كثرة الاستخدام. حاول بعد قليل، أو أضف مفتاحك المجاني الخاص من الإعدادات ليعمل عندك فوراً.";
       if (status === 400 && /API key/i.test(msg)) return "مفتاح Gemini المحفوظ في الخادم غير صالح. (لصاحب الموقع: حدّث GEMINI_KEY في Cloudflare)";
       if (status === 403) return "مفتاح الخادم لا يملك صلاحية استخدام Gemini API.";
@@ -555,9 +560,11 @@
     d.title = mode === "offline" ? "تعذّر الوصول لخوادم البيانات" : "متصل بخدمة Copernicus CAMS";
   });
   ECO.offlineNotice = () => ECO.state.mode === "offline"
-    ? `<div class="notice warn" style="margin-bottom:16px"><span>تعذّر الاتصال بخدمة بيانات الأقمار الصناعية الآن، لذلك لا تُعرض أي أرقام (لا نعرض بيانات وهمية). تأكد من الإنترنت ثم اضغط «إعادة المحاولة».</span><button class="btn btn-sm" type="button" onclick="ECO.data.refreshAll()">إعادة المحاولة</button></div>`
+    ? `<div class="notice warn" style="margin-bottom:16px"><span>تعذّر الاتصال بخدمة بيانات الأقمار الصناعية الآن، لذلك لا تُعرض أي أرقام (لا نعرض بيانات وهمية). تأكد من الإنترنت ثم اضغط «إعادة المحاولة».</span><button class="btn btn-sm" type="button" data-refresh-all>إعادة المحاولة</button></div>`
     : "";
   ECO.demoNotice = ECO.offlineNotice;
+  /* زر «إعادة المحاولة» في رسائل انقطاع البيانات (بلا onclick داخلي حتى تعمل سياسة أمان المحتوى) */
+  document.addEventListener("click", e => { if (e.target.closest && e.target.closest("[data-refresh-all]") && ECO.data && ECO.data.refreshAll) ECO.data.refreshAll(); });
 
   ECO.initCore = () => { initSettings(); init3DButtons(); };
 })();

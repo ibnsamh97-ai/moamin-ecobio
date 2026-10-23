@@ -27,6 +27,7 @@
     if (code === "ORIGIN_NOT_ALLOWED") return "الخادم لا يقبل الطلبات من هذا الرابط: " + location.origin;
     if (code === "NOT_FOUND") return "هذه المساهمة لم تعد موجودة (ربما رُوجعت من جهاز آخر).";
     if (code === "TOO_LARGE") return "البيانات أطول من المسموح.";
+    if (code === "QUEUE_FULL") return "قائمة المساهمات التي تنتظر المراجعة ممتلئة الآن. أعد الإرسال بعد أيام قليلة.";
     if (status === 404 && code === "NOT_ALLOWED") return "الخادم المشترك يعمل بنسخة قديمة لا تدعم مواقع الباحثين. (لصاحب الموقع: الصق كود الخادم الجديد في Cloudflare)";
     return `تعذّر إكمال الطلب (${status}).`;
   }
