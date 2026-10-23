@@ -468,3 +468,52 @@
   .faq-bar .seg { width: 100%; overflow-x: auto; flex-wrap: nowrap; }
   .faq-bar .input { max-width: none; }
 }
+
+/* =====================================================================
+   إدخال الجداول المشترك، مدقق النتائج، مصمّم التجارب
+   ===================================================================== */
+.tb-in { display: grid; gap: 12px; }
+.tb-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.tb-in textarea { font-size: .8rem; }
+.tb-in > .btn { justify-self: start; }
+.qc-cols { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.qc-cols .chip { white-space: normal; }
+.qc-units { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; font-size: .85rem; color: var(--muted); margin-bottom: 10px; }
+.qc-units label { display: inline-flex; align-items: center; gap: 6px; }
+.qc-units .input { width: auto; padding-block: 6px; }
+.qc-sum, .ex-opt { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin: 14px 0; }
+.ex-opt .db-kpi .v small { font-size: .72rem; color: var(--faint); font-weight: 400; margin-inline-start: 4px; }
+.qc-tbl td[data-k] { cursor: pointer; white-space: nowrap; }
+.qc-b { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 999px; font-size: .78rem; border: 1px solid transparent; }
+.qc-b svg { width: 14px; height: 14px; flex: none; }
+.qc-b i { font-style: normal; font-family: var(--f-mono); direction: ltr; }
+.qc-ok { color: var(--chloro); background: rgba(147, 221, 138, .08); border-color: rgba(147, 221, 138, .25); }
+.qc-warn { color: #f2cd8c; background: rgba(230, 174, 79, .1); border-color: rgba(230, 174, 79, .35); }
+.qc-fail { color: #f5b3b8; background: rgba(239, 90, 100, .1); border-color: rgba(239, 90, 100, .4); }
+.qc-na { color: var(--faint); }
+.qc-why { margin-top: 10px; padding: 10px 14px; border-radius: var(--r-sm); background: var(--ink-0); border: 1px solid var(--line-2); font-size: .9rem; line-height: 1.8; }
+.qc-issues { margin: 0; padding-inline-start: 22px; display: grid; gap: 8px; font-size: .9rem; line-height: 1.8; }
+.qc-issues li.qc-fail::marker { color: var(--crimson); }
+.qc-issues li.qc-warn::marker { color: var(--silt); }
+.qc-issues li { background: none; border: 0; padding: 0; color: #d3e5e0; }
+.qc-ref { padding-inline-start: 20px; display: grid; gap: 6px; font-size: .85rem; color: var(--muted); line-height: 1.8; }
+.ex-ft .input { min-width: 90px; padding-block: 7px; }
+.ex-ft td:nth-child(2) .input { min-width: 150px; }
+.ex-rt .input { width: 110px; padding-block: 6px; }
+.ex-rt tr.ex-cpt td { background: rgba(79, 200, 220, .06); }
+.tbl tr.sig td { background: rgba(147, 221, 138, .07); }
+.tbl tr.ex-sub td:first-child { padding-inline-start: 26px; color: var(--muted); }
+.ex-h4 { font-size: .95rem; margin: 18px 0 8px; color: var(--muted); }
+.ex-eq { font-family: var(--f-mono); font-size: .8rem; line-height: 1.8; padding: 10px 12px; margin-top: 12px; border-radius: var(--r-sm); background: var(--ink-0); border: 1px solid var(--line); overflow-wrap: anywhere; text-align: left; }
+.ex-note { font-size: .8rem; line-height: 1.7; margin: 10px 0; }
+.ex-cont-ctl { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-top: 16px; font-size: .85rem; color: var(--muted); }
+.ex-cont-ctl label { display: inline-flex; align-items: center; gap: 6px; }
+.ex-cont-ctl .input { width: auto; padding-block: 6px; }
+.ex-cont { margin-top: 10px; border-radius: var(--r-md); border: 1px solid var(--line); background: var(--ink-0); padding: 8px; }
+.ex-cont canvas { display: block; width: 100%; max-width: 640px; height: auto; margin-inline: auto; }
+#ex-tabs { margin-bottom: 16px; }
+#ad-mode, #cu-mode { margin-top: 4px; }
+.panel-h h3:has(> svg) { display: flex; align-items: center; gap: 8px; }
+.panel-h h3 > svg { width: 20px; height: 20px; flex: none; color: var(--river); vertical-align: -4px; margin-inline-end: 6px; }
+.panel-h h3:has(> svg) > svg { margin-inline-end: 0; }
+.notice > svg { width: 18px; height: 18px; flex: none; margin-top: 3px; }

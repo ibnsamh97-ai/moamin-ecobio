@@ -210,6 +210,35 @@
   </div>
 </section>
 
+<!-- ======================= مدقق نتائج المختبر ======================= -->
+<section class="view" id="view-qc" data-title="مدقق نتائج المختبر">
+  <div class="wrap">
+    <div class="view-head"><div>
+      <h2>مدقق نتائج المختبر</h2>
+      <p>قبل التحليل الإحصائي: يفحص صحة نتائج تحليل المياه بمعايير القبول في Standard Methods (القسم 1030E): توازن الأيونات، وTDS المقاس مقابل المحسوب، ونسبة TDS إلى التوصيلية، واتساق العسرة، وتشبع الأكسجين، وBOD مقابل COD، ووحدات العناصر الثقيلة، والقيم الشاذة. الحساب كله في متصفحك.</p>
+    </div></div>
+    <section class="panel"><div class="panel-h"><h3><span class="pl-step">1</span>جدول النتائج</h3><span class="sub">صف لكل عيّنة، وعمود لكل معيار (mg/L)</span></div><div id="qc-in"></div></section>
+    <div id="qc-out" data-mo-skip></div>
+  </div>
+</section>
+
+<!-- ======================= مصمّم ومحلّل التجارب ======================= -->
+<section class="view" id="view-exp" data-title="مصمّم ومحلّل التجارب">
+  <div class="wrap">
+    <div class="view-head"><div>
+      <h2>مصمّم ومحلّل التجارب</h2>
+      <p>صمّم تجارب المعالجة بمنهجية سطح الاستجابة (Box–Behnken وCCD)، وحلّل نتائجها بـ ANOVA واختبار عدم الملاءمة لتجد الظروف المثلى بفترة تنبؤ وتجربة تأكيد؛ واحسب الجرعة المثلى من اختبار الجرة؛ وقارن نماذج الامتزاز بملاءمة غير خطية ومعيار AICc؛ واحسب ثوابت التحلل ونصف العمر ومعاملات النمو. تُحفظ تجربتك في جهازك لتكملها لاحقاً.</p>
+    </div></div>
+    <div class="an-tabs" id="ex-tabs" role="tablist" aria-label="أدوات التجارب">
+      <button type="button" role="tab" data-tab="doe" aria-selected="true">تصميم التجارب RSM</button>
+      <button type="button" role="tab" data-tab="jar" aria-selected="false">اختبار الجرة</button>
+      <button type="button" role="tab" data-tab="ads" aria-selected="false">نماذج الامتزاز</button>
+      <button type="button" role="tab" data-tab="cur" aria-selected="false">منحنيات التحلل والنمو</button>
+    </div>
+    <div id="ex-doe" data-mo-skip></div><div id="ex-jar" data-mo-skip hidden></div><div id="ex-ads" data-mo-skip hidden></div><div id="ex-cur" data-mo-skip hidden></div>
+  </div>
+</section>
+
 <!-- ======================= الرصد الفضائي ======================= -->
 <section class="view" id="view-monitor" data-title="الرصد الفضائي">
   <div class="wrap">
@@ -1302,11 +1331,15 @@
 <script src="js/calc.js"></script>
 <script src="js/plant.js"></script>
 <script src="js/stats.js"></script>
+<script src="js/fitlib.js"></script>
 <script src="js/xlsx-lite.js"></script>
+<script src="js/tabular.js"></script>
 <script src="js/analyzer.js"></script>
 <script src="js/districts.js"></script>
 <script src="js/vision.js"></script>
 <script src="js/help.js"></script>
+<script src="js/qc.js"></script>
+<script src="js/exp.js"></script>
 <script src="js/app.js"></script>
 <script src="js/reactbits.js"></script>
 <script src="js/motion.js"></script>
