@@ -1,0 +1,7 @@
+version=1.0.1
+versionCode=21
+signed=true
+commit=74d76e3f6930b38391c188b1b3aafcbadeb2b63d
+built=2026-10-23T20:20:38Z
+aab_bytes=7296664
+apk_bytes=7531314
