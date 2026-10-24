@@ -1,0 +1,107 @@
+[ok   ] air.shirqat                  rows=      5     0.4s  2026-10-19 → 2026-10-23
+[ok   ] air.cams_forecast.shirqat    rows=      9     0.4s  
+[ok   ] air.baiji                    rows=      5     0.4s  2026-10-19 → 2026-10-23
+[ok   ] air.cams_forecast.baiji      rows=      9     0.4s  
+[ok   ] air.tikrit                   rows=      5     0.4s  2026-10-19 → 2026-10-23
+[ok   ] air.cams_forecast.tikrit     rows=      9     0.4s  
+[ok   ] air.dour                     rows=      5     0.4s  2026-10-19 → 2026-10-23
+[ok   ] air.cams_forecast.dour       rows=      9     0.4s  
+[ok   ] air.samarra                  rows=      5     0.4s  2026-10-19 → 2026-10-23
+[ok   ] air.cams_forecast.samarra    rows=      9     0.4s  
+[ok   ] air.balad                    rows=      5     0.4s  2026-10-19 → 2026-10-23
+[ok   ] air.cams_forecast.balad      rows=      9     0.4s  
+[ok   ] weather.shirqat              rows=      8     0.8s  ERA5 حتى 2026-10-23، وتنبؤ لـ 3 يوماً
+[ok   ] weather.baiji                rows=      8     0.8s  ERA5 حتى 2026-10-23، وتنبؤ لـ 3 يوماً
+[ok   ] weather.tikrit               rows=      8     0.7s  ERA5 حتى 2026-10-23، وتنبؤ لـ 3 يوماً
+[ok   ] weather.dour                 rows=      8     0.5s  ERA5 حتى 2026-10-23، وتنبؤ لـ 3 يوماً
+[ok   ] weather.samarra              rows=      8     0.5s  ERA5 حتى 2026-10-23، وتنبؤ لـ 3 يوماً
+[ok   ] weather.balad                rows=      8     0.8s  ERA5 حتى 2026-10-23، وتنبؤ لـ 3 يوماً
+[ok   ] station.metar.kirkuk         rows=      5     1.2s  84 رصداً ساعياً حقيقياً منذ 2026-10-19
+[ok   ] station.era5.kirkuk          rows=      1     0.4s  2026-10-23 → 2026-10-23
+[ok   ] station.cams.kirkuk          rows=      4    92.5s  2026-10-20 →
+[ok   ] station.metar.baghdad        rows=      5     1.3s  110 رصداً ساعياً حقيقياً منذ 2026-10-19
+[ok   ] station.era5.baghdad         rows=      1     0.4s  2026-10-23 → 2026-10-23
+[ok   ] station.cams.baghdad         rows=      4     0.4s  2026-10-20 →
+[ok   ] station.metar.erbil          rows=      5     1.2s  114 رصداً ساعياً حقيقياً منذ 2026-10-19
+[ok   ] station.era5.erbil           rows=      1     0.4s  2026-10-23 → 2026-10-23
+[ok   ] station.cams.erbil           rows=      4     0.4s  2026-10-20 →
+[ok   ] station.metar.tikrit_ab      rows=      0     0.0s  أرشيف منتهٍ ومحفوظ سابقاً
+[ok   ] station.era5.tikrit_ab       rows=      0     0.0s  
+[ok   ] station.metar.baiji_ab       rows=      0     0.0s  أرشيف منتهٍ ومحفوظ سابقاً
+[ok   ] station.era5.baiji_ab        rows=      0     0.0s  
+[ok   ] station.metar.balad_ab       rows=      0     0.0s  أرشيف منتهٍ ومحفوظ سابقاً
+[ok   ] station.era5.balad_ab        rows=      0     0.0s  
+[ok   ] station.bias                 rows=    270     0.1s  
+[ok   ] station.districts            rows=     12     0.0s  
+[ok   ] river.shirqat                rows=      5     0.4s  2026-10-19 →
+[ok   ] river.baiji                  rows=      5     0.4s  2026-10-19 →
+[ok   ] river.tikrit                 rows=      5     0.4s  2026-10-19 →
+[ok   ] river.dour                   rows=      5     0.4s  2026-10-19 →
+[ok   ] river.samarra                rows=      5    92.6s  2026-10-19 →
+[ok   ] river.balad                  rows=      5     0.4s  2026-10-19 →
+[ok   ] water_rs.sentinel2           rows=     12     8.3s  12 مهمة (قضاء × شهر)، 12 شهراً بمشهد صافٍ
+[ok   ] sat.fires_modis              rows=      0     3.8s  عولج 0 من 0 مشهداً متبقياً
+[ok   ] sat.ndvi_modis               rows=      0     5.3s  عولج 0 من 0 مشهداً متبقياً
+[ok   ] sat.river_lst_landsat        rows=      0    31.2s  عولج 0 من 3 مشهداً متبقياً
+[ok   ] sat.gases_s5p                rows=    872   744.7s  عولج 285 من 252 مشهداً متبقياً
+[ok   ] research.studies             rows=    256     0.2s  7 بحثاً، 6 ربطاً بالأقضية
+[ok   ] ai.forecast.shirqat          rows=     10     9.3s  الأفضل لليوم التالي: gradient_boosting (RMSE 39.8، R² 0.235، المهارة 0.1527)
+[ok   ] ai.forecast.baiji            rows=     10    17.6s  الأفضل لليوم التالي: random_forest (RMSE 46.073، R² 0.1468، المهارة 0.1038)
+[ok   ] ai.forecast.tikrit           rows=     10     6.8s  الأفضل لليوم التالي: gradient_boosting (RMSE 44.228، R² 0.2138، المهارة 0.1397)
+[ok   ] ai.forecast.dour             rows=     10    18.1s  الأفضل لليوم التالي: random_forest (RMSE 49.209، R² 0.1276، المهارة 0.0819)
+[ok   ] ai.forecast.samarra          rows=     10    17.6s  الأفضل لليوم التالي: random_forest (RMSE 36.282، R² 0.1118، المهارة 0.0237)
+[ok   ] ai.forecast.balad            rows=     10    18.0s  الأفضل لليوم التالي: random_forest (RMSE 35.93، R² 0.129، المهارة 0.0332)
+[ok   ] ai.anomalies                 rows=    186     0.0s  Isolation Forest، نسبة التلوث المتوقعة 2%
+[ok   ] ai.anomalies_wrap            rows=      0     2.9s  
+[ok   ] ai.regimes                   rows=   9252     0.0s  K-Means، k = 3، Silhouette = 0.337
+[ok   ] ai.regimes_wrap              rows=      0     0.9s  
+[ok   ] ai.relationships             rows=     18     0.0s  سبيرمان شهري
+[ok   ] ai.relationships_wrap        rows=      0     1.4s  
+[ok   ] ai.dust_events               rows=   2412     4.8s  
+[ok   ] ai.river_quality             rows=    156     0.6s  
+{
+ "updated_at": "2026-10-24T07:17:50+00:00",
+ "seconds": 1092.9,
+ "counts": {
+  "districts": 6,
+  "air_daily": 9252,
+  "weather_daily": 25902,
+  "river_daily": 58758,
+  "water_rs_monthly": 708,
+  "studies": 7,
+  "study_values": 256,
+  "pollution_sources": 1057,
+  "model_runs": 720,
+  "forecasts": 102,
+  "anomalies": 186,
+  "air_regime_daily": 9252,
+  "station_daily": 20603,
+  "station_bias": 270
+ },
+ "ranges": {
+  "air_daily": [
+   "2022-08-04",
+   "2026-10-23"
+  ],
+  "weather_daily": [
+   "2015-01-01",
+   "2026-10-26"
+  ],
+  "river_daily": [
+   "2000-01-01",
+   "2026-10-23"
+  ],
+  "station_daily": [
+   "2000-02-07",
+   "2026-10-23"
+  ],
+  "water_rs_monthly": [
+   "2017-01",
+   "2026-10"
+  ]
+ },
+ "errors": 0,
+ "schema_version": 1,
+ "bytes": 28995584,
+ "bytes_gz": 6356378
+}
