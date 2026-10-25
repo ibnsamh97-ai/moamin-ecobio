@@ -1,7 +1,7 @@
 /* EcoBio AI — عامل الخدمة: يحفظ واجهة المنصة لتفتح دون إنترنت.
    الواجهة: الشبكة أولاً ثم النسخة المحفوظة. الملفات الثابتة: المحفوظ أولاً مع تحديثه في الخلفية.
    لا يتدخل في طلبات البيانات الحية (Open-Meteo وغيرها)؛ قاعدة الأقضية لها ذاكرتها الخاصة. */
-const V = "ecobio-shell-v6";
+const V = "ecobio-shell-v7";
 const CORE = ["./", "index.html", "css/style.css", "css/shell.css", "css/tools.css", "css/motion.css", "manifest.webmanifest", "assets/icons/pwa-192.png"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(V).then(c => c.addAll(CORE)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", e => {
@@ -14,7 +14,7 @@ self.addEventListener("fetch", e => {
     e.respondWith(fetch(r).then(res => { const c = res.clone(); caches.open(V).then(x => x.put("index.html", c)); return res; }).catch(() => caches.match("index.html")));
     return;
   }
-  if (/\.(js|css|png|webp|jpg|svg|woff2?|wasm|json|glb)$/.test(u.pathname)) {
+  if (/\.(js|css|png|webp|jpg|svg|woff2?|wasm|json|glb|csv)$/.test(u.pathname)) {
     e.respondWith(caches.open(V).then(async c => {
       const hit = await c.match(r);
       const net = fetch(r).then(res => { if (res.ok) c.put(r, res.clone()); return res; }).catch(() => hit);

@@ -180,7 +180,17 @@
     const rp = R.R.map((row, i) => row.map((r, j) => (i === j ? 0 : rP(r, n))));
     const sk = D.names.map((_, i) => skew(D.X.map(r => r[i])));
     S.hk = Math.max(2, Math.min(S.hk, Math.min(8, n - 1)));
-    S.res = { D, R, pa, Z, linkV, linkS, rp, sk, n, p };
+    /* APCS يحتاج «عيّنة صفرية» حقيقية: كل المتغيرات تراكيز. إن دخلت متغيرات ليست تراكيز
+       (الارتفاع، المسافة، pH، الحرارة) في PCA تُحسب النسب من PCA منفصل على متغيرات التركيز فقط */
+    let RA = null, massIdx = D.keys.map((key, i) => (NONMASS.has(key) ? -1 : i)).filter(i => i >= 0);
+    if (!S.log) {
+      if (massIdx.length === p) { RA = R; RA.idx = massIdx; RA.sep = false; }
+      else if (massIdx.length >= 3) {
+        RA = MV.apcsMlr(D.X.map(r => massIdx.map(i => r[i])), { k: S.k ? Math.min(S.k, massIdx.length) : null, targets: D.Y ? [D.Y] : [] });
+        RA.idx = massIdx; RA.sep = true;
+      }
+    }
+    S.res = { D, R, RA, pa, Z, linkV, linkS, rp, sk, n, p };
     render();
   }
 
@@ -330,11 +340,17 @@
 
     /* مساهمات APCS-MLR */
     let apcsHTML = "";
+    const RA = S.res.RA;
+    const nonMass = names.filter((_, i) => NONMASS.has(keys[i]));
     if (S.log) apcsHTML = `<div class="notice">${ico("i-warn")}<span>نسب المساهمة بـ APCS-MLR تفترض أن التراكيز تُجمع خطياً من المصادر، وهذا لا يصح بعد التحويل اللوغاريتمي؛ ألغِ التحويل لحسابها.</span></div>`;
+    else if (!RA) apcsHTML = `<p class="faint">نسب المساهمة تحتاج ثلاثة متغيرات تركيز على الأقل؛ ${nonMass.length ? `${nonMass.map(x => `<bdi>${esc(x)}</bdi>`).join("، ")} ليست تراكيز تُوزَّع على مصادر.` : ""}</p>`;
     else {
+      const kA = RA.k, aNames = RA.idx.map(i => names[i]);
+      /* اسم مختصر لكل مصدر: أقوى المتغيرات تحميلاً فيه */
+      const tag = j => RA.L.map((r, i) => [r[j], i]).filter(([v]) => v >= 0.6).sort((a, b) => b[0] - a[0]).slice(0, 3).map(([, i]) => aNames[i]);
       const rowsC = [];
-      if (D.tName && R.targets[0]) rowsC.push({ name: D.tName, m: R.targets[0], tgt: true, key: D.tKey });
-      names.forEach((x, i) => { if (!NONMASS.has(keys[i])) rowsC.push({ name: x, m: R.mlr[i], key: keys[i] }); });
+      if (D.tName && RA.targets[0]) rowsC.push({ name: D.tName, m: RA.targets[0], tgt: true, key: D.tKey });
+      aNames.forEach((x, i) => rowsC.push({ name: x, m: RA.mlr[i], key: keys[RA.idx[i]] }));
       rowsC.forEach(r => {
         const f = [];
         if (!r.m) { r.flag = true; r.note = "تعذّر الانحدار"; return; }
@@ -345,14 +361,14 @@
         r.flag = f.length > 0; r.note = f.join("، ");
       });
       const nFlag = rowsC.filter(r => r.flag).length;
-      apcsHTML = rowsC.length ? `
-        <div class="tbl-wrap"><table class="tbl src-tbl"><thead><tr><th>المتغير</th><th>R²</th><th>المتوسط</th>${Array.from({ length: k }, (_, j) => `<th><i class="dot" style="background:${PAL[j % PAL.length]}"></i>المصدر ${j + 1}</th>`).join("")}<th>غير مفسَّر</th><th>ملاحظة</th></tr></thead>
+      apcsHTML = `${RA.sep ? `<div class="notice info">${ico("i-info")}<span>${nonMass.map(x => `<bdi>${esc(x)}</bdi>`).join("، ")} ليست تراكيز، فلا يوجد لها «صفر» حقيقي يحتاجه APCS. لذلك حُسبت النسب من تحليل مكوّنات منفصل على متغيرات التركيز وحدها (${aNames.length} متغيرات، ${kA} ${kA === 1 ? "مصدر" : "مصادر"})؛ ترقيم المصادر هنا مستقل عن جدول التحميلات أعلاه، واسم كل مصدر بجانبه.</span></div>` : ""}
+        <div class="tbl-wrap"><table class="tbl src-tbl"><thead><tr><th>المتغير</th><th>R²</th><th>المتوسط</th>${Array.from({ length: kA }, (_, j) => `<th><i class="dot" style="background:${PAL[j % PAL.length]}"></i>المصدر ${j + 1}${tag(j).length ? `<br><small class="faint">${tag(j).map(esc).join("، ")}</small>` : ""}</th>`).join("")}<th>غير مفسَّر</th><th>ملاحظة</th></tr></thead>
           <tbody>${rowsC.map(r => `<tr class="${r.tgt ? "src-tgt" : ""}${r.flag ? " src-flag" : ""}"><td><bdi>${esc(r.name)}</bdi>${r.tgt ? ' <span class="chip tone-none">الكتلة الكلية</span>' : ""}</td>
-            ${r.m ? `<td class="num">${F2(r.m.r2)}</td><td class="num">${F(r.m.mean, "auto")}</td>${r.m.pct.map(v => `<td class="num${v < -5 ? " neg" : ""}">${v.toFixed(1)}%</td>`).join("")}<td class="num">${r.m.pctUnexp.toFixed(1)}%</td>` : `<td colspan="${k + 3}">—</td>`}
+            ${r.m ? `<td class="num">${F2(r.m.r2)}</td><td class="num">${F(r.m.mean, "auto")}</td>${r.m.pct.map(v => `<td class="num${v < -5 ? " neg" : ""}">${v.toFixed(1)}%</td>`).join("")}<td class="num">${r.m.pctUnexp.toFixed(1)}%</td>` : `<td colspan="${kA + 3}">—</td>`}
             <td class="src-note">${r.flag ? ico("i-warn") + esc(r.note) : ""}</td></tr>`).join("")}</tbody></table></div>
-        ${bars(rowsC.filter(r => r.m).map(r => ({ name: r.name, parts: r.m.pct.concat([r.m.pctUnexp]), flag: r.flag })), k)}
-        <div class="src-leg">${Array.from({ length: k }, (_, j) => `<span><i class="sw" style="background:${PAL[j % PAL.length]}"></i>المصدر ${j + 1}</span>`).join("")}<span><i class="sw sw-un"></i>غير مفسَّر (ثابت الانحدار)</span></div>
-        ${nFlag ? `<div class="notice warn">${ico("i-warn")}<span>في ${nFlag} من ${rowsC.length} متغيرات مساهمات سالبة أو أكبر من 100% أو ثابت كبير. هذا معروف في APCS-MLR حين تتعاكس المتغيرات (مثل الغبار وCO، أو الأوزون وNO₂) أو تكون العلاقة غير خطية قرب الصفر. لا تحذف الإشارة السالبة ولا تعِد توزيع النسب يدوياً؛ اذكرها كما هي، أو استبعد المتغيرات المتعاكسة غير المنبعثة (الأوزون، الحرارة، الأكسجين)، أو جرّب عدداً آخر من المصادر، ويبقى EPA PMF 5.0 الأداة المرجعية لتوزيع موجب مقيّد.</span></div>` : `<p class="ok">${ico("i-check")}كل المساهمات موجبة ومعقولة، والنموذج يفسّر ${F2(Math.min(...rowsC.filter(r => r.m).map(r => r.m.r2)))} من التباين على الأقل.</p>`}` : `<p class="faint">لا توجد متغيرات تركيز لحساب مساهماتها (الأس الهيدروجيني والحرارة والارتفاع والمسافة لا تُوزَّع على مصادر).</p>`;
+        ${bars(rowsC.filter(r => r.m).map(r => ({ name: r.name, parts: r.m.pct.concat([r.m.pctUnexp]), flag: r.flag })), kA)}
+        <div class="src-leg">${Array.from({ length: kA }, (_, j) => `<span><i class="sw" style="background:${PAL[j % PAL.length]}"></i>المصدر ${j + 1}</span>`).join("")}<span><i class="sw sw-un"></i>غير مفسَّر (ثابت الانحدار)</span></div>
+        ${nFlag ? `<div class="notice warn">${ico("i-warn")}<span>في ${nFlag} من ${rowsC.length} متغيرات مساهمات سالبة أو أكبر من 100% أو ثابت كبير. هذا معروف في APCS-MLR حين تتعاكس المتغيرات (مثل الغبار وCO، أو الأوزون وNO₂) أو تكون العلاقة غير خطية قرب الصفر (توزيعات ملتوية). لا تحذف الإشارة السالبة ولا تعِد توزيع النسب يدوياً؛ اذكرها كما هي، أو استبعد المتغيرات المتعاكسة غير المنبعثة (الأوزون، الحرارة، الأكسجين)، أو جرّب عدداً آخر من المصادر، ويبقى EPA PMF 5.0 الأداة المرجعية لتوزيع موجب مقيّد.</span></div>` : `<p class="ok">${ico("i-check")}كل المساهمات موجبة ومعقولة، والنموذج يفسّر ${F2(Math.min(...rowsC.filter(r => r.m).map(r => r.m.r2)))} من التباين على الأقل.</p>`}`;
     }
 
     /* جدول التجميع للعيّنات */
@@ -476,13 +492,17 @@
       { name: "القيم الذاتية", rows: [["المكوّن", "القيمة الذاتية", "% من التباين", "% تراكمي", "المئين 95 (تحليل موازٍ)", "مستبقى"]].concat(ev.map((v, i) => [i + 1, r4(v), r4((100 * v) / p), r4(ev.slice(0, i + 1).reduce((a, b) => a + b, 0) * 100 / p), r4(pa.p95[i]), i < k ? "نعم" : ""])).concat([[], ["KMO", R.kmo ? r4(R.kmo.kmo) : "—"], ["Bartlett χ²", R.bartlett ? r4(R.bartlett.chi2) : "—"], ["df", R.bartlett ? R.bartlett.df : "—"], ["p", R.bartlett ? R.bartlett.p : "—"]]) },
       { name: "التحميلات المدوّرة", rows: [["المتغير"].concat(Array.from({ length: k }, (_, j) => `المصدر ${j + 1}`), ["h²", "MSA"])].concat(names.map((x, i) => [x].concat(R.L[i].map(r4), [r4(R.comm[i]), R.kmo ? r4(R.kmo.msa[i]) : ""]))).concat([["مجموع المربعات"].concat(R.ssRot.map(r4)), ["% من التباين"].concat(R.pctRot.map(r4))]) },
       { name: "معاملات الدرجات", rows: [["المتغير"].concat(Array.from({ length: k }, (_, j) => `المصدر ${j + 1}`))].concat(names.map((x, i) => [x].concat(R.B[i].map(r4)))) },
-      { name: "الدرجات وAPCS", rows: [["العيّنة"].concat(Array.from({ length: k }, (_, j) => `درجة ${j + 1}`), Array.from({ length: k }, (_, j) => `APCS ${j + 1}`), D.Y && R.targets[0] ? Array.from({ length: k }, (_, j) => `مساهمة ${j + 1} في ${D.tName}`) : [])].concat(R.scores.map((r, i) => [D.ids[i]].concat(r.map(r4), R.apcs[i].map(r4), D.Y && R.targets[0] ? R.apcs[i].map((a, j) => r4(a * R.targets[0].b[j])) : []))) }
+      { name: "الدرجات وAPCS", rows: [["العيّنة"].concat(Array.from({ length: k }, (_, j) => `درجة ${j + 1}`), Array.from({ length: k }, (_, j) => `APCS ${j + 1}`), S.res.RA && D.Y && S.res.RA.targets[0] ? Array.from({ length: S.res.RA.k }, (_, j) => `مساهمة المصدر ${j + 1} في ${D.tName}`) : [])].concat(R.scores.map((r, i) => [D.ids[i]].concat(r.map(r4), R.apcs[i].map(r4), S.res.RA && D.Y && S.res.RA.targets[0] ? S.res.RA.apcs[i].map((a, j) => r4(a * S.res.RA.targets[0].b[j])) : []))) }
     ];
     if (!S.log) {
-      const rowsC = [];
-      if (D.tName && R.targets[0]) rowsC.push([D.tName, R.targets[0]]);
-      names.forEach((x, i) => { if (!NONMASS.has(D.keys[i]) && R.mlr[i]) rowsC.push([x, R.mlr[i]]); });
-      sheets.push({ name: "APCS-MLR", rows: [["المتغير", "R²", "المتوسط", "الثابت"].concat(Array.from({ length: k }, (_, j) => `معامل ${j + 1}`), Array.from({ length: k }, (_, j) => `مساهمة ${j + 1}`), Array.from({ length: k }, (_, j) => `% ${j + 1}`), ["% غير مفسَّر"])].concat(rowsC.map(([x, m]) => [x, r4(m.r2), r4(m.mean), r4(m.b0)].concat(m.b.map(r4), m.contrib.map(r4), m.pct.map(r4), [r4(m.pctUnexp)]))) });
+      const RA = S.res.RA;
+      if (RA) {
+        const rowsC = [], kA = RA.k;
+        if (D.tName && RA.targets[0]) rowsC.push([D.tName, RA.targets[0]]);
+        RA.idx.forEach((vi, i) => { if (RA.mlr[i]) rowsC.push([names[vi], RA.mlr[i]]); });
+        sheets.push({ name: "APCS-MLR", rows: [["المتغير", "R²", "المتوسط", "الثابت"].concat(Array.from({ length: kA }, (_, j) => `معامل ${j + 1}`), Array.from({ length: kA }, (_, j) => `مساهمة ${j + 1}`), Array.from({ length: kA }, (_, j) => `% ${j + 1}`), ["% غير مفسَّر"])].concat(rowsC.map(([x, m]) => [x, r4(m.r2), r4(m.mean), r4(m.b0)].concat(m.b.map(r4), m.contrib.map(r4), m.pct.map(r4), [r4(m.pctUnexp)])))
+          .concat(RA.sep ? [[], ["حُسبت من PCA منفصل على متغيرات التركيز فقط: " + RA.idx.map(i => names[i]).join("، ")]] : []) });
+      }
     }
     if (S.res.lab) sheets.push({ name: "مجاميع العيّنات", rows: [["العيّنة", "المجموعة"]].concat(D.ids.map((id, i) => [id, S.res.lab[i] + 1])) });
     TB.xlsx(sheets, `مصادر-التلوث-${(S.label || "البيانات").slice(0, 40).replace(/[^\p{L}\p{N}]+/gu, "-")}.xlsx`);
@@ -495,7 +515,8 @@
     let s = `تحديد مصادر التلوث: طُبّق تحليل المكوّنات الرئيسة (PCA) على مصفوفة ارتباط Pearson لـ ${n} عيّنة و${p} متغيرات (${D.names.join("، ")}) بعد تقييسها${S.log ? " وتحويلها لوغاريتمياً (log₁₀)" : ""}${nd ? "، وعُوّضت القيم الأقل من حد الكشف بنصف قيمة الحد" : ""}. `;
     if (kmo && bt) s += `بلغ مؤشر Kaiser–Meyer–Olkin ${kmo.kmo.toFixed(2)}، وكان اختبار Bartlett للكروية ${bt.p < 0.05 ? "معنوياً" : "غير معنوي"} (χ² = ${bt.chi2.toFixed(1)}، df = ${bt.df}، p ${pfmt(bt.p)})${bt.p < 0.05 && kmo.kmo >= 0.5 ? "، ما يؤكد ملاءمة البيانات للتحليل" : ""}. `;
     s += `استُبقيت ${k} ${S.k ? "مكوّنات حدّد الباحث عددها" : "مكوّنات قيمها الذاتية أكبر من 1 (Kaiser, 1960)"}${paK === k ? "، وأكّد التحليل الموازي (Horn, 1965) هذا العدد" : ""}، ودُوّرت بطريقة Varimax مع تطبيع Kaiser (Kaiser, 1958) فشرحت ${cum}% من التباين الكلي، وصُنّفت التحميلات إلى قوية (> 0.75) ومتوسطة (0.50–0.75) وضعيفة (0.30–0.50) (Liu et al., 2003). `;
-    if (!S.log) s += `وقُدّرت مساهمة كل مصدر بنموذج الدرجات المطلقة للمكوّنات الرئيسة مع الانحدار الخطي المتعدد (APCS-MLR) (Thurston & Spengler, 1985)، إذ حُسبت الدرجات المطلقة بطرح درجة عيّنة افتراضية تراكيزها صفر من درجات العيّنات ثم انحدرت تراكيز كل متغير عليها${D.tName && R.targets[0] ? `، وفسّر النموذج ${(R.targets[0].r2 * 100).toFixed(1)}% من تباين ${D.tName}` : ""}. `;
+    const RA = S.res.RA;
+    if (RA) s += `وقُدّرت مساهمة كل مصدر بنموذج الدرجات المطلقة للمكوّنات الرئيسة مع الانحدار الخطي المتعدد (APCS-MLR) (Thurston & Spengler, 1985)${RA.sep ? ` على متغيرات التركيز وحدها (${RA.idx.map(i => D.names[i]).join("، ")})` : ""}، إذ حُسبت الدرجات المطلقة بطرح درجة عيّنة افتراضية تراكيزها صفر من درجات العيّنات ثم انحدرت تراكيز كل متغير عليها${D.tName && RA.targets[0] ? `، وفسّر النموذج ${(RA.targets[0].r2 * 100).toFixed(1)}% من تباين ${D.tName}` : ""}. `;
     s += `وجُمعت ${S.res.linkS ? "العيّنات والمتغيرات" : "المتغيرات"} هرمياً بطريقة Ward (1963) على المسافة الإقليدية للبيانات المقيّسة.`;
     return s;
   }
@@ -506,7 +527,8 @@
     let s = `Source identification: Principal component analysis (PCA) was applied to the Pearson correlation matrix of ${n} samples and ${p} variables (${D.names.join(", ")}) after standardization${S.log ? " and log10 transformation" : ""}${nd ? "; values below the detection limit were replaced by half the limit" : ""}. `;
     if (kmo && bt) s += `The Kaiser–Meyer–Olkin measure of sampling adequacy was ${kmo.kmo.toFixed(2)} and Bartlett's test of sphericity was ${bt.p < 0.05 ? "significant" : "not significant"} (χ² = ${bt.chi2.toFixed(1)}, df = ${bt.df}, p ${pfmt(bt.p)}). `;
     s += `${k} components ${S.k ? "were retained" : "with eigenvalues greater than 1 were retained (Kaiser, 1960)"}${paK === k ? ", a number confirmed by parallel analysis (Horn, 1965)" : ""}, and were rotated by Varimax with Kaiser normalization (Kaiser, 1958), explaining ${cum}% of the total variance. Loadings were classified as strong (> 0.75), moderate (0.50–0.75) and weak (0.30–0.50) (Liu et al., 2003). `;
-    if (!S.log) s += `Source contributions were estimated by absolute principal component scores–multiple linear regression (APCS-MLR; Thurston & Spengler, 1985)${D.tName && R.targets[0] ? `, which explained ${(R.targets[0].r2 * 100).toFixed(1)}% of the variance of ${D.tName}` : ""}. `;
+    const RA = S.res.RA;
+    if (RA) s += `Source contributions were estimated by absolute principal component scores–multiple linear regression (APCS-MLR; Thurston & Spengler, 1985)${RA.sep ? ` using the concentration variables only (${RA.idx.map(i => D.names[i]).join(", ")})` : ""}${D.tName && RA.targets[0] ? `, which explained ${(RA.targets[0].r2 * 100).toFixed(1)}% of the variance of ${D.tName}` : ""}. `;
     s += `Hierarchical cluster analysis of ${S.res.linkS ? "samples and variables" : "variables"} used Ward's method (Ward, 1963) on Euclidean distances of standardized data.`;
     return s;
   }
