@@ -596,3 +596,12 @@
   .src-opts .input { min-width: 0; width: 100%; }
   .src-opts label { width: 100%; }
 }
+
+/* ===== الاتجاه الزمني ===== */
+.tr-row { cursor: pointer; }
+.tr-row:hover td { background: rgba(79, 200, 220, .04); }
+.tr-row.on td { background: rgba(79, 200, 220, .08); }
+.tr-row.on td:first-child { box-shadow: inset -3px 0 0 var(--river); }
+.tr-say { font-size: .9rem; line-height: 1.95; color: var(--text); margin: 12px 0 0; }
+#view-trend .chart-box { height: 320px; }
+@media (max-width: 640px) { #view-trend .chart-box { height: 260px; } }
