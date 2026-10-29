@@ -463,7 +463,22 @@
     areaFor(y).then(renderYearInfo).catch(() => { /* */ });
   }
 
-  // مساحة الماء من القمر: نسبة بكسلات MNDWI ≥ 0 داخل المنطقة × مساحتها
+  // مساحة الماء من القمر: نسبة بكسلات MNDWI ≥ 0 داخل المنطقة × مساحتها (Xu 2006).
+  // العتبة الثابتة تختلف دقتها بين المواقع (Reis et al. 2021)، والطمي الرطب قرب الصفر؛ لذلك نحسب أيضاً
+  // المساحة عند −0.1 و+0.1 نطاقاً لعدم اليقين، وعتبة Otsu (1979) المستخرجة من مدرّج كل صورة
+  const AREA_KEY = "tw_area2";
+  function otsu(counts, edges) {
+    const mid = counts.map((_, i) => (edges[i] + edges[i + 1]) / 2), tot = counts.reduce((a, b) => a + b, 0);
+    const all = counts.reduce((s, c, i) => s + c * mid[i], 0);
+    let wB = 0, sB = 0, best = -1, thr = 0;
+    for (let k = 0; k < counts.length - 1; k++) {
+      wB += counts[k]; sB += counts[k] * mid[k]; const wF = tot - wB; if (!wB || !wF) continue;
+      const between = wB * wF * (sB / wB - (all - sB) / wF) ** 2;
+      if (between > best) { best = between; thr = edges[k + 1]; }
+    }
+    return thr;
+  }
+  const above = (counts, edges, t) => counts.reduce((s, c, i) => s + (edges[i] >= t - 1e-9 ? c : 0), 0);
   function aoiFeature(key) {
     const a = AOIS[key];
     if (a.rect) { const [w, s, e, n] = a.rect; return { type: "Feature", properties: {}, geometry: { type: "Polygon", coordinates: [[[w, s], [e, s], [e, n], [w, n], [w, s]]] } }; }
@@ -501,22 +516,25 @@
   const areaKey = (it, aoi) => `${it.id}|${aoi}`;
   async function areaFor(y, aoi = T.tm.aoi) {
     const it = T.tm.best.get(y); if (!it) return null;
-    const key = areaKey(it, aoi), cache = U.store.get("tw_area", {});
+    const key = areaKey(it, aoi), cache = U.store.get(AREA_KEY, {});
     if (cache[key]) { T.tm.area[key] = cache[key]; return cache[key]; }
     if (T.tm.area[key]) return T.tm.area[key];
     const A = AOIS[aoi], st = aoiStats(aoi);
-    const p = new URLSearchParams({ collection: "landsat-c2-l2", item: it.id, expression: MNDWI, asset_as_band: "true", histogram_bins: "2", histogram_range: "-1,1", max_size: String(A.max) });
+    const p = new URLSearchParams({ collection: "landsat-c2-l2", item: it.id, expression: MNDWI, asset_as_band: "true", histogram_bins: "40", histogram_range: "-1,1", max_size: String(A.max) });
     let j;
     try { j = await pcPost("item/statistics", p, st.f); }
     catch (e) { if (e.status >= 500 && A.max > 1024) { p.set("max_size", "1024"); j = await pcPost("item/statistics", p, st.f); } else throw e; }
     const stats = (j.properties && j.properties.statistics) || (j.features && j.features[0] && j.features[0].properties.statistics) || j;
     const b = stats[Object.keys(stats)[0]];
     if (!b || !b.histogram) throw new Error("NO_STATS");
-    const water = b.histogram[0][1], valid = b.valid_pixels != null ? b.valid_pixels : b.count, total = valid + (b.masked_pixels || 0);
-    const pxArea = st.bboxArea / total, inside = total * st.polyArea / st.bboxArea;
-    const res = { y, date: it.date, km2: +(water * pxArea / 1e6).toFixed(1), cover: Math.min(1, valid / inside), plat: it.plat };
+    const counts = b.histogram[0], edges = b.histogram[1];
+    const valid = b.valid_pixels != null ? b.valid_pixels : b.count, total = valid + (b.masked_pixels || 0);
+    const pxArea = st.bboxArea / total, inside = total * st.polyArea / st.bboxArea, km = px => +(px * pxArea / 1e6).toFixed(1);
+    const tOtsu = otsu(counts, edges);
+    const res = { y, date: it.date, km2: km(above(counts, edges, 0)), lo: km(above(counts, edges, 0.1)), hi: km(above(counts, edges, -0.1)),
+      otsu: +tOtsu.toFixed(2), km2Otsu: km(above(counts, edges, tOtsu)), cover: Math.min(1, valid / inside), plat: it.plat };
     T.tm.area[key] = res;
-    try { const c2 = U.store.get("tw_area", {}); c2[key] = res; U.store.set("tw_area", c2); } catch (e) { /* */ }
+    try { const c2 = U.store.get(AREA_KEY, {}); c2[key] = res; U.store.set(AREA_KEY, c2); } catch (e) { /* */ }
     return res;
   }
   async function allYears() {
@@ -541,7 +559,7 @@
     return data;
   }
   function areaSeries() {
-    const cache = U.store.get("tw_area", {});
+    const cache = U.store.get(AREA_KEY, {});
     return T.tm.years.map(y => { const it = T.tm.best.get(y), a = it && (T.tm.area[areaKey(it, T.tm.aoi)] || cache[areaKey(it, T.tm.aoi)]); return a && a.cover > 0.85 ? a : null; });
   }
   function renderChart() {
@@ -550,7 +568,8 @@
     U.chart(cv, {
       type: "bar",
       data: { labels: T.tm.years, datasets: [
-        { type: "bar", label: "مساحة الماء (كم²) – " + AOIS[T.tm.aoi].name, data: ser.map(a => a ? a.km2 : null), backgroundColor: T.tm.years.map(y => (y === T.tm.year ? "#4fc8dc" : "rgba(79,200,220,0.45)")), yAxisID: "y", borderRadius: 3 },
+        { type: "bar", label: "مساحة الماء (كم²) – " + AOIS[T.tm.aoi].name, data: ser.map(a => a ? a.km2 : null), backgroundColor: T.tm.years.map(y => (y === T.tm.year ? "#4fc8dc" : "rgba(79,200,220,0.45)")), yAxisID: "y", borderRadius: 3, grouped: false, order: 2 },
+        { type: "bar", label: "نطاق العتبة من +0.1 إلى −0.1", data: ser.map(a => (a && a.lo != null ? [a.lo, a.hi] : null)), backgroundColor: "rgba(228,241,237,0.16)", borderColor: "rgba(228,241,237,0.5)", borderWidth: 1, yAxisID: "y", grouped: false, barPercentage: 0.35, order: 1 },
         { type: "line", label: "متوسط التصريف عند تكريت (م³/ث) – GloFAS", data: T.tm.years.map(y => flow[y] != null ? flow[y] : null), borderColor: "#e6ae4f", backgroundColor: "#e6ae4f", pointRadius: 2, borderWidth: 1.6, yAxisID: "y2", spanGaps: true, tension: 0.25 }
       ] },
       options: {
@@ -565,7 +584,7 @@
     const box = U.$("#tw-yinfo"); if (!box) return;
     const y = T.tm.year, it = y && T.tm.best.get(y);
     if (!it) { box.innerHTML = ""; return; }
-    const a = T.tm.area[areaKey(it, T.tm.aoi)] || U.store.get("tw_area", {})[areaKey(it, T.tm.aoi)];
+    const a = T.tm.area[areaKey(it, T.tm.aoi)] || U.store.get(AREA_KEY, {})[areaKey(it, T.tm.aoi)];
     const ser = areaSeries().filter(Boolean);
     let cmp = "";
     if (ser.length >= 2) {
@@ -573,7 +592,7 @@
       cmp = `<div class="tw-head"><span>${AOIS[T.tm.aoi].name}</span><b>${f.y}: ${U.fmt(f.km2, 0)} كم² ← ${l.y}: ${U.fmt(l.km2, 0)} كم²</b><span class="chip tone-${ch < -10 ? "bad" : ch > 10 ? "good" : "info"}">${ch > 0 ? "+" : ""}${U.fmt(ch, 0)}%</span></div>`;
     }
     box.innerHTML = `${cmp}<div class="tw-ystat"><span class="tw-ybig">${y}</span><span>${it.date} · ${satName(it.plat)} · غيوم ${U.fmt(it.cloud, 0)}%${it.striped ? " · <span class=\"warnc\">صورة مخططة (عطل Landsat 7)</span>" : ""}</span>
-      <span>مساحة الماء: ${a ? (a.cover > 0.85 ? `<b>${U.fmt(a.km2, a.km2 < 100 ? 1 : 0)} كم²</b>` : `تغطية الصورة ${Math.round(a.cover * 100)}% فقط من المنطقة`) : `<span class="faint">جارٍ الحساب…</span>`}${T.tm.flow && T.tm.flow[y] ? ` · التصريف ${U.fmt(T.tm.flow[y], 0)} م³/ث` : ""}</span></div>`;
+      <span>مساحة الماء: ${a ? (a.cover > 0.85 ? `<b>${U.fmt(a.km2, a.km2 < 100 ? 1 : 0)} كم²</b>${a.lo != null ? ` <small class="faint">(بين ${U.fmt(a.lo, a.lo < 100 ? 1 : 0)} و${U.fmt(a.hi, a.hi < 100 ? 1 : 0)} كم² حسب العتبة؛ عتبة Otsu لهذه الصورة ${a.otsu} ← ${U.fmt(a.km2Otsu, a.km2Otsu < 100 ? 1 : 0)} كم²)</small>` : ""}` : `تغطية الصورة ${Math.round(a.cover * 100)}% فقط من المنطقة`) : `<span class="faint">جارٍ الحساب…</span>`}${T.tm.flow && T.tm.flow[y] ? ` · التصريف ${U.fmt(T.tm.flow[y], 0)} م³/ث` : ""}</span></div>`;
     const sl = U.$("#tw-year"); if (sl) { sl.value = String(T.tm.years.indexOf(y)); U.$("#tw-yearlbl").textContent = y; }
     renderChart();
   }

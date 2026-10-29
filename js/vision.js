@@ -140,6 +140,7 @@
         <div class="grp" style="display:grid;gap:8px">${meters.map(([l, v, c]) => `<div class="meter"><div class="row"><span>${l}</span><b>${U.fmt(v, 1)}%</b></div><div class="track"><i style="width:${Math.min(100, v)}%;background:${c}"></i></div></div>`).join("")}</div>
       </div>
       <div class="treat-card" style="margin-top:12px"><h4>فحوص مختبرية مقترحة لتأكيد القراءة</h4><ul>${tests.map(t => `<li>${t}</li>`).join("")}</ul></div>
+      ${r.P.glint + r.P.dark > 25 ? `<div class="notice warn" style="margin-top:10px"><span>${U.fmt(r.P.glint + r.P.dark, 0)}% من المنطقة المحددة انعكاسات لامعة أو ظلال داكنة، فالقراءة أقل دقة. أعد التصوير: الهاتف أفقي فوق الماء والكاميرا نحو الأسفل، وظهرك للشمس، في ماء لا يظهر قاعه، ثم حدّد منطقة ماء متجانسة.</span></div>` : ""}
       <p class="faint" style="font-size:.72rem;margin-top:10px">مؤشر FU محسوب من زاوية اللون في فضاء CIE 1931 وجدول Wang وآخرين (2021). القراءة من كاميرا الهاتف تقريبية للفرز السريع وتتأثر بالإضاءة وتوازن الأبيض، ولا تغني عن التحليل المختبري. النسب المئوية هي نسب البكسلات في المنطقة المحددة.</p>`;
     ECO.lastVision = { fu: r.fu, class: ttl, score: Math.round(sc), percents: Object.fromEntries(Object.entries(r.P).map(([k2, v]) => [k2, +v.toFixed(1)])) };
   }
@@ -213,7 +214,7 @@ ${keys}
         U.$("#vi-ai-out").textContent.trim().length > 60 ? { type: "h", text: "تفسير الذكاء الاصطناعي (Gemini)" } : null,
         U.$("#vi-ai-out").textContent.trim().length > 60 ? { type: "text", html: U.$("#vi-ai-out").innerHTML } : null,
         { type: "note", text: "قراءة الصورة تقريبية للفرز السريع وتتأثر بالإضاءة وإعدادات الكاميرا، ولا تغني عن التحليل المختبري." },
-        { type: "refs", items: ["Wang, S., et al. (2021). A dataset of remote-sensed Forel-Ule Index for global inland waters during 2000–2018. Scientific Data 8: 26.", "Novoa, S., et al. (2013). The Forel-Ule scale revisited spectrally. J. Eur. Opt. Soc. 8: 13057."] },
+        { type: "refs", items: ["Wang, S., et al. (2021). A dataset of remote-sensed Forel-Ule Index for global inland waters during 2000–2018. Scientific Data 8: 26.", "EyeOnWater. Guideline EyeOnWater app, version 2.4.1: طريقة التصوير (الهاتف أفقي فوق الماء، الظهر للشمس، لا يظهر القاع).", "Novoa, S., et al. (2013). The Forel-Ule scale revisited spectrally. J. Eur. Opt. Soc. 8: 13057."] },
         { type: "sign" }
       ]
     }, mode);

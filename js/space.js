@@ -23,6 +23,9 @@
   const S = { map: null, layers: [], mode: "ndti", date: null, dates: [], dayItems: [], via: "direct", marker: null, pt: null, series: null, range: "6m", seq: 0, tseq: 0, center: null, tileErr: 0, tileOk: 0, inited: false };
   const px = new Map();
 
+  /* حدود القراءة الفضائية: لقطات منفصلة، وNDCI في المياه الطينية */
+  const SNAP_NOTE = "كل قراءة لقطة واحدة: يمر Sentinel-2 فوق صلاح الدين نحو الحادية عشرة صباحاً بتوقيت بغداد كل 5 أيام تقريباً إذا صفا الجو، فالقراءة تصف النهر لحظة الصورة فقط، وقد يحدث تلوث ويزول بين صورتين دون أن يظهر.";
+  const NDCI_NOTE = "الطين العالق الكثيف في دجلة يرفع انعكاس الحزمتين الحمراء وحافة الأحمر معاً، فقد يرتفع NDCI دون زيادة حقيقية في الطحالب؛ إذا كانت العكورة مرتفعة فاقرأ NDCI بحذر وأكّد الكلوروفيل مختبرياً. المؤشران نسبيان وليسا تراكيز.";
   const SCL_AR = { 0: "لا بيانات", 1: "بكسل معيب", 2: "منطقة داكنة", 3: "ظل غيوم", 4: "نبات", 5: "أرض جرداء", 6: "ماء", 7: "غير مصنّف", 8: "غيوم متوسطة", 9: "غيوم كثيفة", 10: "غيوم رقيقة", 11: "ثلج" };
   const RANGES = { "6m": { label: "6 أشهر", months: 6, win: 3 }, "1y": { label: "سنة", months: 12, win: 7 }, "all": { label: "منذ 2017", months: 0, win: 30 } };
 
@@ -238,6 +241,7 @@
       </div>
       <div class="sp-refl" dir="ltr">${["B02", "B03", "B04", "B05", "B08"].map(k => `<span><small>${k}</small>${U.fmt(o.rho[k] * 100, 1)}%</span>`).join("")}</div>
       <p class="faint sp-note">الانعكاسية السطحية لكل حزمة طيفية. تصنيف ESA للبكسل: ماء (SCL ${o.scl}) · مؤشر الماء NDWI ${U.fmt(o.ndwi, 2)}</p>
+      <p class="faint sp-note">${SNAP_NOTE} ${NDCI_NOTE}</p>
       <div class="sp-track"><span>تتبّع هذه النقطة عبر الزمن:</span>${Object.entries(RANGES).map(([k, r]) => `<button type="button" class="btn btn-sm${S.series && S.range === k ? " btn-primary" : ""}" data-sp-range="${k}">${r.label}</button>`).join("")}</div>`;
   }
 
@@ -331,6 +335,7 @@
     box.innerHTML = `<div class="panel-h"><h3>السلسلة الزمنية – ${R.label}</h3><span class="sub">${water.length} قراءة ماء من ${ser.points.length} صورة</span></div>
       ${water.length ? `<div class="chart-box sp-chart"><canvas id="sp-chart"></canvas></div>` : `<div class="notice info"><span>كل الصور لهذه النقطة غائمة أو ليست ماءً. جرّب نقطة وسط النهر.</span></div>`}
       ${summary ? `<p class="sp-sum">${summary}</p>` : ""}
+      ${water.length ? `<p class="faint sp-note">${SNAP_NOTE}</p>` : ""}
       ${st.ndti ? `<div class="tbl-wrap"><table class="tbl sp-tbl"><thead><tr><th>المؤشر</th><th>المتوسط</th><th>الوسيط</th><th>الأدنى</th><th>الأعلى</th><th>الاتجاه/سنة</th></tr></thead><tbody>
         ${["ndti", "ndci"].map(k => `<tr><td>${k === "ndti" ? "العكورة NDTI" : "الكلوروفيل NDCI"}</td><td dir="ltr">${U.fmt(st[k].mean, 3)}</td><td dir="ltr">${U.fmt(st[k].median, 3)}</td><td dir="ltr">${U.fmt(st[k].min, 3)}</td><td dir="ltr">${U.fmt(st[k].max, 3)}</td><td dir="ltr">${tr[k] == null ? "—" : (tr[k] > 0 ? "+" : "") + U.fmt(tr[k], 3)}</td></tr>`).join("")}
       </tbody></table></div>` : ""}

@@ -30,7 +30,7 @@
     mohan: "Mohan, S.V., Nithila, P., Reddy, S.J. (1996). Estimation of heavy metals in drinking water and development of heavy metal pollution index. J. Environ. Sci. Health A31(2): 283–289.",
     richards: "Richards, L.A. (1954). Diagnosis and Improvement of Saline and Alkali Soils. USDA Agriculture Handbook No. 60.",
     wilcox: "Wilcox, L.V. (1955). Classification and Use of Irrigation Waters. USDA Circular 969.",
-    baiji: "الحمداني، ن.ص.، سعيد، إ.ع.، علوش، ر.ه. (2025). مجلة تكريت للعلوم الصرفة 30(5) – بيانات قناة مصافي صلاح الدين.",
+    baiji: "الحمداني، ن.ص.، سعيد، إ.ع.، علوش، ر.ه. (2025). مجلة تكريت للعلوم الصرفة 30(6): 18–24 – بيانات قناة مصافي صلاح الدين.",
     balad: "Dalas, M.S., Farhan, M.G., Altae, M. (2022). Tikrit Journal of Pure Science 27(4): 23–30.",
     langmuir: "Langmuir, I. (1918). J. Am. Chem. Soc. 40: 1361–1403؛ Freundlich, H. (1906). Z. Phys. Chem. 57: 385–470.",
     emerson: "Emerson, K., et al. (1975). Aqueous ammonia equilibrium calculations: effect of pH and temperature. J. Fish. Res. Board Can. 32: 2379–2383.",
@@ -162,6 +162,46 @@
     },
     formula: "CF = Cs / Bn          Igeo = log₂( Cs / (1.5·Bn) )\nEF = (Cx/Fe)sample / (Cx/Fe)background\nCdeg = Σ CF          PLI = (CF₁·CF₂·…·CFₙ)^(1/n)\nEr = Tr · CF          RI = Σ Er      [Tr: Hg 40, Cd 30, As 10, Pb 5, Cu 5, Ni 5, Co 5, Cr 2, Zn 1]",
     refs: [REF.mul, REF.hak, REF.tom, REF.tw, "Sutherland, R.A. (2000). Environmental Geology 39: 611–627 (EF classes)."]
+  });
+
+  /* أدلة جودة الرواسب للمياه العذبة (MacDonald et al. 2000) ومؤشر Nemerow */
+  const SQG = { As: [9.79, 33.0], Cd: [0.99, 4.98], Cr: [43.4, 111], Cu: [31.6, 149], Pb: [35.8, 128], Hg: [0.18, 1.06], Ni: [22.7, 48.6], Zn: [121, 459] };
+  const sqgRows = st => { const t = ECO.RESEARCH.find(r => r.id === "baiji-2025").tables.find(x => x.id === "sed"); return ["Pb", "Cu", "Cd", "Ni"].map(m => { const row = t.rows.find(r => r[0].startsWith(m)); return [m, String(row[st]), String(SEDBG[m][0])]; }); };
+  C.push({
+    id: "sqg", cat: "sed", title: "أدلة جودة الرواسب TEC وPEC ومؤشر Nemerow", en: "TEC · PEC · mean PEC-Q · Nemerow PN",
+    desc: "يقارن تراكيز العناصر في رواسب الأنهار بالحدين المتفق عليهما للأثر على الأحياء القاعية، ويحسب متوسط نسبة PEC واحتمال السمية، ومؤشر Nemerow الشامل.",
+    table: { cols: [{ id: "m", label: "العنصر", type: "text" }, { id: "cs", label: "التركيز mg/kg جاف" }, { id: "bn", label: "الخلفية Bn" }],
+      rows: Object.keys(SQG).map(m => [m, "", String((SEDBG[m] || [""])[0])]) },
+    presets: [{ id: "baiji1", label: "رواسب قناة بيجي – م1", rows: () => sqgRows(1), src: REF.baiji }, { id: "baiji5", label: "رواسب قناة بيجي – م5", rows: () => sqgRows(5), src: REF.baiji }],
+    run(f, rows) {
+      const R = rows.map(r => ({ m: String(r.m || "").trim(), cs: n(r.cs), bn: n(r.bn) })).filter(r => U.isNum(r.cs) && r.cs >= 0);
+      if (!R.length) return null;
+      const known = R.filter(r => SQG[r.m]);
+      const cls = r => { const [tec, pec] = SQG[r.m]; return r.cs < tec ? ["أقل من TEC: الأثر غير مرجّح", "good"] : r.cs < pec ? ["بين TEC وPEC: أثر ممكن", "warn"] : ["فوق PEC: أثر مرجّح", "severe"]; };
+      const pq = known.map(r => r.cs / SQG[r.m][1]);
+      const mpq = pq.length ? pq.reduce((a, b) => a + b, 0) / pq.length : NaN;
+      /* نسبة العيّنات السامة في بيانات التحقق لدى MacDonald et al. (2000)، 347 عيّنة:
+         أقل من 0.1: 6 من 61 · أقل من 0.5: 30 من 174 · أكثر من 0.5: 147 من 173 · أكثر من 1.0: 132 من 143.
+         الفئتان الوسطيان بالطرح: 0.1–0.5 = 24 من 113، و0.5–1.0 = 15 من 30 */
+      const mpqB = !U.isNum(mpq) ? null : mpq < 0.1 ? ["سمية غير مرجّحة: 6 من 61 عيّنة بهذه الفئة كانت سامة (10%)", "good"] : mpq < 0.5 ? ["احتمال سمية منخفض: 24 من 113 عيّنة كانت سامة (21%)", "fair"] : mpq <= 1 ? ["سمية محتملة: 15 من 30 عيّنة كانت سامة (50%)", "bad"] : ["سمية مرجّحة جداً: 132 من 143 عيّنة كانت سامة (92%)", "severe"];
+      const withBn = R.filter(r => U.isNum(r.bn) && r.bn > 0), pi = withBn.map(r => r.cs / r.bn);
+      const pmean = pi.length ? pi.reduce((a, b) => a + b, 0) / pi.length : NaN, pmax = pi.length ? Math.max(...pi) : NaN;
+      const pn = pi.length ? Math.sqrt((pmean * pmean + pmax * pmax) / 2) : NaN;
+      const pnB = band(pn, [[0.7, "نظيف", "good"], [1, "حدّ الإنذار", "fair"], [2, "تلوث خفيف", "warn"], [3, "تلوث متوسط", "bad"], [1e9, "تلوث شديد", "severe"]]);
+      return {
+        cards: [
+          { label: "متوسط نسبة PEC", value: f2(mpq, 3), sub: mpqB ? mpqB[0] : "أدخل عنصراً من القائمة", tone: mpqB ? mpqB[1] : "info" },
+          { label: "مؤشر Nemerow الشامل", value: f2(pn, 2), sub: pi.length ? pnB.label : "يحتاج القيم الخلفية", tone: pi.length ? pnB.tone : "info" },
+          { label: "عناصر فوق PEC", value: String(known.filter(r => r.cs >= SQG[r.m][1]).length), sub: `من أصل ${known.length} لها حدود منشورة`, tone: known.some(r => r.cs >= SQG[r.m][1]) ? "severe" : "good" }
+        ],
+        table: { head: ["العنصر", "Cs", "TEC", "PEC", "Cs/PEC", "التصنيف", "Pi (Cs/Bn)"], rows: R.map(r => { const g = SQG[r.m]; const c = g ? cls(r) : null; return [r.m, f2(r.cs, 3), g ? String(g[0]) : "—", g ? String(g[1]) : "—", g ? f2(r.cs / g[1], 3) : "—", c ? c[0] : "لا يوجد دليل لهذا العنصر", U.isNum(r.bn) && r.bn > 0 ? f2(r.cs / r.bn, 2) : "—"]; }) },
+        chart: known.length ? { type: "bar", data: { labels: known.map(r => r.m), datasets: [{ label: "Cs/TEC", data: known.map(r => r.cs / SQG[r.m][0]), backgroundColor: ECO.COL.silt + "cc", borderRadius: 4 }, { label: "Cs/PEC", data: known.map(r => r.cs / SQG[r.m][1]), backgroundColor: ECO.COL.rust + "cc", borderRadius: 4 }] } } : null,
+        interp: `${known.length ? `متوسط نسبة PEC = ${f2(mpq, 3)}${mpqB ? ` (${mpqB[0]})` : ""}. ` : ""}${pi.length ? `مؤشر Nemerow = ${f2(pn, 2)} (${pnB.label})، وأعلى Pi = ${f2(pmax, 2)}. ` : ""}الحدّان TEC وPEC لرواسب المياه العذبة بوزن جاف؛ تحتهما TEC لا يُتوقع أثر على الأحياء القاعية، وفوق PEC يُتوقع الأثر غالباً.`
+      };
+    },
+    formula: "Cs/PEC لكل عنصر          mean PEC-Q = Σ(Cs/PEC) / n\nPi = Cs / Bn          PN = √[(P̄² + Pmax²) / 2]\nالتصنيف: Cs < TEC أثر غير مرجّح · TEC–PEC أثر ممكن · > PEC أثر مرجّح",
+    refs: ["MacDonald, D.D., Ingersoll, C.G., Berger, T.A. (2000). Development and evaluation of consensus-based sediment quality guidelines for freshwater ecosystems. Archives of Environmental Contamination and Toxicology 39: 20–31.",
+      "Nemerow, N.L. (1974). Scientific Stream Pollution Analysis. McGraw-Hill, New York.", REF.tw]
   });
 
   const RISKDEF = { Pb: [0.0035, 0.0085], Cd: [0.0005, 0.38], Cr: [0.003, 0.5], Ni: [0.02, ""], Cu: [0.04, ""], Zn: [0.3, ""], Fe: [0.7, ""], As: [0.0003, 1.5] };

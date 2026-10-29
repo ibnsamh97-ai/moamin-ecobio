@@ -815,7 +815,7 @@
           <p class="faint tw-small" id="tw-tmprog"></p>
           <label class="toggle"><input type="checkbox" id="tw-cmp"><span class="sw"></span>قارن سنتين بخط فاصل</label>
           <div class="field" id="tw-cmpbox" hidden><label for="tw-yb">سنة الجهة اليمنى</label><select id="tw-yb" class="input"></select></div>
-          <p class="faint tw-small">صورة واحدة صافية لكل سنة من أقمار Landsat (المسار 169/الصف 036 الذي يغطي المحافظة كلها). مساحة الماء = البكسلات التي فيها مؤشر MNDWI ≥ 0 (Xu، 2006) داخل المنطقة، محسوبة على خوادم Planetary Computer. التصريف من نموذج GloFAS v4 وليس قياساً.</p>
+          <p class="faint tw-small">صورة واحدة صافية لكل سنة من أقمار Landsat (المسار 169/الصف 036 الذي يغطي المحافظة كلها). مساحة الماء = البكسلات التي فيها مؤشر MNDWI ≥ 0 (Xu، 2006) داخل المنطقة، محسوبة على خوادم Planetary Computer. الشريط الفاتح نطاق عدم اليقين بين العتبتين +0.1 و−0.1، لأن الطمي الرطب والجزر الطينية المكشوفة في الجفاف قيمتها قريبة من الصفر، وتُعرض عتبة Otsu لكل صورة للمقارنة. التصريف من نموذج GloFAS v4، وهو يحسب السدود بقواعد تشغيل قياسية والسحب للري تقديراً، فلا يطابق إطلاقات سد الموصل الفعلية، وليس قياساً.</p>
         </div>
         <div id="tw-panel-spill" hidden>
           <h3>محاكاة تسرب ملوث</h3>
@@ -1030,7 +1030,7 @@
           <label class="drop" for="vi-file" id="vi-drop">
             <svg aria-hidden="true"><use href="#i-camera"/></svg>
             <b>اختر صورة أو صوّر الآن</b>
-            <span class="muted">ضوء نهار، بلا ظل، والكاميرا موجّهة نحو الماء. لعينة في وعاء: ضعه على ورقة بيضاء.</span>
+            <span class="muted">امسك الهاتف أفقياً فوق سطح الماء والكاميرا نحو الأسفل، وظهرك للشمس (الشمس فوق كتفك)، بلا ظل ولا انعكاس سماء، وفي ماء لا يظهر قاعه. لعيّنة في وعاء: ضعه على ورقة بيضاء.</span>
             <input type="file" id="vi-file" accept="image/*" hidden>
           </label>
           <div class="vi-stage" id="vi-stage" hidden>
