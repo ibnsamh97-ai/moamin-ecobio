@@ -54,6 +54,7 @@
   <symbol id="i-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></symbol>
   <symbol id="i-spark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 13.8 9.2 20 11l-6.2 1.8L12 19l-1.8-6.2L4 11l6.2-1.8Z"/><path d="M19 3v4M17 5h4"/></symbol>
   <symbol id="i-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></symbol>
+  <symbol id="i-lab" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2v17.5A2.5 2.5 0 0 1 6.5 22A2.5 2.5 0 0 1 4 19.5V2"/><path d="M20 2v17.5a2.5 2.5 0 0 1-2.5 2.5a2.5 2.5 0 0 1-2.5-2.5V2"/><path d="M3 2h7"/><path d="M14 2h7"/><path d="M9 16H4"/><path d="M20 16h-5"/></symbol>
   <symbol id="i-leaf" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.5 19 2c1 2 2 4.2 1 8-1.4 5.6-5.3 10-9 10Z"/><path d="M2 21c0-3 1.9-5.4 5.1-6"/></symbol>
   <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h5v-6h4v6h5V9.5"/></symbol>
   <symbol id="i-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.5"/></symbol>
@@ -512,6 +513,64 @@
     </div>
     <div class="grid g-3 stage-info" id="river-info"></div>
     <p class="faint u-fs075r-mt10">المحاكاة تعليمية: نسب الإزالة تقريبية مستمدة من مدى القيم الشائع في الأدبيات، وليست نتائج قياس.</p>
+  </div>
+</section>
+
+<!-- ======================= المختبر الافتراضي 3D ======================= -->
+<section class="view" id="view-lab" data-title="المختبر الافتراضي 3D">
+  <div class="wrap">
+    <div class="view-head">
+      <div>
+        <h2>المختبر الافتراضي: تجارب المعالجة والتلوث 3D</h2>
+        <p>نفّذ التجربة العملية خطوة بخطوة في مختبر ثلاثي الأبعاد: اختر الأداة الصحيحة من الصينية وشاهد ما يحدث داخل الزجاجيات. كل نتيجة تظهر في الدفتر مأخوذة من بحث منشور، ومصدرها مذكور في نهاية التجربة.</p>
+      </div>
+    </div>
+    <div class="lb-picker" id="lb-picker" role="group" aria-label="اختر التجربة"></div>
+    <p class="lb-aim" id="lb-aim"></p>
+    <div class="lb-progress">
+      <div class="lb-segs" id="lb-segs" aria-hidden="true"></div>
+      <span class="lb-steplbl" id="lb-steplbl"></span>
+      <button class="btn btn-sm btn-ghost" id="lb-reset" type="button">ابدأ من جديد</button>
+    </div>
+    <div class="lb-main" id="lb-main">
+      <div class="lb-col-a">
+        <div class="stage lb-stage" id="lb-stage">
+          <canvas id="lb-canvas" aria-label="مختبر ثلاثي الأبعاد تُنفَّذ فيه التجربة"></canvas>
+          <div class="lbl-layer" id="lb-lbls"></div>
+          <div class="lb-chip" id="lb-chip" aria-hidden="true"></div>
+          <div class="lb-hud">
+            <div class="lb-speed" id="lb-speed" role="group" aria-label="سرعة الوقت">
+              <span>الوقت</span>
+              <button type="button" data-s="1" aria-pressed="true">×1</button>
+              <button type="button" data-s="2" aria-pressed="false">×2</button>
+              <button type="button" data-s="4" aria-pressed="false">×4</button>
+            </div>
+            <button type="button" class="lb-viewbtn" id="lb-view" title="أعد المنظر إلى الخطوة الحالية" aria-label="أعد المنظر إلى الخطوة الحالية"><svg aria-hidden="true"><use href="#i-expand"/></svg></button>
+          </div>
+          <div class="lb-clock" id="lb-clock" hidden></div>
+          <button class="btn btn-primary lb-stage-next" id="lb-stage-next" type="button" hidden>الخطوة التالية</button>
+          <div class="lb-toast" id="lb-toast" role="status" aria-live="polite" hidden></div>
+          <span class="stage-note">اسحب لتدوير المنظر، وكبّر بالعجلة أو بإصبعين</span>
+        </div>
+        <div class="lb-tray-wrap">
+          <span class="lb-tray-h">صينية الأدوات</span>
+          <div class="lb-tray" id="lb-tray" role="group" aria-label="صينية الأدوات"></div>
+        </div>
+      </div>
+      <div class="lb-col-b">
+        <section class="lb-card" id="lb-card" aria-live="polite"></section>
+        <section class="panel lb-panel">
+          <div class="panel-h"><h3 id="lb-chart-t">الرسم البياني</h3><span class="sub" id="lb-chart-s"></span></div>
+          <div class="lb-chart-box"><canvas id="lb-chart" aria-label="رسم بياني لنتائج التجربة"></canvas></div>
+        </section>
+        <section class="panel lb-panel">
+          <div class="panel-h"><h3>دفتر المختبر</h3><span class="sub">يُملأ أثناء التجربة</span></div>
+          <div class="lb-tbl"><table id="lb-nb"></table><p class="muted lb-nb-empty" id="lb-nb-empty">لا قراءات بعد.</p></div>
+          <details class="lb-mats" id="lb-mats"></details>
+        </section>
+      </div>
+    </div>
+    <section class="lb-results" id="lb-results" hidden></section>
   </div>
 </section>
 
@@ -1368,6 +1427,9 @@
 <script src="js/help.js"></script>
 <script src="js/qc.js"></script>
 <script src="js/exp.js"></script>
+<script src="js/data-lab.js"></script>
+<script src="js/lab3d.js"></script>
+<script src="js/labexp.js"></script>
 <script src="js/sources.js"></script>
 <script src="js/trendlib.js"></script>
 <script src="js/trend.js"></script>
