@@ -14,17 +14,14 @@
     { id: "observe", n: 1, label: "الرصد", icon: "i-sat", hue: "#4fc8dc",
       q: "ما حالة الهواء والنهر الآن؟",
       lead: "قاعدة بيانات يومية لكل قضاء على دجلة مع توقّعات الذكاء الاصطناعي، وقراءات حية من الأقمار الصناعية لهواء صلاح الدين ونهر دجلة، وصور فضائية للنهر منذ عام 1984.",
-      photo: { src: "assets/photos/observe.webp", alt: "الكرة الأرضية في المنصة تُظهر العراق ومحطات الرصد على نهر دجلة" },
       tools: ["districts", "monitor", "space", "twin", "analysis"] },
     { id: "analyze", n: 2, label: "التحليل", icon: "i-flask", hue: "#e6ae4f",
       q: "عندك عيّنة أو نتائج مختبر؟",
       lead: "ثبّت موقع العيّنة، واحسب مؤشرات جودتها، واقرأ صور الماء وشرائح الطحالب، وحلّل جداول نتائجك إحصائياً.",
-      photo: { src: "assets/photos/lab.webp", alt: "مختبر في قسم علوم الحياة بجامعة تكريت، ومجاهر مغطاة على المناضد" },
       tools: ["samples", "water", "qc", "analyzer", "sources", "trend", "calc", "palmer", "vision"] },
     { id: "treat", n: 3, label: "المعالجة", icon: "i-leaf", hue: "#93dd8a",
       q: "كيف تُزال هذه الملوثات؟",
       lead: "صمّم سلسلة معالجة لمياهك وتنبّأ بكفاءتها قبل أي تجربة، وتعرّف على آليات المعالجة الحيوية والنباتية بنماذج ثلاثية الأبعاد.",
-      photo: { src: "assets/photos/garden.webp", alt: "حديقة كلية التربية للعلوم الصرفة ومجسم المجهر الأبيض" },
       tools: ["exp", "plant", "river", "micro", "molecules"] },
     { id: "labs", n: 0, label: "المختبر", icon: "i-lab", hue: "#b493ff",
       q: "جرّب التجربة العملية قبل أن تدخل المختبر",
@@ -33,7 +30,6 @@
     { id: "studies", n: 4, label: "البحث", icon: "i-book", hue: "#a5b6ff",
       q: "ماذا دُرس قبلك، وماذا بقي؟",
       lead: "بحوث جامعة تكريت المنشورة على الخريطة، والمواقع والملوثات التي لم تُدرس بعد، وتقارير PDF جاهزة للعرض على المشرف.",
-      photo: { src: "assets/photos/board.webp", alt: "لوحة جامعة تكريت – كلية التربية للعلوم الصرفة" },
       tools: ["research", "scholar", "gaps", "reports"] },
     { id: "help", n: 0, label: "الدليل", icon: "i-learn", hue: "#f0a6c8",
       q: "كيف تستعمل المنصة في بحثك؟",
@@ -42,7 +38,6 @@
     { id: "department", n: 0, label: "القسم", icon: "i-building", hue: "#c4d3cf",
       q: "قسم علوم الحياة – جامعة تكريت",
       lead: "تجوّل في القسم ومختبراته بثلاثة أبعاد، وتعرّف على أهداف المنصة ومنهجيتها وحدود دقتها.",
-      photo: { src: "assets/photos/college.webp", alt: "لافتة كلية التربية للعلوم الصرفة – قسم علوم الحياة" },
       tools: ["campus", "about"] }
   ];
 
@@ -231,12 +226,12 @@
   function navHTML() {
     return NAV_GROUPS.map(g => {
       const G = groupOf(g);
-      if (g.direct) return `<div class="nav-group is-direct" data-sec="${G.id}" style="--hue:${G.hue}"><a class="nav-btn" href="#${g.direct}" data-v="${g.direct}"><span>${G.label}</span>${g.badge ? `<i class="nav-badge">${g.badge}</i>` : ""}</a></div>`;
+      if (g.direct) return `<div class="nav-group is-direct" data-sec="${G.id}" style="--hue:${G.hue}"><a class="nav-btn" href="#${g.direct}" data-v="${g.direct}">${ico(G.icon, "nav-ic")}<span>${G.label}</span>${g.badge ? `<i class="nav-badge">${g.badge}</i>` : ""}</a></div>`;
       const links = G.ss.length > 1 ? G.ss.map(x => `<a href="#${x.id}">${esc(x.label)}${ico("i-chev")}</a>`).join("") : `<a href="#${G.ss[0].id}">كل أدوات ${G.label} (${G.tools.length})${ico("i-chev")}</a>`;
       return `<div class="nav-group" data-sec="${G.id}" style="--hue:${G.hue}">
-      <a class="nav-btn" href="${G.href}" aria-haspopup="true"><span>${G.label}</span>${ico("i-chevd", "chev")}</a>
+      <a class="nav-btn" href="${G.href}" aria-haspopup="true">${ico(G.icon, "nav-ic")}<span>${G.label}</span>${ico("i-chevd", "chev")}</a>
       <div class="mega"><div class="mega-in">
-        <div class="mega-intro">${G.n ? `<span class="mg-idx">0${G.n} — مرحلة البحث</span>` : `<span class="mg-idx">${ico(G.icon)}</span>`}<b class="mg-t">${G.label}</b><p>${esc(G.q)}</p><div class="mg-links">${links}</div></div>
+        <div class="mega-intro">${G.n ? `<span class="mg-idx">0${G.n} — مرحلة البحث</span>` : `<span class="mg-idx">${ico(G.icon)}</span>`}<b class="mg-t">${G.label}</b><p>${esc(G.q)}</p><div class="mg-links">${links}<a href="#tools" class="mg-all">كل أدوات المنصة${ico("i-chev")}</a></div></div>
         <div class="mega-list${G.tools.length > 4 ? " two" : ""}">${G.tools.map(megaItem).join("")}</div>
       </div></div>
     </div>`;
@@ -245,16 +240,19 @@
 
   function drawerHTML() {
     return `<div class="drawer-head"><b>EcoBio <em>AI</em></b><button class="btn icon-btn btn-ghost" type="button" aria-label="إغلاق القائمة">${ico("i-close")}</button></div>
-      <a class="dr-home" href="#home" data-v="home">${ico("i-home")}<span>الرئيسية</span></a>
+      <div class="dr-top"><a class="dr-home" href="#home" data-v="home">${ico("i-home")}<span>الرئيسية</span></a><a class="dr-home" href="#tools" data-v="tools">${ico("i-grid")}<span>كل الأدوات</span></a><button type="button" class="dr-home" data-open-search>${ico("i-search")}<span>ابحث</span></button></div>
       ${SECTIONS.map(s => `<div class="dr-group" style="--hue:${s.hue}"><a class="dr-title" href="#${s.id}" data-sec-link="${s.id}">${s.n ? `<i class="dr-n">0${s.n}</i>` : ico(s.icon)}<span>${s.label}<small>${esc(s.q)}</small></span></a>
         ${s.tools.map(t => `<a href="#${t}" data-v="${t}" class="dr-item"><span>${esc(TOOLS[t].label)}${TOOLS[t].isNew ? ` <i class="tag-new">جديد</i>` : ""}</span></a>`).join("")}</div>`).join("")}
       <div class="dr-group"><button type="button" class="dr-btn" data-open-settings>${ico("i-gear")}<span>إعدادات المساعد</span></button></div>`;
   }
 
+  /* الشريط السفلي (الهاتف والتطبيق): خمس تبويبات ثابتة */
+  const TABS = [["home", "i-home", "الرئيسية"], ["tools", "i-grid", "الأدوات"], ["lab", "i-lab", "المختبر"], ["assistant", "i-chat", "المساعد"]];
   function bottomHTML() {
-    return `<a href="#home" data-v="home">${ico("i-home")}<span>الرئيسية</span></a>` +
-      PATH.map(s => `<a href="#${s.id}" data-sec-link="${s.id}" style="--hue:${s.hue}">${ico(s.icon)}<span>${s.label}</span></a>`).join("");
+    return TABS.filter(([v]) => v === "home" || v === "tools" || has(v)).map(([v, ic, l]) => `<a href="#${v}" data-tab="${v}">${ico(ic)}<span>${l}</span></a>`).join("") +
+      `<button type="button" data-open-menu aria-label="القائمة الكاملة">${ico("i-menu")}<span>القائمة</span></button>`;
   }
+  const tabOf = v => v === "home" || v === "lab" || v === "assistant" ? v : "tools";
 
   function pathMini(cur) {
     return `<ol class="path-mini" aria-label="مراحل البحث البيئي">${PATH.map(s => `<li style="--hue:${s.hue}"${s.id === cur ? ' aria-current="step"' : ""}><a href="#${s.id}"><i>${s.n}</i>${s.label}</a></li>`).join("")}</ol>`;
@@ -273,17 +271,18 @@
     </a>`;
   }
 
+  const art = key => (ECO.illus ? ECO.illus(key) : "");
   function hubHTML(s) {
     const nx = s.n > 0 ? PATH[s.n] : null;
-    const media = s.photo ? `<figure class="hub-media"><img src="${s.photo.src}" alt="${esc(s.photo.alt)}" width="1280" height="720" decoding="async"></figure>` : `<div class="hub-glyph" aria-hidden="true">${ico(s.icon)}</div>`;
-    return `<div class="hub-hero${s.photo ? " has-photo" : ""}">
-      ${media}
+    return `<div class="hub-hero">
       <div class="wrap hub-hero-in">
         <div class="hub-copy">
           ${s.n > 0 ? pathMini(s.id) : `<p class="kicker">${ico(s.icon)}${s.label}</p>`}
           <h1>${esc(s.q)}</h1>
           <p class="lead">${esc(s.lead)}</p>
+          <a class="hub-jump" href="#tools" data-tools-sec="${s.id}">${ico("i-grid")}<span>${s.tools.length === 1 ? "أداة واحدة" : `${s.tools.length} أدوات`} في هذا القسم · كل أدوات المنصة</span></a>
         </div>
+        <div class="hub-art" aria-hidden="true">${art(s.id)}</div>
       </div>
     </div>
     <div class="wrap hub-body">
@@ -294,34 +293,75 @@
     </div>`;
   }
 
-  /* مراحل البحث الأربع في الرئيسية: بطاقات كبيرة تتراكم مع التمرير */
+  /* مراحل البحث الأربع في الرئيسية: بطاقة لكل مرحلة برسمها المتحرك */
   function stagesHTML() {
-    return PATH.map(s => `<li class="stg" style="--hue:${s.hue}; --i:${s.n - 1}">
-      <article class="stage-in">
-        <figure class="stage-media">${s.photo ? `<img src="${s.photo.src}" alt="${esc(s.photo.alt)}" width="1280" height="720" loading="lazy" decoding="async">` : ""}</figure>
-        <div class="stage-body">
-          <span class="stage-idx">0${s.n} <i></i> 0${PATH.length}</span>
+    return PATH.map(s => `<li class="stg" style="--hue:${s.hue}">
+      <article class="stg-card">
+        <a class="stg-art" href="#${s.id}" tabindex="-1" aria-hidden="true">${art(s.id)}</a>
+        <div class="stg-body">
+          <span class="stg-n">المرحلة 0${s.n}</span>
           <h3><a href="#${s.id}">${s.label}</a></h3>
-          <p class="stage-q">${esc(s.q)}</p>
-          <p class="stage-lead">${esc(s.lead)}</p>
-          <ul class="stage-tools">${s.tools.slice(0, 4).map(t => `<li><a href="#${t}">${ico(TOOLS[t].icon)}<span>${esc(TOOLS[t].label)}</span></a></li>`).join("")}</ul>
-          <a class="pill pill-light stage-go" href="#${s.id}"><span>ادخل قسم ${s.label}</span><i class="pill-arrow">${ico("i-chev")}</i></a>
+          <p class="stg-q">${esc(s.q)}</p>
+          <ul class="stg-tools">${s.tools.slice(0, 3).map(t => `<li><a href="#${t}">${ico(TOOLS[t].icon)}<span>${esc(TOOLS[t].label)}</span>${TOOLS[t].isNew ? `<i class="tag-new">جديد</i>` : ""}</a></li>`).join("")}</ul>
+          <a class="stg-all" href="#${s.id}"><span>${s.tools.length > 3 ? `كل أدوات ${s.label} (${s.tools.length})` : `ادخل قسم ${s.label}`}</span>${ico("i-chev")}</a>
         </div>
       </article>
     </li>`).join("");
   }
 
-  function riverPathHTML() {
-    return PATH.map(s => `<li class="rv-stop" style="--hue:${s.hue}">
-      <a class="rv-node" href="#${s.id}" aria-label="المرحلة ${s.n}: ${s.label}">${ico(s.icon)}</a>
-      <div class="rv-body">
-        <span class="rv-n">المرحلة ${s.n}</span>
-        <h3><a href="#${s.id}">${s.label}</a></h3>
-        <p class="rv-q">${esc(s.q)}</p>
-        <ul class="rv-tools">${s.tools.slice(0, 3).map(t => `<li><a href="#${t}">${ico(TOOLS[t].icon)}<span>${esc(TOOLS[t].label)}</span>${TOOLS[t].isNew ? `<i class="tag-new">جديد</i>` : ""}</a></li>`).join("")}</ul>
-        <a class="rv-all" href="#${s.id}">${s.tools.length > 3 ? `كل أدوات ${s.label} (${s.tools.length})` : `ادخل قسم ${s.label}`}${ico("i-chev")}</a>
-      </div>
-    </li>`).join("");
+  /* «كل الأدوات»: دليل التطبيق، مرتب على الأقسام، مع فلتر فوري */
+  function tileHTML(t) {
+    const T = TOOLS[t], s = SEC_OF[t];
+    return `<a class="tt" href="#${t}" data-tt="${t}" style="--hue:${s ? s.hue : "var(--river)"}"><span class="tt-ic">${ico(T.icon)}</span><span class="tt-t"><b>${esc(T.label)}${T.isNew ? ` <i class="tag-new">جديد</i>` : ""}</b><small>${esc(T.desc)}</small></span></a>`;
+  }
+  function toolsHTML() {
+    const n = Object.keys(TOOLS).filter(t => has(t) && !TOOLS[t].hidden).length;
+    return `<header class="tl-head">
+        <div class="tl-title"><h1>كل الأدوات</h1><p><b class="num">${n}</b> أداة مرتبة على مراحل البحث البيئي. اكتب ما تحتاجه، أو اختر قسماً.</p></div>
+        <div class="tl-bar">
+          <label class="tl-find">${ico("i-search")}<span class="sr-only">فلترة الأدوات</span><input id="tl-q" type="search" autocomplete="off" spellcheck="false" placeholder="مثلاً: WQI، رصاص، طحالب، ANOVA"></label>
+          <div class="tl-chips" role="group" aria-label="الأقسام"><button type="button" class="on" data-tl-sec="" aria-pressed="true">الكل</button>${SECTIONS.map(s => `<button type="button" data-tl-sec="${s.id}" aria-pressed="false" style="--hue:${s.hue}">${ico(s.icon)}${s.label}</button>`).join("")}</div>
+        </div>
+      </header>
+      <div class="tl-body">${SECTIONS.map(s => `<section class="tl-group" data-sec="${s.id}" style="--hue:${s.hue}" aria-labelledby="tl-h-${s.id}">
+        <header class="tl-gh">${s.n ? `<i class="tl-gn">0${s.n}</i>` : `<i class="tl-gn">${ico(s.icon)}</i>`}<div><h2 id="tl-h-${s.id}">${s.label}</h2><p>${esc(s.q)}</p></div><a href="#${s.id}">صفحة القسم${ico("i-chev")}</a></header>
+        <div class="tl-grid">${s.tools.map(tileHTML).join("")}</div>
+      </section>`).join("")}
+      <div class="tl-empty" hidden><b>لا توجد أداة تطابق بحثك</b><span>جرّب كلمة أقصر، أو اسأل المساعد الذكي.</span><a class="btn btn-sm" href="#assistant">${ico("i-chat")}اسأل المساعد</a></div></div>`;
+  }
+  let tlSec = "";
+  function filterTools() {
+    const root = U.$("#tools-root"); if (!root) return;
+    const q = (U.$("#tl-q") || {}).value || "";
+    if (!INDEX.length) buildIndex();
+    const toks = tokens(q);
+    let shown = 0;
+    U.$$(".tl-group", root).forEach(g => {
+      let n = 0;
+      const secOk = !tlSec || g.dataset.sec === tlSec;
+      U.$$(".tt", g).forEach(a => {
+        const e = INDEX.find(x => x.id === a.dataset.tt);
+        const ok = secOk && (!toks.length || (e && scoreOf(e, toks) > 0));
+        a.hidden = !ok; if (ok) n++;
+      });
+      g.hidden = !n; shown += n;
+    });
+    const em = U.$(".tl-empty", root); if (em) em.hidden = shown > 0;
+  }
+  function wireTools() {
+    const root = U.$("#tools-root"); if (!root || root.dataset.wired) return;
+    root.dataset.wired = "1";
+    const q = U.$("#tl-q", root);
+    q.addEventListener("input", filterTools);
+    root.addEventListener("click", e => {
+      const b = e.target.closest("[data-tl-sec]"); if (!b) return;
+      setToolsSec(b.dataset.tlSec);
+    });
+  }
+  function setToolsSec(id) {
+    tlSec = id || "";
+    U.$$("[data-tl-sec]").forEach(x => { const on = x.dataset.tlSec === tlSec; x.classList.toggle("on", on); x.setAttribute("aria-pressed", String(on)); });
+    filterTools();
   }
 
   function footHTML() {
@@ -341,9 +381,9 @@
     const nav = U.$("#nav"); if (nav) nav.innerHTML = navHTML();
     const dp = U.$("#drawer-panel"); if (dp) dp.innerHTML = drawerHTML();
     const bb = U.$("#bottombar"); if (bb) bb.innerHTML = bottomHTML();
-    const rp = U.$("#river-path"); if (rp) rp.innerHTML = riverPathHTML();
     const sg = U.$("#stages"); if (sg) sg.innerHTML = stagesHTML();
     const ft = U.$("#foot"); if (ft) ft.innerHTML = footHTML();
+    const tr = U.$("#tools-root"); if (tr) { tr.innerHTML = toolsHTML(); wireTools(); }
     const main = U.$("main");
     SECTIONS.forEach(s => {
       if (document.getElementById("view-" + s.id)) return;
@@ -387,9 +427,9 @@
   /* ------------------------------------------------------------------
      الموجّه
   ------------------------------------------------------------------ */
-  const VIEW_IDS = new Set(["home", ...SECTIONS.map(s => s.id), ...Object.keys(TOOLS).filter(has)]);
+  const VIEW_IDS = new Set(["home", "tools", ...SECTIONS.map(s => s.id), ...Object.keys(TOOLS).filter(has)]);
   let current = null;
-  const titleOf = v => v === "home" ? "EcoBio AI" : `${(TOOLS[v] || secById(v) || {}).label || ""} · EcoBio AI`;
+  const titleOf = v => v === "home" ? "EcoBio AI" : v === "tools" ? "كل الأدوات · EcoBio AI" : `${(TOOLS[v] || secById(v) || {}).label || ""} · EcoBio AI`;
 
   function route() {
     const raw = decodeURIComponent((location.hash || "#home").slice(1));
@@ -401,6 +441,10 @@
     U.$$(".view").forEach(s => s.classList.toggle("active", s.id === "view-" + v));
     const sec = secById(v) ? v : (SEC_OF[v] ? SEC_OF[v].id : null);
     U.$$("[data-v]").forEach(a => a.classList.toggle("active", a.dataset.v === v));
+    const tab = tabOf(v);
+    U.$$("[data-tab]").forEach(a => { const on = a.dataset.tab === tab; a.classList.toggle("active", on); if (on) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); });
+    rememberTool(v);
+    if (v === "tools") { const m = raw.match(/[&?]s=([a-z]+)/); setToolsSec(m && secById(m[1]) ? m[1] : ""); }
     U.$$("[data-sec-link]").forEach(a => a.classList.toggle("active", a.dataset.secLink === sec));
     U.$$(".nav-group").forEach(g => g.classList.toggle("active", !!sec && g.dataset.sec.split(" ").includes(sec)));
     document.body.dataset.view = v;
@@ -418,6 +462,15 @@
     if (ECO.motion && ECO.motion.top) ECO.motion.top();
     else if (window.scrollY > 0) window.scrollTo({ top: 0, behavior: "instant" in window ? "instant" : "auto" });
   }
+  /* آخر الأدوات التي فتحها المستخدم (على جهازه فقط) */
+  const RECENT_MAX = 6;
+  function rememberTool(v) {
+    if (!TOOLS[v] || TOOLS[v].hidden || !has(v)) return;
+    const list = U.store.get("recent", []).filter(x => x !== v && TOOLS[x]);
+    list.unshift(v); U.store.set("recent", list.slice(0, RECENT_MAX));
+  }
+  ECO.recent = () => U.store.get("recent", []).filter(t => TOOLS[t] && !TOOLS[t].hidden && has(t));
+  ECO.recentClear = () => U.store.del("recent");
   ECO.go = id => { if (location.hash === "#" + id) route(); else location.hash = id; };
 
   /* ------------------------------------------------------------------
@@ -437,22 +490,24 @@
     }).concat(SECTIONS.map(s => ({ id: s.id, kind: "sec", label: "قسم " + s.label, icon: s.icon, sec: "قسم", hue: s.hue, desc: s.q,
       L: norm(s.label), K: "", D: norm(s.q + " " + s.lead), S: "" })));
   }
+  const tokens = q => norm(q).split(/[\s،,]+/).filter(Boolean).map(t => t.length > 3 && t.startsWith("ال") ? t.slice(2) : t);
+  function scoreOf(e, toks) {
+    let sc = 0;
+    for (const t of toks) {
+      let m = 0;
+      if (e.L.startsWith(t)) m = 30; else if (e.L.includes(t)) m = 20;
+      if (!m && e.K.includes(t)) m = 12;
+      if (!m && e.D.includes(t)) m = 6;
+      if (!m && e.S.includes(t)) m = 4;
+      if (!m) return 0;
+      sc += m;
+    }
+    return sc + (e.kind === "tool" ? 1 : 0);
+  }
   function search(q) {
-    const toks = norm(q).split(/[\s،,]+/).filter(Boolean).map(t => t.length > 3 && t.startsWith("ال") ? t.slice(2) : t);
+    const toks = tokens(q);
     if (!toks.length) return null;
-    return INDEX.map(e => {
-      let sc = 0;
-      for (const t of toks) {
-        let m = 0;
-        if (e.L.startsWith(t)) m = 30; else if (e.L.includes(t)) m = 20;
-        if (!m && e.K.includes(t)) m = 12;
-        if (!m && e.D.includes(t)) m = 6;
-        if (!m && e.S.includes(t)) m = 4;
-        if (!m) return null;
-        sc += m;
-      }
-      return { e, sc: sc + (e.kind === "tool" ? 1 : 0) };
-    }).filter(Boolean).sort((a, b) => b.sc - a.sc).slice(0, 8).map(x => x.e);
+    return INDEX.map(e => ({ e, sc: scoreOf(e, toks) })).filter(x => x.sc > 0).sort((a, b) => b.sc - a.sc).slice(0, 8).map(x => x.e);
   }
   const SUGGEST = ["lab", "districts", "water", "analyzer", "plant", "research"];
 
@@ -527,6 +582,8 @@
         }
         return;
       }
+      const ts = e.target.closest("[data-tools-sec]");
+      if (ts) { e.preventDefault(); ECO.go("tools&s=" + ts.dataset.toolsSec); return; }
       const sk = e.target.closest("[data-skip]");
       if (sk) { e.preventDefault(); const m = U.$(".view.active h1, .view.active h2"); if (m) { m.setAttribute("tabindex", "-1"); m.focus(); } return; }
       const st = e.target.closest("[data-open-settings]"); if (st) { U.$("#drawer").hidden = true; const b = U.$("#open-settings"); if (b) b.click(); return; }
@@ -540,8 +597,10 @@
       else if (e.key === "Escape") { closePalette(); U.$("#drawer").hidden = true; }
     });
     const dr = U.$("#drawer");
-    U.$("#open-menu").onclick = e => { dr.hidden = false; if (e.detail === 0) { const f = dr.querySelector("a.active, a"); if (f) f.focus(); } };
-    dr.addEventListener("click", e => { if (e.target === dr || e.target.closest("a") || e.target.closest(".drawer-head button")) dr.hidden = true; });
+    const openMenu = e => { dr.hidden = false; if (e.detail === 0) { const f = dr.querySelector("a.active, a"); if (f) f.focus(); } };
+    U.$("#open-menu").onclick = openMenu;
+    document.addEventListener("click", e => { if (e.target.closest("[data-open-menu]")) openMenu(e); });
+    dr.addEventListener("click", e => { if (e.target === dr || e.target.closest("a") || e.target.closest(".drawer-head button") || e.target.closest("[data-open-search]")) dr.hidden = true; });
   }
 
   buildShell();

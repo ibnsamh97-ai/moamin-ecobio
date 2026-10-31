@@ -23,12 +23,11 @@
   const late = !window.performance || performance.now() > 2300;
 
   /* عناصر تظهر بالتمرير، وما يُستثنى منها (طبقات ثابتة ومشاهد ثلاثية الأبعاد) */
-  const REVEAL = [".sec-head", ".rv-stop", ".paths-alt", ".spot-card", ".feature-study", ".dept-card",
-    ".bn", ".mf-stat", ".live-copy", ".live-globe", ".closing-in", ".manifesto .lbl",
+  const REVEAL = [".sec-head", ".paths-more", ".feature-study", ".kpi", ".stg", ".fx", ".duo-card", ".closing-in", ".row-head", ".rc",
     ".view-head", ".tool-card", ".ns-card", ".hub-next", ".sibs",
     ".panel", ".an-panel", ".calc-card", ".study-card", ".rep-card"].join(",");
-  const SKIP = ".hero, .cine, .stg, #view-twin, .tw-stage, .tour-stage, .modal, .drawer, .palette, .sheet-wrap, #report-stage, [data-mo-skip]";
-  const COUNT = ".hl-main > b, .hl-stat > b, .stat .v, .metric .v, .db-kpi .v, .db-gnow b, .mf-stat > b";
+  const SKIP = ".hero, .hx, #view-twin, .tw-stage, .tour-stage, .modal, .drawer, .palette, .sheet-wrap, #report-stage, [data-mo-skip]";
+  const COUNT = ".hl-main > b, .hl-stat > b, .stat .v, .metric .v, .db-kpi .v, .db-gnow b, .kpi > b";
   const COUNT_SKIP = "#view-twin, .tw-stage, .tour-stage, #report-stage, .leaflet-container, .chart-box, [data-mo-skip]";
   const PREVENT = ".drawer, .palette, .modal, .sheet-wrap, .tour-stage, .tw-stage, [data-lenis-prevent]";
 
@@ -184,10 +183,10 @@
   ------------------------------------------------------------------ */
   let intro = null, introPlayed = false;
   function prepIntro() {
-    const hero = document.querySelector("#view-home .cine"); if (!hero) return;
-    const copy = hero.querySelector(".cine-copy"), h1 = copy && copy.querySelector("h1");
+    const hero = document.querySelector("#view-home .hx"); if (!hero) return;
+    const copy = hero.querySelector(".hx-copy"), h1 = copy && copy.querySelector("h1");
     const bits = copy ? Array.from(copy.children).filter(x => x !== h1) : [];
-    const foot = hero.querySelector(".cine-foot");
+    const foot = hero.querySelector(".hx-data");
     intro = { hero, h1, bits, foot, bt: null };
     if (!hasGsap || reduced || late) return;
     intro.bt = h1 && RB.blurText ? RB.blurText(h1, { delay: 90, blur: 12, distance: 22, direction: "bottom", stepDuration: 0.42 }) : null;

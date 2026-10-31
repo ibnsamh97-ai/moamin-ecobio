@@ -180,7 +180,7 @@
       orbit.update(dt);
       // إزاحة الكرة لليسار على الشاشات العريضة حتى لا تغطي النص
       const w = canvas.clientWidth, h = canvas.clientHeight;
-      if (w > 900 && canvas.closest(".hero")) { camera.aspect = (w * 1.5) / h; camera.setViewOffset(w * 1.5, h, w * 0.46, 0, w, h); }
+      if (w > 1100 && canvas.closest(".hero, .hx")) { camera.aspect = (w * 1.5) / h; camera.setViewOffset(w * 1.5, h, w * 0.46, 0, w, h); }
       else if (camera.view && camera.view.enabled) { camera.aspect = w / h; camera.clearViewOffset(); }
 
       stationObjs.forEach(o => {

@@ -6,12 +6,12 @@
 <title>EcoBio AI</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="description" content="EcoBio AI — منصة ذكية لرصد التلوث البيئي من الأقمار الصناعية ومعالجته حيوياً بالذكاء الاصطناعي. جامعة تكريت – كلية التربية للعلوم الصرفة – قسم علوم الحياة.">
-<meta name="theme-color" content="#050a0c">
+<meta name="theme-color" content="#051116">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alexandria:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Readex+Pro:wght@600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Readex+Pro:wght@400;500;600;700&display=swap">
 <!--ECO:CSS-->
 <link rel="stylesheet" href="vendor/leaflet.css">
 <link rel="stylesheet" href="css/style.css">
@@ -80,6 +80,7 @@
   <symbol id="i-plant" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 20.5h19"/><path d="M4 20.5V12h5.5v8.5M14.5 20.5V8.5H20v12"/><path d="M9.5 15h5M6.75 12V9.5a3 3 0 0 1 3-3H12"/><path d="M17.25 8.5V5.5"/><path d="M15.5 4.5c.6-.9 2.9-.9 3.5 0"/></symbol>
   <symbol id="i-db" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5.5" rx="7.5" ry="2.8"/><path d="M4.5 5.5v6.5c0 1.55 3.36 2.8 7.5 2.8s7.5-1.25 7.5-2.8V5.5"/><path d="M4.5 12v6.5c0 1.55 3.36 2.8 7.5 2.8s7.5-1.25 7.5-2.8V12"/></symbol>
   <symbol id="i-code" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m8 7-5 5 5 5M16 7l5 5-5 5M13.5 4.5l-3 15"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/></symbol>
   <symbol id="i-logo" viewBox="0 0 132 132"><ellipse cx="66" cy="66" rx="60" ry="60" fill="none" stroke="#4fc8dc" stroke-width="5" stroke-dasharray="10 12" opacity=".7"/><path d="M66 108C42 96 34 72 42 50c8-20 26-28 46-30 4 22 2 46-10 64-4 6-8 12-12 24Z" fill="none" stroke="#93dd8a" stroke-width="8" stroke-linejoin="round"/><path d="M66 108c2-20 6-38 18-62" fill="none" stroke="#4fc8dc" stroke-width="6" stroke-linecap="round"/><circle cx="66" cy="6" r="8" fill="#e6ae4f"/></symbol>
 </svg>
 
@@ -114,6 +115,7 @@
     <div class="top-actions">
       <span class="live-dot" id="live-dot" title="حالة البيانات"><i></i><span id="live-text">جارٍ الاتصال</span></span>
       <button type="button" class="search-btn" data-open-search aria-label="ابحث عن أداة"><svg aria-hidden="true"><use href="#i-search"/></svg><span>ابحث</span><kbd>/</kbd></button>
+      <a class="tools-btn" href="#tools" data-v="tools" aria-label="كل الأدوات"><svg aria-hidden="true"><use href="#i-grid"/></svg><span>كل الأدوات</span></a>
       <a class="ask-btn" href="#assistant" data-v="assistant"><svg aria-hidden="true"><use href="#i-chat"/></svg><span>اسأل المساعد</span></a>
       <button type="button" class="btn icon-btn btn-ghost" id="open-settings" aria-label="إعدادات المساعد الذكي"><svg aria-hidden="true"><use href="#i-gear"/></svg></button>
       <button type="button" class="menu-btn" id="open-menu" aria-label="القائمة الكاملة"><svg aria-hidden="true"><use href="#i-menu"/></svg></button>
@@ -125,49 +127,42 @@
 <main>
 <!-- ======================= الرئيسية ======================= -->
 <section class="view" id="view-home" data-title="الرئيسية">
-  <!-- البطل: نهر من الضوء -->
-  <div class="cine" id="cine">
-    <div class="cine-media" aria-hidden="true">
-      <canvas class="cine-ribbon" id="cine-ribbon"></canvas>
-      <video class="cine-video" id="cine-video" muted loop playsinline preload="none" disablepictureinpicture data-src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260508_064122_c4750c0e-7476-4b44-94a2-a85a65c63bf2.mp4"></video>
-      <div class="cine-scrim"></div>
-      <div class="cine-grain"></div>
-    </div>
-    <div class="cine-in">
-      <div class="cine-copy hero-copy">
-        <p class="cine-eyebrow"><i></i>جامعة تكريت<span class="hide-sm"> · كلية التربية للعلوم الصرفة</span> · قسم علوم الحياة</p>
-        <h1><span class="cine-l1">نرصد التلوث من الفضاء،</span> <span class="cine-l2">ونعالجه بالحياة.</span></h1>
-        <p class="cine-sub">منصة بحثية مفتوحة لطلبة البيئة وباحثيها: أقمار صناعية تقرأ هواء صلاح الدين ونهر دجلة، ومختبر يحلّل نتائج عيّناتك، ومحاكيات تصمّم معالجتها قبل أي تجربة.</p>
-        <div class="cine-cta hero-cta">
-          <button type="button" class="pill pill-light" data-scroll="#paths"><span>ابدأ رحلتك البحثية</span><i class="pill-arrow"><svg aria-hidden="true"><use href="#i-chevd"/></svg></i></button>
-          <a class="pill pill-glass" href="#lab"><svg aria-hidden="true"><use href="#i-lab"/></svg><span>المختبر الافتراضي 3D</span></a>
-        </div>
+  <!-- البطل: الأرض من المدار -->
+  <div class="hx" id="hx">
+    <canvas class="globe" id="globe-canvas" aria-label="كرة أرضية ثلاثية الأبعاد تُظهر العراق ونهر دجلة ومحطات الرصد والأقمار الصناعية"></canvas>
+    <div class="hx-in">
+      <div class="hx-copy hero-copy">
+        <p class="hx-eyebrow"><i aria-hidden="true"></i>منصة بحثية مفتوحة<span class="hide-sm"> · قسم علوم الحياة – جامعة تكريت</span></p>
+        <h1><span class="hx-l1">نرصد التلوث من الفضاء،</span> <span class="hx-l2">ونعالجه بالحياة</span></h1>
+        <p class="hx-sub">أدوات مجانية لطلبة البيئة وباحثيها: تابع هواء صلاح الدين ونهر دجلة من الأقمار الصناعية، وحلّل نتائج عيّناتك، وصمّم طريقة معالجتها من المتصفح مباشرة.</p>
+        <button type="button" class="hx-search" data-open-search aria-label="ابحث عن أداة أو ملوث أو مؤشر">
+          <svg aria-hidden="true"><use href="#i-search"/></svg><span>ابحث عن أداة، ملوث، أو مؤشر…</span><kbd>/</kbd>
+        </button>
+        <div class="hx-quick" id="hx-quick" aria-label="أدوات يكثر استعمالها"></div>
       </div>
-      <div class="cine-foot">
-        <a class="cine-live" id="cine-live" href="#monitor" aria-live="polite"><i></i><span>جارٍ جلب قراءات الأقمار الصناعية…</span></a>
-        <button type="button" class="cine-scroll" data-scroll="#manifesto" aria-label="انزل إلى المحتوى"><span>انزل</span><i></i></button>
+      <div class="hero-data hx-data">
+        <div class="hero-live" id="hero-live" aria-live="polite"></div>
+        <p class="updated" id="hero-updated"></p>
+        <div id="hero-ground" class="hero-ground"></div>
       </div>
     </div>
   </div>
 
-  <!-- مصادر البيانات -->
-  <div class="sources-strip" aria-label="مصادر البيانات">
-    <div class="ss-track" id="ss-track">
-      <span>Copernicus CAMS</span><span>Sentinel-2</span><span>Landsat 1984+</span><span>NASA GIBS</span><span>Open-Meteo</span><span>ERA5</span><span>GloFAS</span><span>METAR · NOAA</span><span>OpenAlex</span><span>المواصفة العراقية 417</span><span>WHO 2021</span><span>Standard Methods · APHA</span>
+  <!-- المنصة بالأرقام -->
+  <div class="wrap">
+    <div class="kpis" aria-label="المنصة بالأرقام">
+      <div class="kpi" style="--hue:#4fc8dc"><b class="num" id="st-tools">29</b><span>أداة بحثية مجانية</span></div>
+      <div class="kpi" style="--hue:#93dd8a"><b class="num" id="st-stations">7</b><span>محطات لرصد الهواء على دجلة</span></div>
+      <div class="kpi" style="--hue:#e6ae4f"><b class="num" id="st-years">42</b><span>سنة من صور Landsat للنهر</span></div>
+      <div class="kpi" style="--hue:#b493ff"><b class="num" id="st-exps">5</b><span>تجارب في المختبر الافتراضي</span></div>
     </div>
   </div>
 
-  <!-- البيان والأرقام -->
-  <section class="home-sec manifesto" id="manifesto" aria-labelledby="mf-h">
+  <!-- آخر ما فتحت -->
+  <section class="home-sec recent" id="recent" hidden aria-labelledby="rc-h">
     <div class="wrap">
-      <span class="xlbl">01 — لماذا EcoBio</span>
-      <h2 id="mf-h" class="mf-text">من مدار القمر الصناعي إلى شريحة المجهر، كل خطوة في بحثك البيئي لها أداة هنا: ترصد الهواء والنهر، وتحلّل عيّناتك، وتصمّم معالجتها، وتكتب النتيجة بمراجعها.</h2>
-      <div class="mf-stats">
-        <div class="mf-stat"><b class="num" id="st-tools">30</b><span>أداة بحثية مجانية</span></div>
-        <div class="mf-stat"><b class="num">7</b><span>محطات لرصد الهواء على دجلة</span></div>
-        <div class="mf-stat"><b class="num" id="st-years">42</b><span>سنة من صور Landsat للنهر</span></div>
-        <div class="mf-stat"><b class="num" id="st-papers">7</b><span>بحوث منشورة من جامعة تكريت على الخريطة</span></div>
-      </div>
+      <header class="row-head"><h2 id="rc-h"><svg aria-hidden="true"><use href="#i-refresh"/></svg>تابع من حيث توقفت</h2><button type="button" class="link-btn" data-clear-recent>مسح القائمة</button></header>
+      <div class="rc-list" id="rc-list"></div>
     </div>
   </section>
 
@@ -175,78 +170,74 @@
   <section class="home-sec paths" id="paths" aria-labelledby="paths-h">
     <div class="wrap">
       <header class="sec-head">
-        <span class="xlbl">02 — رحلة البحث</span>
-        <h2 id="paths-h" tabindex="-1">أربع مراحل، من السؤال إلى الرسالة</h2>
-        <p>المنصة مرتبة على مراحل البحث البيئي. ابدأ من المرحلة التي تناسبك، وكل أداة تدلّك على الخطوة التالية.</p>
+        <span class="xlbl">رحلة البحث</span>
+        <h2 id="paths-h" tabindex="-1">ماذا تريد أن تفعل اليوم؟</h2>
+        <p>المنصة مرتبة على مراحل البحث البيئي، من رصد الهواء والنهر إلى كتابة النتيجة. ابدأ من المرحلة التي تناسبك، وكل أداة تدلّك على الخطوة التالية.</p>
       </header>
       <ol class="stgs" id="stages"></ol>
-      <p class="paths-alt">تبحث عن أداة بعينها؟ <button type="button" class="link-btn" data-open-search><svg aria-hidden="true"><use href="#i-search"/></svg>ابحث باسم المؤشر أو الملوث</button></p>
+      <div class="paths-more">
+        <a class="pill pill-light" href="#tools"><svg aria-hidden="true"><use href="#i-grid"/></svg><span>تصفّح كل الأدوات</span><i class="pill-arrow"><svg aria-hidden="true"><use href="#i-chev"/></svg></i></a>
+        <button type="button" class="pill pill-line" data-open-search><svg aria-hidden="true"><use href="#i-search"/></svg><span>ابحث باسم المؤشر أو الملوث</span></button>
+      </div>
     </div>
   </section>
 
   <!-- من داخل المنصة -->
-  <section class="home-sec show" aria-labelledby="show-h">
+  <section class="home-sec feat" aria-labelledby="ft-h">
     <div class="wrap">
       <header class="sec-head">
-        <span class="xlbl">03 — من داخل المنصة</span>
-        <h2 id="show-h">أدوات تشتغل مثل مختبر حقيقي</h2>
+        <span class="xlbl">من داخل المنصة</span>
+        <h2 id="ft-h">أدوات تشتغل مثل مختبر حقيقي</h2>
         <p>نماذج ثلاثية الأبعاد ومحاكيات وحاسبات إحصائية، تعمل كلها في المتصفح، وأرقامها من بحوث منشورة ومعادلات موثقة.</p>
       </header>
-      <div class="bento">
-        <a class="bn bn-wide" href="#lab">
-          <figure><img src="assets/photos/lab-preview.webp" alt="المختبر الافتراضي: ست جرار في اختبار الجرة وفوق كل جرة جرعة الشب والعكارة المتبقية" width="1440" height="659" loading="lazy" decoding="async"></figure>
-          <div class="bn-copy"><span class="bn-tag">جديد · ثلاثي الأبعاد</span><h3>المختبر الافتراضي</h3><p>خمس تجارب تمسك أدواتها بيدك: اختبار الجرة، والامتزاز، وBOD₅، والعسرة، والعناصر الثقيلة في القصب.</p></div>
-          <span class="bn-go" aria-hidden="true"><svg><use href="#i-chev"/></svg></span>
+      <div class="fx-grid">
+        <a class="fx fx-wide" href="#lab" style="--hue:#b493ff">
+          <div class="fx-art" data-illus="labs" aria-hidden="true"></div>
+          <div class="fx-copy"><span class="fx-tag">جديد · ثلاثي الأبعاد</span><h3>المختبر الافتراضي</h3><p>خمس تجارب تمسك أدواتها بيدك: اختبار الجرة، والامتزاز، وBOD₅، والعسرة، والعناصر الثقيلة في القصب.</p></div>
+          <span class="fx-go" aria-hidden="true"><svg><use href="#i-chev"/></svg></span>
         </a>
-        <a class="bn" href="#river">
-          <figure><img src="assets/photos/river-preview.webp" alt="محاكاة دجلة ثلاثية الأبعاد: مصفى نفط ومصب صرف صحي وأراضٍ زراعية على النهر" width="1280" height="1118" loading="lazy" decoding="async"></figure>
-          <div class="bn-copy"><span class="bn-tag">محاكاة</span><h3>محاكاة دجلة 3D</h3><p>شغّل مصادر التلوث وطبّق المعالجة النباتية والحيوية، وراقب الأكسجين والأسماك.</p></div>
-          <span class="bn-go" aria-hidden="true"><svg><use href="#i-chev"/></svg></span>
+        <a class="fx" href="#river" style="--hue:#4fc8dc">
+          <div class="fx-art" data-illus="river" aria-hidden="true"></div>
+          <div class="fx-copy"><span class="fx-tag">محاكاة</span><h3>محاكاة دجلة 3D</h3><p>شغّل مصادر التلوث وطبّق المعالجة النباتية والحيوية، وراقب الأكسجين والأسماك.</p></div>
+          <span class="fx-go" aria-hidden="true"><svg><use href="#i-chev"/></svg></span>
         </a>
-        <a class="bn" href="#plant">
-          <figure><img src="assets/photos/plant-preview.webp" alt="محاكي محطة المعالجة: سلسلة مراحل المعالجة ونسبة الإزالة لكل مرحلة" width="1280" height="800" loading="lazy" decoding="async"></figure>
-          <div class="bn-copy"><span class="bn-tag">تصميم</span><h3>محاكي محطة المعالجة</h3><p>ركّب مراحل المعالجة واعرف نوعية المياه الخارجة والجرعات قبل أي تجربة.</p></div>
-          <span class="bn-go" aria-hidden="true"><svg><use href="#i-chev"/></svg></span>
+        <a class="fx" href="#plant" style="--hue:#93dd8a">
+          <div class="fx-art" data-illus="plant" aria-hidden="true"></div>
+          <div class="fx-copy"><span class="fx-tag">تصميم</span><h3>محاكي محطة المعالجة</h3><p>ركّب مراحل المعالجة واعرف نوعية المياه الخارجة والجرعات قبل أي تجربة.</p></div>
+          <span class="fx-go" aria-hidden="true"><svg><use href="#i-chev"/></svg></span>
         </a>
-        <a class="bn bn-wide" href="#analyzer">
-          <figure><img src="assets/photos/analyzer-preview.webp" alt="محلّل بيانات البيئة: جدول نتائج بالمتوسط والانحراف المعياري واختبار دنكن" width="1280" height="800" loading="lazy" decoding="async"></figure>
-          <div class="bn-copy"><span class="bn-tag">إحصاء</span><h3>محلّل بيانات البيئة</h3><p>ارفع ملف Excel لتحصل على ANOVA ودنكن والارتباط ومؤشرات التلوث ورسوماً جاهزة للرسالة.</p></div>
-          <span class="bn-go" aria-hidden="true"><svg><use href="#i-chev"/></svg></span>
+        <a class="fx fx-wide" href="#analyzer" style="--hue:#e6ae4f">
+          <div class="fx-art" data-illus="analyzer" aria-hidden="true"></div>
+          <div class="fx-copy"><span class="fx-tag">إحصاء</span><h3>محلّل بيانات البيئة</h3><p>ارفع ملف Excel لتحصل على ANOVA ودنكن والارتباط ومؤشرات التلوث ورسوماً جاهزة للرسالة.</p></div>
+          <span class="fx-go" aria-hidden="true"><svg><use href="#i-chev"/></svg></span>
         </a>
-      </div>
-    </div>
-  </section>
-
-  <!-- الرصد الحي -->
-  <section class="home-sec live" aria-labelledby="live-h">
-    <div class="wrap live-grid">
-      <div class="live-globe">
-        <canvas class="globe" id="globe-canvas" aria-label="كرة أرضية ثلاثية الأبعاد تُظهر العراق ونهر دجلة ومحطات الرصد والأقمار الصناعية"></canvas>
-      </div>
-      <div class="live-copy">
-        <span class="xlbl">04 — الرصد الحي</span>
-        <h2 id="live-h">هواء تكريت، من المدار إلى شاشتك</h2>
-        <p>قراءات تُحدَّث كل 30 دقيقة من نموذج Copernicus CAMS الذي يدمج أرصاد الأقمار الصناعية، مع تحقق من أرصاد المطارات الرسمية.</p>
-        <div class="hero-data"><div class="hero-live" id="hero-live" aria-live="polite"></div><p class="updated" id="hero-updated"></p></div>
-        <a class="pill pill-line" href="#monitor"><span>كل المحطات السبع</span><i class="pill-arrow"><svg aria-hidden="true"><use href="#i-chev"/></svg></i></a>
       </div>
     </div>
   </section>
 
   <div class="wrap"><div class="feature-study" id="home-study"></div></div>
 
-  <!-- القسم -->
-  <section class="home-sec dept" aria-labelledby="dept-h">
-    <div class="wrap">
-      <div class="dept-card">
-        <figure class="dept-photo"><img src="assets/photos/corridor.webp" alt="ممر قسم علوم الحياة ولافتة تشير إلى مختبر البيئة والتلوث وقاعة الدكتوراه" width="1200" height="900" loading="lazy" decoding="async"></figure>
-        <div class="dept-in">
-          <span class="xlbl">05 — من داخل القسم</span>
+  <!-- الدليل والقسم -->
+  <section class="home-sec duo" aria-label="دليل المنصة وقسم علوم الحياة">
+    <div class="wrap duo-grid">
+      <article class="duo-card" style="--hue:#f0a6c8">
+        <div class="duo-art" data-illus="help" aria-hidden="true"></div>
+        <div class="duo-copy">
+          <span class="xlbl">أول مرة هنا؟</span>
+          <h2>درس عملي لكل أداة</h2>
+          <p>لمن الأداة، ومتى تستعملها، وخطوات العمل، وكيف تقرأ النتيجة، ومنهجيتها ومراجعها، مع مسارات جاهزة حسب نوع بحثك.</p>
+          <div class="duo-cta"><a class="pill pill-light" href="#learn"><span>افتح دليل المنصة</span><i class="pill-arrow"><svg aria-hidden="true"><use href="#i-chev"/></svg></i></a><a class="pill pill-glass" href="#faq"><span>الأسئلة والأجوبة</span></a></div>
+        </div>
+      </article>
+      <article class="duo-card" style="--hue:#c4d3cf">
+        <div class="duo-art" data-illus="department" aria-hidden="true"></div>
+        <div class="duo-copy">
+          <span class="xlbl">من داخل القسم</span>
           <h2 id="dept-h">قسم علوم الحياة، بطابقيه ومختبراته</h2>
           <p>تجوّل في القسم بثلاثة أبعاد، وادخل مختبر البيئة والتلوث، واضغط على أي جهاز لتعرف ما يقيسه وأي أداة في المنصة تكمّل عمله.</p>
-          <div class="hero-cta"><a class="pill pill-light" href="#campus"><span>ادخل الجولة ثلاثية الأبعاد</span><i class="pill-arrow"><svg aria-hidden="true"><use href="#i-chev"/></svg></i></a><a class="pill pill-glass" href="#about"><span>عن المشروع</span></a></div>
+          <div class="duo-cta"><a class="pill pill-light" href="#campus"><span>ادخل الجولة ثلاثية الأبعاد</span><i class="pill-arrow"><svg aria-hidden="true"><use href="#i-chev"/></svg></i></a><a class="pill pill-glass" href="#about"><span>عن المشروع</span></a></div>
         </div>
-      </div>
+      </article>
     </div>
   </section>
 
@@ -259,6 +250,11 @@
       <a class="link-btn" href="#assistant"><svg aria-hidden="true"><use href="#i-chat"/></svg>أو اسأل المساعد الذكي بالعربية</a>
     </div>
   </section>
+</section>
+
+<!-- ======================= كل الأدوات ======================= -->
+<section class="view" id="view-tools" data-title="كل الأدوات">
+  <div class="wrap" id="tools-root" data-mo-skip></div>
 </section>
 
 <!-- ======================= دليل المنصة ======================= -->
@@ -1462,6 +1458,7 @@
 <script src="js/core.js"></script>
 <script src="js/native.js"></script>
 <script src="js/pwa.js"></script>
+<script src="js/illus.js"></script>
 <script src="js/nav.js"></script>
 <script src="js/ground.js"></script>
 <script src="js/globe.js"></script>
