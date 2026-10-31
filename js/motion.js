@@ -24,10 +24,11 @@
 
   /* عناصر تظهر بالتمرير، وما يُستثنى منها (طبقات ثابتة ومشاهد ثلاثية الأبعاد) */
   const REVEAL = [".sec-head", ".rv-stop", ".paths-alt", ".spot-card", ".feature-study", ".dept-card",
+    ".bn", ".mf-stat", ".live-copy", ".live-globe", ".closing-in", ".manifesto .lbl",
     ".view-head", ".tool-card", ".ns-card", ".hub-next", ".sibs",
     ".panel", ".an-panel", ".calc-card", ".study-card", ".rep-card"].join(",");
-  const SKIP = ".hero, #view-twin, .tw-stage, .tour-stage, .modal, .drawer, .palette, .sheet-wrap, #report-stage, [data-mo-skip]";
-  const COUNT = ".hl-main > b, .hl-stat > b, .stat .v, .metric .v, .db-kpi .v, .db-gnow b";
+  const SKIP = ".hero, .cine, .stg, #view-twin, .tw-stage, .tour-stage, .modal, .drawer, .palette, .sheet-wrap, #report-stage, [data-mo-skip]";
+  const COUNT = ".hl-main > b, .hl-stat > b, .stat .v, .metric .v, .db-kpi .v, .db-gnow b, .mf-stat > b";
   const COUNT_SKIP = "#view-twin, .tw-stage, .tour-stage, #report-stage, .leaflet-container, .chart-box, [data-mo-skip]";
   const PREVENT = ".drawer, .palette, .modal, .sheet-wrap, .tour-stage, .tw-stage, [data-lenis-prevent]";
 
@@ -183,43 +184,16 @@
   ------------------------------------------------------------------ */
   let intro = null, introPlayed = false;
   function prepIntro() {
-    const hero = document.querySelector("#view-home .hero"); if (!hero) return;
-    const copy = hero.querySelector(".hero-copy"), h1 = copy && copy.querySelector("h1");
+    const hero = document.querySelector("#view-home .cine"); if (!hero) return;
+    const copy = hero.querySelector(".cine-copy"), h1 = copy && copy.querySelector("h1");
     const bits = copy ? Array.from(copy.children).filter(x => x !== h1) : [];
-    const data = hero.querySelector(".hero-data");
-    intro = { hero, h1, bits, data, bt: null };
+    const foot = hero.querySelector(".cine-foot");
+    intro = { hero, h1, bits, foot, bt: null };
     if (!hasGsap || reduced || late) return;
-    intro.bt = h1 && RB.blurText ? RB.blurText(h1, { delay: 120, blur: 10, distance: 18, direction: "top", stepDuration: 0.35 }) : null;
+    intro.bt = h1 && RB.blurText ? RB.blurText(h1, { delay: 90, blur: 12, distance: 22, direction: "bottom", stepDuration: 0.42 }) : null;
     if (intro.bt) intro.bt.hide();
-    G.set(bits, { opacity: 0, translate: "0px 12px" });
-    if (data) { G.set(data, { opacity: 0, translate: "0px 12px" }); heroWait = true; }
-  }
-
-  function rays(hero) {
-    if (!RB.lightRays || hero.querySelector(".hero-rays")) return;
-    const box = document.createElement("div"); box.className = "hero-rays"; box.setAttribute("aria-hidden", "true");
-    const globe = hero.querySelector("canvas.globe");
-    hero.insertBefore(box, globe ? globe.nextSibling : hero.firstChild);
-    const river = getComputedStyle(html).getPropertyValue("--river").trim() || "#4fc8dc";
-    const narrow = window.innerWidth < 900;
-    // المصدر فوق الكرة الأرضية (يسار الشاشة في الواجهة العربية): ضوء من الفضاء يسقط على العراق
-    const globeX = narrow ? 0.5 : 0.3;
-    const r = RB.lightRays(box, {
-      raysOrigin: { anchor: [globeX, -0.2], dir: [0, 1] }, raysColor: river,
-      raysSpeed: 0.4, lightSpread: 0.55, rayLength: 2.6, fadeDistance: 1.3, rayDensity: 1, raySharpness: 0.3,
-      glow: 0.35, haze: 0.3, atmosphere: 0.4, intensity: 1, saturation: 1, opacity: 0.6,
-      followMouse: finePointer && !reduced, mouseInfluence: 0.06, cursorShadow: false, clickPulse: false,
-      pulsating: false, noiseAmount: 0, distortion: 0, intro: !reduced, maxDevicePixelRatio: narrow ? 1 : 1.5
-    });
-    if (!r) box.remove();
-  }
-  function star(hero) {
-    if (reduced || !RB.starBorder) return;
-    const b = hero.querySelector(".hero-cta .btn-primary");
-    if (!b || b.classList.contains("rb-star")) return;
-    const river = getComputedStyle(html).getPropertyValue("--river").trim() || "#4fc8dc";
-    RB.starBorder(b, { color: "#ffffff", trailColor: river, duration: 6, thickness: 1.5, trailLength: 0.35, glow: 0.65,
-      hover: "brighten", clickPulse: false });
+    G.set(bits, { opacity: 0, translate: "0px 22px" });
+    if (foot) G.set(foot, { opacity: 0 });
   }
 
   function playIntro() {
@@ -227,18 +201,16 @@
     const view = document.getElementById("view-home");
     if (!view || !view.classList.contains("active")) return;   // تُعرض أول مرة تُفتح فيها الرئيسية
     introPlayed = true;
-    const { hero, bits, data, bt } = intro;
-    rays(hero);
-    if (!hasGsap || reduced || late) { star(hero); return; }
-    const [kicker, ...rest] = bits;
-    const tl = G.timeline({ defaults: { duration: 0.6, ease: "power2.out" } });
+    if (!hasGsap || reduced || late) return;
+    const { bits, foot, bt } = intro;
+    const [eyebrow, ...rest] = bits;
+    const tl = G.timeline({ defaults: { duration: 0.9, ease: "expo.out" } });
     const up = { opacity: 1, translate: "0px 0px" };
-    if (kicker) tl.to(kicker, up, 0);
-    if (bt) tl.add(bt.play(), 0.1);
-    rest.forEach((el, i) => tl.to(el, Object.assign({ onStart: el.classList.contains("hero-cta") ? () => star(hero) : null }, up), 0.45 + i * 0.2));
-    if (data) tl.to(data, Object.assign({ onStart: () => { heroWait = false; releaseCounts(data, 0.1); } }, up), 0.85);
-    tl.eventCallback("onComplete", () => G.set(bits.concat(data || []), { clearProps: "opacity,translate" }));
-    if (!rest.some(el => el.classList.contains("hero-cta"))) star(hero);
+    if (eyebrow) tl.to(eyebrow, up, 0.1);
+    if (bt) tl.add(bt.play(), 0.25);
+    rest.forEach((el, i) => tl.to(el, up, 0.85 + i * 0.16));
+    if (foot) tl.to(foot, { opacity: 1, duration: 1.2, ease: "power2.out" }, 1.3);
+    tl.eventCallback("onComplete", () => G.set(bits.concat(foot || []), { clearProps: "opacity,translate" }));
   }
   // شاشة الترحيب (أول زيارة في الجلسة) تغطي الرئيسية 3 ثوانٍ: الافتتاحية تبدأ مع تلاشيها
   let splashGate = null;

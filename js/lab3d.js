@@ -1478,7 +1478,7 @@
   LAB._load = id => load(id);
   LAB._speed = v => { speed = v; };
   /* للاختبار الآلي على معالج رسوم برمجي: ارسم إطاراً واحداً من كل n */
-  LAB._thin = k => { if (!st || st._thin) return; const r = st.renderer, orig = r.render.bind(r); let c = 0; st._thin = true; r.render = (a, b) => { if (++c % k === 0) orig(a, b); }; };
+  LAB._thin = k => { if (!st) return; st._thinK = k; if (st._thin) return; const r = st.renderer, orig = r.render.bind(r); let c = 0; st._thin = true; r.render = (a, b) => { if (++c % st._thinK === 0) orig(a, b); }; };
 
   ECO.views.lab = {
     init,

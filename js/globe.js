@@ -46,7 +46,7 @@
 
   function build() {
     const canvas = U.$("#globe-canvas");
-    st = ECO.makeStage(canvas, { fov: 38, clear: 0x051116 });
+    st = ECO.makeStage(canvas, { fov: 38, clear: 0x050a0c });
     if (!st) return;
     const { scene, camera } = st;
     const small = window.innerWidth < 700;
@@ -180,7 +180,7 @@
       orbit.update(dt);
       // إزاحة الكرة لليسار على الشاشات العريضة حتى لا تغطي النص
       const w = canvas.clientWidth, h = canvas.clientHeight;
-      if (w > 900) { camera.aspect = (w * 1.5) / h; camera.setViewOffset(w * 1.5, h, w * 0.46, 0, w, h); }
+      if (w > 900 && canvas.closest(".hero")) { camera.aspect = (w * 1.5) / h; camera.setViewOffset(w * 1.5, h, w * 0.46, 0, w, h); }
       else if (camera.view && camera.view.enabled) { camera.aspect = w / h; camera.clearViewOffset(); }
 
       stationObjs.forEach(o => {

@@ -13,8 +13,8 @@
     if (seen || (hash && hash !== "home")) { el.remove(); return; }
     const steps = ["الاتصال بالأقمار الصناعية…", "جلب بيانات Copernicus CAMS…", "تهيئة نموذج التعلم الآلي…", "تجهيز المشاهد ثلاثية الأبعاد…"];
     let i = 0; msg.textContent = steps[0];
-    const iv = setInterval(() => { i = Math.min(i + 1, steps.length - 1); msg.textContent = steps[i]; }, 720);
-    setTimeout(() => { clearInterval(iv); el.classList.add("done"); setTimeout(() => el.remove(), 700); }, 3000);
+    const iv = setInterval(() => { i = Math.min(i + 1, steps.length - 1); msg.textContent = steps[i]; }, 460);
+    setTimeout(() => { clearInterval(iv); el.classList.add("done"); setTimeout(() => el.remove(), 700); }, 1900);
   }
 
   function about() {

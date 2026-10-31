@@ -46,6 +46,15 @@
       tools: ["campus", "about"] }
   ];
 
+  /* مجموعات القائمة العلوية: ست بوابات واضحة. «المختبر» رابط مباشر،
+     و«المنصة» تجمع الدليل والقسم (روابط الأقسام نفسها لم تتغير) */
+  const NAV_GROUPS = [
+    { secs: ["observe"] }, { secs: ["analyze"] }, { secs: ["treat"] },
+    { secs: ["labs"], direct: "lab", badge: "3D" },
+    { secs: ["studies"] },
+    { secs: ["help", "department"], label: "المنصة", icon: "i-learn", hue: "#c4d3cf", q: "كيف تستعمل المنصة، ومن يقف وراءها؟" }
+  ];
+
   /* ------------------------------------------------------------------
      الأدوات
   ------------------------------------------------------------------ */
@@ -213,20 +222,31 @@
      بناء الواجهة الثابتة: القائمة العلوية، القائمة الجانبية، الشريط السفلي،
      صفحات الأقسام، مسار الرئيسية، التذييل، لوحة البحث
   ------------------------------------------------------------------ */
+  const groupOf = g => {
+    const ss = g.secs.map(secById).filter(Boolean), s0 = ss[0];
+    return { ss, id: g.secs.join(" "), label: g.label || s0.label, icon: g.icon || s0.icon, hue: g.hue || s0.hue, q: g.q || s0.q,
+      tools: ss.flatMap(x => x.tools), href: "#" + (g.direct || s0.id), n: ss.length === 1 ? s0.n : 0 };
+  };
+  const megaItem = t => `<a href="#${t}" data-v="${t}" class="mega-item"><span class="mi-ic">${ico(TOOLS[t].icon)}</span><span class="mi-t"><b>${esc(TOOLS[t].label)}${TOOLS[t].isNew ? ` <i class="tag-new">جديد</i>` : ""}</b><small>${esc(TOOLS[t].desc)}</small></span></a>`;
   function navHTML() {
-    return SECTIONS.map(s => `<div class="nav-group" data-sec="${s.id}" style="--hue:${s.hue}">
-      <a class="nav-btn" href="#${s.id}" data-sec-link="${s.id}">${ico(s.icon)}<span>${s.label}</span>${ico("i-chevd", "chev")}</a>
-      <div class="mega">
-        <div class="mega-head"><b>${esc(s.q)}</b><a href="#${s.id}">كل أدوات ${s.label}${ico("i-chev")}</a></div>
-        <div class="mega-list">${s.tools.map(t => `<a href="#${t}" data-v="${t}" class="mega-item"><span class="mi-ic">${ico(TOOLS[t].icon)}</span><span><b>${esc(TOOLS[t].label)}${TOOLS[t].isNew ? ` <i class="tag-new">جديد</i>` : ""}</b><small>${esc(TOOLS[t].desc)}</small></span></a>`).join("")}</div>
-      </div>
-    </div>`).join("");
+    return NAV_GROUPS.map(g => {
+      const G = groupOf(g);
+      if (g.direct) return `<div class="nav-group is-direct" data-sec="${G.id}" style="--hue:${G.hue}"><a class="nav-btn" href="#${g.direct}" data-v="${g.direct}"><span>${G.label}</span>${g.badge ? `<i class="nav-badge">${g.badge}</i>` : ""}</a></div>`;
+      const links = G.ss.length > 1 ? G.ss.map(x => `<a href="#${x.id}">${esc(x.label)}${ico("i-chev")}</a>`).join("") : `<a href="#${G.ss[0].id}">كل أدوات ${G.label} (${G.tools.length})${ico("i-chev")}</a>`;
+      return `<div class="nav-group" data-sec="${G.id}" style="--hue:${G.hue}">
+      <a class="nav-btn" href="${G.href}" aria-haspopup="true"><span>${G.label}</span>${ico("i-chevd", "chev")}</a>
+      <div class="mega"><div class="mega-in">
+        <div class="mega-intro">${G.n ? `<span class="mg-idx">0${G.n} — مرحلة البحث</span>` : `<span class="mg-idx">${ico(G.icon)}</span>`}<b class="mg-t">${G.label}</b><p>${esc(G.q)}</p><div class="mg-links">${links}</div></div>
+        <div class="mega-list${G.tools.length > 4 ? " two" : ""}">${G.tools.map(megaItem).join("")}</div>
+      </div></div>
+    </div>`;
+    }).join("");
   }
 
   function drawerHTML() {
     return `<div class="drawer-head"><b>EcoBio <em>AI</em></b><button class="btn icon-btn btn-ghost" type="button" aria-label="إغلاق القائمة">${ico("i-close")}</button></div>
-      <a href="#home" data-v="home">${ico("i-home")}<span>الرئيسية</span></a>
-      ${SECTIONS.map(s => `<div class="dr-group" style="--hue:${s.hue}"><a class="dr-title" href="#${s.id}" data-sec-link="${s.id}">${ico(s.icon)}<span>${s.label}<small>${esc(s.q)}</small></span></a>
+      <a class="dr-home" href="#home" data-v="home">${ico("i-home")}<span>الرئيسية</span></a>
+      ${SECTIONS.map(s => `<div class="dr-group" style="--hue:${s.hue}"><a class="dr-title" href="#${s.id}" data-sec-link="${s.id}">${s.n ? `<i class="dr-n">0${s.n}</i>` : ico(s.icon)}<span>${s.label}<small>${esc(s.q)}</small></span></a>
         ${s.tools.map(t => `<a href="#${t}" data-v="${t}" class="dr-item"><span>${esc(TOOLS[t].label)}${TOOLS[t].isNew ? ` <i class="tag-new">جديد</i>` : ""}</span></a>`).join("")}</div>`).join("")}
       <div class="dr-group"><button type="button" class="dr-btn" data-open-settings>${ico("i-gear")}<span>إعدادات المساعد</span></button></div>`;
   }
@@ -240,10 +260,10 @@
     return `<ol class="path-mini" aria-label="مراحل البحث البيئي">${PATH.map(s => `<li style="--hue:${s.hue}"${s.id === cur ? ' aria-current="step"' : ""}><a href="#${s.id}"><i>${s.n}</i>${s.label}</a></li>`).join("")}</ol>`;
   }
 
-  function toolCard(t, feat) {
+  function toolCard(t, feat, i) {
     const T = TOOLS[t];
     return `<a class="tool-card${feat ? " feat" : ""}" href="#${t}" data-v="${t}">
-      <span class="tc-ic">${ico(T.icon)}</span>
+      ${i != null ? `<span class="tc-n">${String(i + 1).padStart(2, "0")}</span>` : ""}<span class="tc-ic">${ico(T.icon)}</span>
       <span class="tc-body">
         <b class="tc-name">${esc(T.label)}${T.isNew ? ` <i class="tag-new">جديد</i>` : ""}</b>
         <span class="tc-desc">${esc(T.desc)}</span>
@@ -255,7 +275,9 @@
 
   function hubHTML(s) {
     const nx = s.n > 0 ? PATH[s.n] : null;
-    return `<div class="hub-hero">
+    const media = s.photo ? `<figure class="hub-media"><img src="${s.photo.src}" alt="${esc(s.photo.alt)}" width="1280" height="720" decoding="async"></figure>` : `<div class="hub-glyph" aria-hidden="true">${ico(s.icon)}</div>`;
+    return `<div class="hub-hero${s.photo ? " has-photo" : ""}">
+      ${media}
       <div class="wrap hub-hero-in">
         <div class="hub-copy">
           ${s.n > 0 ? pathMini(s.id) : `<p class="kicker">${ico(s.icon)}${s.label}</p>`}
@@ -265,11 +287,28 @@
       </div>
     </div>
     <div class="wrap hub-body">
-      <h2 class="hub-h">${s.tools.length === 1 ? "الأداة" : `${s.tools.length} أدوات`} في قسم ${s.label}</h2>
-      <div class="tool-list">${s.tools.map((t, i) => toolCard(t, i === 0)).join("")}</div>
-      ${nx ? `<a class="hub-next" href="#${nx.id}" style="--hue:${nx.hue}"><span class="hn-k">المرحلة التالية</span><span class="hn-t"><b>${nx.label}</b>${esc(nx.q)}</span>${ico("i-chev")}</a>`
+      <h2 class="hub-h"><span>${s.tools.length === 1 ? "الأداة" : `${s.tools.length} أدوات`}</span> في قسم ${s.label}</h2>
+      <div class="tool-list">${s.tools.map((t, i) => toolCard(t, i === 0, i)).join("")}</div>
+      ${nx ? `<a class="hub-next" href="#${nx.id}" style="--hue:${nx.hue}"><span class="hn-k">المرحلة التالية · 0${nx.n}</span><span class="hn-t"><b>${nx.label}</b>${esc(nx.q)}</span>${ico("i-chev")}</a>`
         : s.n === 4 ? `<a class="hub-next" href="#department" style="--hue:${secById("department").hue}"><span class="hn-k">تعرّف على القسم</span><span class="hn-t"><b>قسم علوم الحياة</b>جولة ثلاثية الأبعاد في المختبرات</span>${ico("i-chev")}</a>` : ""}
     </div>`;
+  }
+
+  /* مراحل البحث الأربع في الرئيسية: بطاقات كبيرة تتراكم مع التمرير */
+  function stagesHTML() {
+    return PATH.map(s => `<li class="stg" style="--hue:${s.hue}; --i:${s.n - 1}">
+      <article class="stage-in">
+        <figure class="stage-media">${s.photo ? `<img src="${s.photo.src}" alt="${esc(s.photo.alt)}" width="1280" height="720" loading="lazy" decoding="async">` : ""}</figure>
+        <div class="stage-body">
+          <span class="stage-idx">0${s.n} <i></i> 0${PATH.length}</span>
+          <h3><a href="#${s.id}">${s.label}</a></h3>
+          <p class="stage-q">${esc(s.q)}</p>
+          <p class="stage-lead">${esc(s.lead)}</p>
+          <ul class="stage-tools">${s.tools.slice(0, 4).map(t => `<li><a href="#${t}">${ico(TOOLS[t].icon)}<span>${esc(TOOLS[t].label)}</span></a></li>`).join("")}</ul>
+          <a class="pill pill-light stage-go" href="#${s.id}"><span>ادخل قسم ${s.label}</span><i class="pill-arrow">${ico("i-chev")}</i></a>
+        </div>
+      </article>
+    </li>`).join("");
   }
 
   function riverPathHTML() {
@@ -292,8 +331,9 @@
         <p>منصة مفتوحة لرصد التلوث البيئي ومعالجته، من قسم علوم الحياة في كلية التربية للعلوم الصرفة – جامعة تكريت.</p>
         <p class="foot-src">مصادر البيانات: Copernicus CAMS · Open-Meteo · NASA GIBS · Sentinel-2 · Landsat · المواصفة العراقية 417 · إرشادات WHO 2021</p>
       </div>
-      ${SECTIONS.map(s => `<nav class="foot-col" aria-label="${s.label}" style="--hue:${s.hue}"><a class="fc-h" href="#${s.id}">${s.label}</a>${s.tools.map(t => `<a href="#${t}">${esc(TOOLS[t].label)}</a>`).join("")}</nav>`).join("")}
+      ${NAV_GROUPS.map(g => { const G = groupOf(g); return `<nav class="foot-col" aria-label="${G.label}" style="--hue:${G.hue}"><a class="fc-h" href="${G.href}">${G.label}</a>${G.tools.map(t => `<a href="#${t}">${esc(TOOLS[t].label)}</a>`).join("")}</nav>`; }).join("")}
     </div>
+    <div class="foot-mark" aria-hidden="true">EcoBio</div>
     <div class="wrap foot-bar"><span id="foot-l"></span><span class="foot-links"><a href="#learn">دليل المنصة</a><a href="#faq">الأسئلة والأجوبة</a><a href="privacy.html">سياسة الخصوصية</a></span></div>`;
   }
 
@@ -302,6 +342,7 @@
     const dp = U.$("#drawer-panel"); if (dp) dp.innerHTML = drawerHTML();
     const bb = U.$("#bottombar"); if (bb) bb.innerHTML = bottomHTML();
     const rp = U.$("#river-path"); if (rp) rp.innerHTML = riverPathHTML();
+    const sg = U.$("#stages"); if (sg) sg.innerHTML = stagesHTML();
     const ft = U.$("#foot"); if (ft) ft.innerHTML = footHTML();
     const main = U.$("main");
     SECTIONS.forEach(s => {
@@ -361,7 +402,7 @@
     const sec = secById(v) ? v : (SEC_OF[v] ? SEC_OF[v].id : null);
     U.$$("[data-v]").forEach(a => a.classList.toggle("active", a.dataset.v === v));
     U.$$("[data-sec-link]").forEach(a => a.classList.toggle("active", a.dataset.secLink === sec));
-    U.$$(".nav-group").forEach(g => g.classList.toggle("active", g.dataset.sec === sec));
+    U.$$(".nav-group").forEach(g => g.classList.toggle("active", !!sec && g.dataset.sec.split(" ").includes(sec)));
     document.body.dataset.view = v;
     document.body.dataset.sec = sec || "";
     const mod = ECO.views[v];

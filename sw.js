@@ -1,8 +1,8 @@
 /* EcoBio AI — عامل الخدمة: يحفظ واجهة المنصة لتفتح دون إنترنت.
    الواجهة: الشبكة أولاً ثم النسخة المحفوظة. الملفات الثابتة: المحفوظ أولاً مع تحديثه في الخلفية.
    لا يتدخل في طلبات البيانات الحية (Open-Meteo وغيرها)؛ قاعدة الأقضية لها ذاكرتها الخاصة. */
-const V = "ecobio-shell-v11";
-const CORE = ["./", "index.html", "css/style.css", "css/shell.css", "css/tools.css", "css/motion.css", "manifest.webmanifest", "assets/icons/pwa-192.png"];
+const V = "ecobio-shell-v12";
+const CORE = ["./", "index.html", "css/style.css", "css/shell.css", "css/tools.css", "css/motion.css", "css/redesign.css", "manifest.webmanifest", "assets/icons/pwa-192.png"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(V).then(c => c.addAll(CORE)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", e => {
   e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k.startsWith("ecobio-shell-") && k !== V).map(k => caches.delete(k)))).then(() => self.clients.claim()));
