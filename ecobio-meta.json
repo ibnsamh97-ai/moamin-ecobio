@@ -1,0 +1,46 @@
+{
+ "updated_at": "2026-10-31T08:25:27+00:00",
+ "seconds": 1201.0,
+ "counts": {
+  "districts": 6,
+  "air_daily": 9294,
+  "weather_daily": 25944,
+  "river_daily": 58800,
+  "water_rs_monthly": 708,
+  "studies": 7,
+  "study_values": 256,
+  "pollution_sources": 1107,
+  "model_runs": 1140,
+  "forecasts": 228,
+  "anomalies": 186,
+  "air_regime_daily": 9294,
+  "station_daily": 20624,
+  "station_bias": 270
+ },
+ "ranges": {
+  "air_daily": [
+   "2022-08-04",
+   "2026-10-30"
+  ],
+  "weather_daily": [
+   "2015-01-01",
+   "2026-11-02"
+  ],
+  "river_daily": [
+   "2000-01-01",
+   "2026-10-30"
+  ],
+  "station_daily": [
+   "2000-02-07",
+   "2026-10-30"
+  ],
+  "water_rs_monthly": [
+   "2017-01",
+   "2026-10"
+  ]
+ },
+ "errors": 0,
+ "schema_version": 1,
+ "bytes": 29790208,
+ "bytes_gz": 6532066
+}
