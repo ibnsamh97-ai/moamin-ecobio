@@ -1,0 +1,382 @@
+{
+ "name": "EcoBio AI open data – Tigris districts of Salah Al-Din",
+ "updated_at": "2026-10-31T08:25:27+00:00",
+ "license": "CC BY 4.0 (اذكر المصدر الأصلي لكل جدول)",
+ "base": "https://raw.githubusercontent.com/ibnsamh97-ai/moamin-ecobio/db/api/",
+ "districts": [
+  {
+   "id": "shirqat",
+   "name_ar": "الشرقاط",
+   "name_en": "Al-Shirqat",
+   "lat": 35.51,
+   "lon": 43.23
+  },
+  {
+   "id": "baiji",
+   "name_ar": "بيجي",
+   "name_en": "Baiji",
+   "lat": 34.9311,
+   "lon": 43.487
+  },
+  {
+   "id": "tikrit",
+   "name_ar": "تكريت",
+   "name_en": "Tikrit",
+   "lat": 34.6071,
+   "lon": 43.6782
+  },
+  {
+   "id": "dour",
+   "name_ar": "الدور",
+   "name_en": "Al-Dour",
+   "lat": 34.4575,
+   "lon": 43.7983
+  },
+  {
+   "id": "samarra",
+   "name_ar": "سامراء",
+   "name_en": "Samarra",
+   "lat": 34.1959,
+   "lon": 43.8857
+  },
+  {
+   "id": "balad",
+   "name_ar": "بلد",
+   "name_en": "Balad",
+   "lat": 34.0164,
+   "lon": 44.1453
+  }
+ ],
+ "datasets": {
+  "air": {
+   "description": "تقديرات CAMS اليومية للملوثات (µg/m³)",
+   "source": "cams",
+   "columns": [
+    "date",
+    "pm2_5",
+    "pm2_5_max",
+    "pm10",
+    "dust",
+    "no2",
+    "so2",
+    "o3",
+    "o3_max",
+    "co",
+    "aqi_pm25",
+    "aqi",
+    "hours"
+   ],
+   "files": {
+    "shirqat": {
+     "path": "shirqat/air.csv",
+     "rows": 1549
+    },
+    "baiji": {
+     "path": "baiji/air.csv",
+     "rows": 1549
+    },
+    "tikrit": {
+     "path": "tikrit/air.csv",
+     "rows": 1549
+    },
+    "dour": {
+     "path": "dour/air.csv",
+     "rows": 1549
+    },
+    "samarra": {
+     "path": "samarra/air.csv",
+     "rows": 1549
+    },
+    "balad": {
+     "path": "balad/air.csv",
+     "rows": 1549
+    }
+   }
+  },
+  "weather": {
+   "description": "الطقس اليومي من ERA5 والحرارة المصحّحة بالقياس الأرضي",
+   "source": "era5",
+   "columns": [
+    "date",
+    "src",
+    "t_max",
+    "t_min",
+    "t_mean",
+    "rh_mean",
+    "calib_station",
+    "t_max_adj",
+    "t_min_adj",
+    "t_mean_adj",
+    "t_max_bias",
+    "t_min_bias"
+   ],
+   "files": {
+    "shirqat": {
+     "path": "shirqat/weather.csv",
+     "rows": 4324
+    },
+    "baiji": {
+     "path": "baiji/weather.csv",
+     "rows": 4324
+    },
+    "tikrit": {
+     "path": "tikrit/weather.csv",
+     "rows": 4324
+    },
+    "dour": {
+     "path": "dour/weather.csv",
+     "rows": 4324
+    },
+    "samarra": {
+     "path": "samarra/weather.csv",
+     "rows": 4324
+    },
+    "balad": {
+     "path": "balad/weather.csv",
+     "rows": 4324
+    }
+   }
+  },
+  "river": {
+   "description": "تصريف دجلة اليومي من GloFAS (m³/s)",
+   "source": "glofas",
+   "columns": [
+    "date",
+    "discharge"
+   ],
+   "files": {
+    "shirqat": {
+     "path": "shirqat/river.csv",
+     "rows": 9800
+    },
+    "baiji": {
+     "path": "baiji/river.csv",
+     "rows": 9800
+    },
+    "tikrit": {
+     "path": "tikrit/river.csv",
+     "rows": 9800
+    },
+    "dour": {
+     "path": "dour/river.csv",
+     "rows": 9800
+    },
+    "samarra": {
+     "path": "samarra/river.csv",
+     "rows": 9800
+    },
+    "balad": {
+     "path": "balad/river.csv",
+     "rows": 9800
+    }
+   }
+  },
+  "water": {
+   "description": "عكورة الماء وكلوروفيله الشهرية من Sentinel-2",
+   "source": "s2",
+   "columns": [
+    "month",
+    "ndti",
+    "ndci",
+    "ndti_p90",
+    "ndci_p90",
+    "n_pixels",
+    "scene_id",
+    "scene_date",
+    "cloud_pct"
+   ],
+   "files": {
+    "shirqat": {
+     "path": "shirqat/water.csv",
+     "rows": 118
+    },
+    "baiji": {
+     "path": "baiji/water.csv",
+     "rows": 118
+    },
+    "tikrit": {
+     "path": "tikrit/water.csv",
+     "rows": 118
+    },
+    "dour": {
+     "path": "dour/water.csv",
+     "rows": 118
+    },
+    "samarra": {
+     "path": "samarra/water.csv",
+     "rows": 118
+    },
+    "balad": {
+     "path": "balad/water.csv",
+     "rows": 118
+    }
+   }
+  },
+  "dust": {
+   "description": "احتمال الغبار الفعلي من نموذجنا المتعلَّم من أرصاد المطارات",
+   "source": "iem",
+   "columns": [
+    "date",
+    "prob",
+    "kind",
+    "cams_dust",
+    "obs_dust",
+    "run_at"
+   ],
+   "files": {
+    "shirqat": {
+     "path": "shirqat/dust.csv",
+     "rows": 402
+    },
+    "baiji": {
+     "path": "baiji/dust.csv",
+     "rows": 402
+    },
+    "tikrit": {
+     "path": "tikrit/dust.csv",
+     "rows": 402
+    },
+    "dour": {
+     "path": "dour/dust.csv",
+     "rows": 402
+    },
+    "samarra": {
+     "path": "samarra/dust.csv",
+     "rows": 402
+    },
+    "balad": {
+     "path": "balad/dust.csv",
+     "rows": 402
+    }
+   }
+  }
+ },
+ "stations": [
+  {
+   "id": "kirkuk",
+   "name_ar": "مطار كركوك",
+   "icao": "ORKK",
+   "lat": 35.4694,
+   "lon": 44.3489,
+   "kind": "current",
+   "path": "stations/kirkuk.csv",
+   "rows": 1567
+  },
+  {
+   "id": "baghdad",
+   "name_ar": "مطار بغداد الدولي",
+   "icao": "ORBI",
+   "lat": 33.2625,
+   "lon": 44.2346,
+   "kind": "current",
+   "path": "stations/baghdad.csv",
+   "rows": 6076
+  },
+  {
+   "id": "erbil",
+   "name_ar": "مطار أربيل الدولي",
+   "icao": "ORER",
+   "lat": 36.2376,
+   "lon": 43.9632,
+   "kind": "current",
+   "path": "stations/erbil.csv",
+   "rows": 5548
+  },
+  {
+   "id": "tikrit_ab",
+   "name_ar": "قاعدة تكريت الجوية (سبايكر)",
+   "icao": "ORSH",
+   "lat": 34.6667,
+   "lon": 43.5333,
+   "kind": "historic",
+   "path": "stations/tikrit_ab.csv",
+   "rows": 3342
+  },
+  {
+   "id": "baiji_ab",
+   "name_ar": "محطة بيجي",
+   "icao": "QBJ",
+   "lat": 34.9667,
+   "lon": 43.4667,
+   "kind": "historic",
+   "path": "stations/baiji_ab.csv",
+   "rows": 275
+  },
+  {
+   "id": "balad_ab",
+   "name_ar": "قاعدة بلد الجوية",
+   "icao": "ORBD",
+   "lat": 33.9402,
+   "lon": 44.3616,
+   "kind": "historic",
+   "path": "stations/balad_ab.csv",
+   "rows": 3816
+  }
+ ],
+ "sources": [
+  {
+   "id": "cams",
+   "name": "Copernicus Atmosphere Monitoring Service (CAMS) global",
+   "provider": "ECMWF / Copernicus عبر Open-Meteo",
+   "url": "https://open-meteo.com/en/docs/air-quality-api",
+   "license": "Copernicus licence (CC BY 4.0 compatible)",
+   "citation": "Inness, A. et al. (2019). The CAMS reanalysis of atmospheric composition. Atmos. Chem. Phys. 19: 3515–3556."
+  },
+  {
+   "id": "era5",
+   "name": "ERA5 reanalysis",
+   "provider": "ECMWF / Copernicus Climate Change Service عبر Open-Meteo",
+   "url": "https://open-meteo.com/en/docs/historical-weather-api",
+   "license": "CC BY 4.0",
+   "citation": "Hersbach, H. et al. (2020). The ERA5 global reanalysis. Q. J. R. Meteorol. Soc. 146: 1999–2049."
+  },
+  {
+   "id": "ifs",
+   "name": "ECMWF IFS / best-match forecast",
+   "provider": "Open-Meteo Forecast API",
+   "url": "https://open-meteo.com/en/docs",
+   "license": "CC BY 4.0",
+   "citation": "Open-Meteo forecast API (Zippenfenig, P., 2023, doi:10.5281/zenodo.7970649)."
+  },
+  {
+   "id": "glofas",
+   "name": "GloFAS v4 river discharge",
+   "provider": "Copernicus Emergency Management Service عبر Open-Meteo",
+   "url": "https://open-meteo.com/en/docs/flood-api",
+   "license": "CC BY 4.0",
+   "citation": "Harrigan, S. et al. (2020). GloFAS-ERA5 operational global river discharge reanalysis 1979–present. Earth Syst. Sci. Data 12: 2043–2060."
+  },
+  {
+   "id": "s2",
+   "name": "Sentinel-2 Level-2A",
+   "provider": "ESA / Copernicus عبر Microsoft Planetary Computer",
+   "url": "https://planetarycomputer.microsoft.com/dataset/sentinel-2-l2a",
+   "license": "Copernicus Sentinel data terms",
+   "citation": "Lacaux, J.P. et al. (2007) لمؤشر NDTI؛ Mishra, S., Mishra, D.R. (2012). Normalized difference chlorophyll index. Remote Sens. Environ. 117: 394–406."
+  },
+  {
+   "id": "osm",
+   "name": "OpenStreetMap",
+   "provider": "OpenStreetMap contributors عبر Overpass API",
+   "url": "https://www.openstreetmap.org/copyright",
+   "license": "ODbL 1.0",
+   "citation": "© OpenStreetMap contributors."
+  },
+  {
+   "id": "iem",
+   "name": "METAR – أرصاد المطارات الرسمية (قياس أرضي حقيقي)",
+   "provider": "Iowa Environmental Mesonet، جامعة ولاية آيوا (أرشيف تقارير METAR)",
+   "url": "https://mesonet.agron.iastate.edu/request/download.phtml?network=IQ__ASOS",
+   "license": "بيانات عامة للاستعمال العلمي",
+   "citation": "Iowa Environmental Mesonet (IEM), Iowa State University. ASOS/METAR archive, network IQ__ASOS."
+  },
+  {
+   "id": "tu",
+   "name": "بحوث جامعة تكريت المنشورة",
+   "provider": "مجلات علمية محكّمة",
+   "url": "https://moamin-ecobio.vercel.app/#research",
+   "license": "اقتباس علمي مع ذكر المصدر",
+   "citation": "انظر جدول studies لكل بحث ومرجعه."
+  }
+ ]
+}
