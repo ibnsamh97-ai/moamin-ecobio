@@ -68,23 +68,20 @@
     await L.wait({ mins: J.mix.settle, sec: 6.5 * k, label: "الترسيب دون خلط" });
     return { rawLook, res };
   }
-  async function jarRead(L, key, fast) {
-    const R = J.runs[key], S = L.S, T = S.tester, res = R.res;
-    for (let i = 0; i < T.jars.length; i++) {
-      const jar = T.jars[i], v = res[i];
-      if (!fast) {
-        const jw = jar.g.getWorldPosition(new THREE.Vector3());
-        await L.arcTo(S.vial.g, [jw.x, jw.y + jar.h + 0.15, jw.z], 0.4, 0.55);
-        await S.vial.liq.color(turbLook(v)[0], turbLook(v)[1], 0.01); S.vial.liq.set(0.26);
-        await L.arcTo(S.vial.g, [S.well.x, S.well.y, S.well.z], 0.6, 0.6);
-      } else await L.sleep(0.25);
-      S.turb.screen.set([`${f1(v)} NTU`, `جرة ${i + 1}`]);
-      const ok = v <= J.limit;
-      S.tags[i].set(`${n(J.doses[i], "ملغم/ل")}<br><b>${n(f1(v), "NTU")}</b>`).cls("dose " + (ok ? "good" : "bad"));
-      L.nb.row(`${key}-${i}`, [`${R.label} · ${i + 1}`, n(J.doses[i]), n(f1(v)), n(Math.round(pct(J.raw, v)), "%")]);
-      S.chartData[key][i] = v; upd();
-    }
-    if (!fast) await L.arcTo(S.vial.g, S.vialHome, 0.4, 0.6);
+  /* عيّنة بالقنينة: تُغمر في الوعاء وتمتلئ ثم ترتفع */
+  async function jarSample(L, S, z, look, depth) {
+    const v = S.vial; v.liq.set(0);
+    await L.moveTo(v.g, [z.pos.x, z.pos.y + depth, z.pos.z], 0.4);
+    v.liq.color(look[0], look[1], 0.01); await v.liq.to(0.26, 0.35);
+    await L.moveTo(v.g, [z.pos.x, z.top + 0.3, z.pos.z], 0.35);
+  }
+  /* قراءة جهاز العكارة لجرة وتسجيلها في اللافتة والدفتر والرسم */
+  function jarRecord(L, key, i) {
+    const R = J.runs[key], S = L.S, v = R.res[i], ok = v <= J.limit;
+    S.turb.screen.set([`${f1(v)} NTU`, `جرة ${i + 1}`]);
+    S.tags[i].set(`${n(J.doses[i], "ملغم/ل")}<br><b>${n(f1(v), "NTU")}</b>`).cls("dose " + (ok ? "good" : "bad"));
+    L.nb.row(`${key}-${i}`, [`${R.label} · ${i + 1}`, n(J.doses[i]), n(f1(v)), n(Math.round(pct(J.raw, v)), "%")]);
+    S.chartData[key][i] = v; upd();
   }
 
   LAB.reg({
@@ -94,12 +91,10 @@
     src: J.src,
     materials: ["جهاز اختبار الجرة: ست جرار وخلّاط لكل جرة", `ماء خام عكارته ${n(J.raw, "NTU")}، و pH ${n(J.ph)}، وقاعدية ${n(J.alk, "ملغم/لتر")}`, "محلول شب Al₂(SO₄)₃·18H₂O تركيزه 1% (كل 1 مل = 10 ملغم)", "ماصة مدرّجة", "محرار", "جهاز قياس العكارة Turbidimeter وقنينة عيّنة"],
     tools: [
-      { id: "jug", name: "الماء الخام", icon: "milk", why: "نملأ به الجرار في بداية التجربة." },
-      { id: "thermo", name: "محرار", icon: "thermo", why: "نقيس به حرارة الماء قبل المعالجة." },
-      { id: "turb", name: "مقياس العكارة", icon: "gauge", why: "نقيس به العكارة قبل المعالجة وبعد الترسيب." },
-      { id: "alum", name: "الشب والماصة", icon: "pipette", why: "نضيف به الجرعات بعد ملء الجرار وقياس الماء الخام." },
-      { id: "mixer", name: "تشغيل الخلّاط", icon: "fan", why: "نشغّله بعد إضافة الشب مباشرة." },
-      { id: "timer", name: "مؤقت الترسيب", icon: "timer", why: "نستعمله بعد انتهاء الخلط البطيء." }
+      { id: "jug", name: "إبريق الماء الخام", icon: "milk", why: "نملأ به الجرار في بداية التجربة." },
+      { id: "thermo", name: "محرار", icon: "thermo", why: "نقيس به حرارة الماء الخام بعد ملء الجرار." },
+      { id: "vial", name: "قنينة العيّنة", icon: "tube", why: "نأخذ بها عيّنة إلى جهاز العكارة." },
+      { id: "pip", name: "الماصة", icon: "pipette", why: "نسحب بها الشب ونضيفه بعد قياس الماء الخام." }
     ],
     views: {
       intro: { t: [0, 1.15, 0], r: 10.5, th: 0, ph: 1.15 },
@@ -135,81 +130,117 @@
       S.F = jarFlocs(L, S.tester);
       L.loop(sdt => S.tester.spin(sdt));
       S.tags = S.tester.jars.map((jar, i) => L.label(jar.g, `${n(i + 1)}`, { dy: S.tester.jh + 0.22, cls: "dose" }));
+      S.fillH = S.tester.jh * 0.74;
+      const lineM = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.75 });
+      S.tester.jars.forEach(j => L.mesh(new THREE.BoxGeometry(j.w * 0.9, 0.01, 0.004), lineM, 0, S.fillH, j.w / 2 + 0.004, j.g));
+      S.knob = L.hitbox(S.tester.g, S.tester.W / 2 - 0.22, 0.24 + S.tester.jh + 0.62, 0.22, 0.2);
     },
     steps: [
       { t: "ما هو اختبار الجرة؟", cam: "intro",
-        say: `<p>حبيبات الطين العالقة في ماء النهر صغيرة جداً وتحمل شحنات سالبة، فتتنافر ولا تترسب وحدها. نضيف مادة مخثّرة مثل <b>الشب</b> فتعادل الشحنات وتتجمع الحبيبات في <b>ندف</b> ثقيلة تترسب.</p><p>في هذه التجربة نضع الماء نفسه في ست جرار، ونعطي كل جرة جرعة شب مختلفة (${J.doses.join(" و")} ملغم/لتر)، ثم نختار <b>أقل جرعة</b> تُنزل العكارة إلى ${n(J.limit, "NTU")}.</p>`,
+        say: `<p>حبيبات الطين العالقة في ماء النهر صغيرة جداً وتحمل شحنات سالبة، فتتنافر ولا تترسب وحدها. نضيف مادة مخثّرة مثل <b>الشب</b> فتعادل الشحنات وتتجمع الحبيبات في <b>ندف</b> ثقيلة تترسب.</p><p>نضع الماء نفسه في ست جرار، ونعطي كل جرة جرعة شب مختلفة (${J.doses.join(" و")} ملغم/لتر)، ثم نختار <b>أقل جرعة</b> تُنزل العكارة إلى ${n(J.limit, "NTU")}.</p><p>في كل خطوة تأخذ الأداة من الصينية بيدك، وتحرّكها في المختبر، وتضعها على الهدف المضيء.</p>`,
         info: "الشب يتحلل في الماء إلى هيدروكسيد الألمنيوم Al(OH)₃، وهو راسب هلامي يلتقط الحبيبات العالقة أثناء تكوّنه (آلية الكنس)." },
       { t: "املأ الجرار بالماء الخام", cam: "jars", tool: "jug",
-        say: `<p>املأ الجرار الست بالماء الخام نفسه، لتراً في كل جرة. عكارته ${n(J.raw, "NTU")}، وقاعديته ${n(J.alk, "ملغم/لتر")}.</p>`,
-        info: "نستعمل الماء نفسه في كل الجرار حتى يكون الفرق الوحيد بينها هو جرعة الشب.",
-        async run(L) { const S = L.S, raw = turbLook(J.raw); await L.pourRow(S.jug, S.tester.jars, { to: S.tester.jh * 0.74, color: raw[0], streamOpacity: 0.75, dur: 0.75, glide: 0.4, srcDrop: 0.08 }); },
-        done: "امتلأت الجرار الست بالماء الخام." },
-      { t: "قِس حرارة الماء الخام", cam: "left", tool: "thermo",
-        say: `<p>الحرارة مهمة: الماء البارد أثقل لزوجة وتفاعلات الشب فيه أبطأ. ضع المحرار في الماء الخام.</p>`,
+        say: `<p>خذ إبريق الماء الخام وحرّكه فوق إحدى الجرار، ثم <b>اضغط مطولاً</b> فيميل الإبريق ويصبّ. يتوقف الصب عند علامة اللتر البيضاء. املأ الجرار الست.</p><p>عكارة هذا الماء ${n(J.raw, "NTU")}، وقاعديته ${n(J.alk, "ملغم/لتر")}.</p>`,
+        info: "نستعمل الماء نفسه في كل الجرار حتى يكون الفرق الوحيد بينها جرعة الشب. على الهاتف: اسحب الإبريق بإصبعك إلى الجرة وأبقِ إصبعك ضاغطاً.",
         async run(L) {
-          const S = L.S, jw = S.jug.g.position;
-          await L.arcTo(S.thermo.g, [jw.x, 0.45, jw.z], 0.6, 0.9);
+          const S = L.S, raw = turbLook(J.raw);
+          await L.grab(S.jug);
+          await L.pourInto(S.tester.jars.map(j => L.zone(j, { to: S.fillH, r: 0.4 })), { rate: 0.5, color: raw[0], dstColor: raw[0], dstOpacity: raw[1], srcRate: 0.01, hint: "حرّك الإبريق فوق جرة مضيئة واضغط مطولاً لتصب" });
+          await L.letGo();
+        },
+        done: "امتلأت الجرار الست بلتر من الماء الخام." },
+      { t: "قِس حرارة الماء الخام", cam: "left", tool: "thermo",
+        say: "<p>خذ المحرار وضعه داخل إبريق الماء الخام، وانتظر حتى يثبت عموده الأحمر.</p><p>الحرارة مهمة: الماء البارد أكثر لزوجة، وتفاعلات الشب فيه أبطأ.</p>",
+        async run(L) {
+          const S = L.S;
+          await L.grab(S.thermo);
+          const z = await L.dropOn(L.zone(S.jug, { r: 0.5 }), { hint: "ضع المحرار فوق الإبريق المضيء وانقر لتغمره" });
+          await L.moveTo(S.thermo.g, [z.pos.x, 0.45, z.pos.z], 0.5);
           await S.thermo.to(J.runs.winter.T, 1.4);
-          S.tl = L.label(S.thermo.g, n(J.runs.winter.T, "°م"), { dy: 1.35, cls: "read" });
-          await L.sleep(0.6); await L.arcTo(S.thermo.g, [-4.1, 0, 1.4], 0.5, 0.8); S.tl.remove();
+          const tl = L.label(S.thermo.g, n(J.runs.winter.T, "°م"), { dy: 1.35, cls: "read" }); await L.sleep(0.9); tl.remove();
+          await L.letGo();
         },
         done: `حرارة الماء ${n(J.runs.winter.T, "°م")}: هذا ماء شتاء بارد.` },
-      { t: "قِس عكارة الماء الخام", cam: "turb", tool: "turb",
-        say: "<p>خذ عيّنة من الماء الخام في قنينة الجهاز، وضعها في جهاز قياس العكارة.</p>",
+      { t: "قِس عكارة الماء الخام", cam: "turb", tool: "vial",
+        say: "<p>خذ قنينة العيّنة واغمرها في إبريق الماء الخام، ثم ضعها في فتحة جهاز قياس العكارة.</p>",
         info: "وحدة NTU تقيس كمية الضوء الذي تبعثره الحبيبات العالقة بزاوية 90°. كلما زادت الحبيبات زاد التبعثر.",
         async run(L) {
           const S = L.S;
-          await L.arcTo(S.vial.g, [S.jug.g.position.x + 0.7, 0, S.jug.g.position.z], 0.5, 0.9);
-          S.vial.liq.set(0.26); await L.sleep(0.3);
-          await L.arcTo(S.vial.g, [S.well.x, S.well.y, S.well.z], 0.8, 1.2);
+          await L.grab(S.vial);
+          const z = await L.dropOn(L.zone(S.jug, { r: 0.5 }), { hint: "اغمر القنينة في الماء الخام: ضعها فوق الإبريق وانقر" });
+          await jarSample(L, S, z, turbLook(J.raw), 0.35);
+          await L.dropOn(L.zone(S.turb, { pos: S.well, top: 0.3, r: 0.28 }), { hint: "ضع القنينة في فتحة جهاز العكارة" });
+          await L.moveTo(S.vial.g, [S.well.x, S.well.y - 0.04, S.well.z], 0.4);
           S.turb.screen.set(["…", "قياس"]); await L.sleep(0.7);
           S.turb.screen.set([`${f1(J.raw)} NTU`, "الماء الخام"]);
           L.nb.row("raw", ["الماء الخام", "—", n(f1(J.raw)), "—"]);
-          await L.sleep(0.5); await L.arcTo(S.vial.g, S.vialHome, 0.5, 0.8);
+          await L.sleep(0.5); await L.letGo(); S.vial.liq.set(0);
         },
         done: `عكارة الماء الخام ${n(J.raw, "NTU")}، أي ستة أضعاف حد المواصفة.` },
-      { t: "أضف جرعات الشب", cam: "jars", tool: "alum",
-        say: `<p>أضف الشب بالماصة: الجرة 1 تأخذ ${n(J.doses[0], "ملغم/لتر")}، وتزيد الجرعة ${n(5)} في كل جرة حتى ${n(J.doses[5], "ملغم/لتر")} في الجرة 6.</p><p class="lb-eq">حجم المحلول (مل) = الجرعة (ملغم/لتر) × حجم الماء (لتر) ÷ تركيز المحلول (10 ملغم/مل)</p><p>مثلاً: الجرة 1 تحتاج ${n("5 × 1 ÷ 10 = 0.5", "مل")}، والجرة 6 تحتاج ${n("3", "مل")}.</p>`,
+      { t: "أضف جرعات الشب", cam: "jars", tool: "pip",
+        say: `<p>خذ الماصة واسحب الشب من قنينته، ثم ضعها فوق الجرار بالترتيب من 1 إلى 6. الجرة 1 تأخذ ${n(J.doses[0], "ملغم/لتر")}، وتزيد الجرعة ${n(5)} في كل جرة.</p><p class="lb-eq">حجم المحلول (مل) = الجرعة (ملغم/لتر) × حجم الماء (لتر) ÷ تركيز المحلول (10 ملغم/مل)</p><p>مثلاً: الجرة 1 تحتاج ${n("5 × 1 ÷ 10 = 0.5", "مل")}، والجرة 6 تحتاج ${n("3", "مل")}.</p>`,
         info: "نضيف الشب إلى كل الجرار بأسرع ما يمكن حتى يبدأ الخلط فيها معاً.",
         async run(L) {
-          const S = L.S, p = S.pip, a = S.alum.g.position;
-          await L.arcTo(p.g, [a.x, 0.9, a.z], 0.4, 0.7);
-          await L.moveTo(p.g, [a.x, 0.12, a.z], 0.4); await p.fill(0.8, 0xeef4f4, 0.4);
-          for (let i = 0; i < 6; i++) {
-            const jw = S.tester.jars[i].g.getWorldPosition(new THREE.Vector3());
-            await L.arcTo(p.g, [jw.x + 0.15, jw.y + S.tester.jh + 0.05, jw.z + 0.2], 0.25, 0.5);
-            await L.drops(new THREE.Vector3(jw.x + 0.15, jw.y + S.tester.jh, jw.z + 0.2), S.tester.jars[i], i + 1, 0xf2f6f6, 0.08);
-            S.tags[i].set(`${n(J.doses[i], "ملغم/ل")}`);
+          const S = L.S, p = S.pip;
+          await L.grab(p);
+          const za = await L.dropOn(L.zone(S.alum, { r: 0.35 }), { hint: "اسحب الشب: ضع الماصة فوق قنينة الشب وانقر" });
+          await L.moveTo(p.g, [za.pos.x, 0.15, za.pos.z], 0.4); await p.fill(0.8, 0xeef4f4, 0.4); await L.moveTo(p.g, [za.pos.x, 1.3, za.pos.z], 0.4);
+          await L.repeat(S.tester.jars, async (jar, i) => {
+            const z = await L.dropOn(L.zone(jar, { r: 0.4 }), { hint: `ضع الماصة فوق الجرة ${i + 1} لتضيف ${U.fmt(J.doses[i] / 10, 1)} مل (${J.doses[i]} ملغم/لتر)` });
+            const top = new THREE.Vector3(z.pos.x + 0.12, z.top + 0.05, z.pos.z + 0.18);
+            await L.moveTo(p.g, [top.x, top.y, top.z], 0.3);
+            await L.drops(top, jar, i + 1, 0xf2f6f6, 0.08);
+            S.tags[i].set(n(J.doses[i], "ملغم/ل"));
             await p.fill(0.8 * (1 - (i + 1) / 7), null, 0.15);
-          }
-          await L.arcTo(p.g, [-3.6, 0, -0.25], 0.5, 0.8); await p.fill(0, null, 0.2);
+          }, { autoAfter: 2 });
+          await p.fill(0, null, 0.2); await L.letGo();
         },
         done: "كل جرة الآن فيها جرعة مختلفة. اللافتة فوق كل جرة تبيّن جرعتها." },
-      { t: "الخلط السريع ثم البطيء", cam: "close", tool: "mixer",
-        say: `<p>شغّل الخلّاط: <b>خلط سريع</b> ${n(J.mix.fast[0], "دورة/دقيقة")} لمدة ${n(J.mix.fast[1], "دقيقة")} لنشر الشب في الماء كله بسرعة، ثم <b>خلط بطيء</b> ${n(J.mix.slow[0], "دورة/دقيقة")} لمدة ${n(J.mix.slow[1], "دقائق")} حتى تتصادم الحبيبات الصغيرة وتكبر الندف.</p>`,
-        info: "الخلط البطيء لازم: لو استمر الخلط سريعاً لتكسرت الندف الكبيرة. غيّر سرعة الوقت من ×1 إلى ×4 أعلى المختبر لتسريع المشاهدة.",
+      { t: "الخلط السريع", cam: "close", auto: true,
+        say: `<p>اضغط زر التشغيل المضيء على جهاز الجرة لتبدأ <b>الخلط السريع</b>: ${n(J.mix.fast[0], "دورة/دقيقة")} لمدة ${n(J.mix.fast[1], "دقيقة")}، فينتشر الشب في الماء كله خلال ثوانٍ.</p>`,
+        info: "لو انتشر المخثّر ببطء لتفاعل في جزء من الماء فقط وضاع أثره في الباقي.",
         async run(L) {
-          const S = L.S, R = J.runs.winter.res, eff = R.map(v => U.clamp(pct(J.raw, v) / 100, 0, 1)), T = S.tester;
+          const S = L.S, T = S.tester, eff = J.runs.winter.res.map(v => U.clamp(pct(J.raw, v) / 100, 0, 1));
+          await L.press([{ obj: S.knob, halo: true, r: 0.18, label: "زر التشغيل" }], { hint: "اضغط زر التشغيل المضيء على جهاز الجرة", label: "شغّل الخلّاط" });
           T.rpm = J.mix.fast[0]; T.screen.set([`${J.mix.fast[0]} rpm`, "سريع"]); S.F.set("rapid", eff);
           await L.wait({ mins: J.mix.fast[1], sec: 4, label: `الخلط السريع ${J.mix.fast[0]} دورة/دقيقة` });
+        },
+        done: "انتشر الشب في الجرار وبدأت الحبيبات تتجمع." },
+      { t: "الخلط البطيء", cam: "close", auto: true,
+        say: `<p>اضغط الزر مرة أخرى لتخفض السرعة إلى ${n(J.mix.slow[0], "دورة/دقيقة")} لمدة ${n(J.mix.slow[1], "دقائق")}، حتى تتصادم الحبيبات الصغيرة وتكبر الندف.</p>`,
+        info: "لو استمر الخلط سريعاً لتكسرت الندف الكبيرة. غيّر سرعة الوقت من ×1 إلى ×4 أعلى المختبر لتسريع المشاهدة.",
+        async run(L) {
+          const S = L.S, T = S.tester;
+          await L.press([{ obj: S.knob, halo: true, r: 0.18, label: "خفّض السرعة" }], { hint: "اضغط الزر لتخفض السرعة إلى 30 دورة/دقيقة", label: "خفّض السرعة" });
           T.rpm = J.mix.slow[0]; T.screen.set([`${J.mix.slow[0]} rpm`, "بطيء"]); S.F.set("slow");
           await L.wait({ mins: J.mix.slow[1], sec: 7, label: `الخلط البطيء ${J.mix.slow[0]} دورة/دقيقة` });
         },
         done: "تكوّنت الندف. لاحظ أنها أكبر في الجرار ذات الجرعات الأعلى." },
-      { t: "الترسيب", cam: "close", tool: "timer",
-        say: `<p>أوقف الخلّاط واترك الجرار ساكنة ${n(J.mix.settle, "دقيقة")}. الندف الثقيلة تهبط إلى القاع، ويصفو الماء فوقها.</p>`,
+      { t: "الترسيب", cam: "close", auto: true,
+        say: `<p>أوقف الخلّاط بالضغط على الزر، واترك الجرار ساكنة ${n(J.mix.settle, "دقيقة")}. الندف الثقيلة تهبط إلى القاع، ويصفو الماء فوقها.</p>`,
         async run(L) {
           const S = L.S, T = S.tester, res = J.runs.winter.res;
+          await L.press([{ obj: S.knob, halo: true, r: 0.18, label: "إيقاف" }], { hint: "اضغط الزر لإيقاف الخلّاط", label: "أوقف الخلّاط" });
           T.rpm = 0; T.screen.set(["0 rpm", "ترسيب"]); S.F.set("settle");
           T.jars.forEach((jar, i) => { const [c, o] = turbLook(res[i]); jar.liq.color(c, o, 7); });
           await L.wait({ mins: J.mix.settle, sec: 7.5, label: "الترسيب دون خلط" });
         },
         done: "انتهى الترسيب. الآن نقيس عكارة الماء الصافي فوق الندف." },
-      { t: "قِس العكارة المتبقية", cam: "intro", tool: "turb",
-        say: "<p>اسحب عيّنة من الماء الصافي في أعلى كل جرة، دون أن تحرّك الراسب، واقرأ عكارتها.</p>",
+      { t: "قِس العكارة المتبقية", cam: "intro", tool: "vial",
+        say: "<p>خذ قنينة العيّنة: اسحب عيّنة من الماء الصافي في أعلى كل جرة دون أن تحرّك الراسب، ثم ضعها في جهاز العكارة. ابدأ بالجرة 1.</p>",
         info: "الأرقام التي تظهر هي النتائج المنشورة في الجدول 5 من البحث لماء عكارته 30 NTU بحرارة 9°م.",
-        async run(L) { await jarRead(L, "winter", false); },
+        async run(L) {
+          const S = L.S, res = J.runs.winter.res;
+          await L.grab(S.vial);
+          await L.repeat(S.tester.jars, async (jar, i) => {
+            const z = await L.dropOn(L.zone(jar, { r: 0.4 }), { hint: `خذ عيّنة من أعلى الجرة ${i + 1}` });
+            await jarSample(L, S, z, turbLook(res[i]), 0.8);
+            await L.dropOn(L.zone(S.turb, { pos: S.well, top: 0.3, r: 0.28 }), { hint: "ضع القنينة في جهاز العكارة" });
+            await L.moveTo(S.vial.g, [S.well.x, S.well.y - 0.04, S.well.z], 0.3);
+            jarRecord(L, "winter", i); await L.sleep(0.4);
+          }, { autoAfter: 2 });
+          await L.letGo(); S.vial.liq.set(0);
+        },
         done: "سُجّلت القراءات في دفتر المختبر وفي الرسم." },
       { t: "حدّد الجرعة المثلى", cam: "jars", auto: true,
         say: `<p>الجرعة المثلى هي <b>أقل</b> جرعة تُنزل العكارة إلى ${n(J.limit, "NTU")} أو أقل. انقر على الجرة التي تمثلها، أو اختر جرعتها:</p>`,
@@ -217,30 +248,29 @@
           const S = L.S, R = J.runs.winter.res, k = optIdx(R);
           const opts = J.doses.map((d, i) => ({ label: `${d} ملغم/لتر`, value: i }));
           const objs = S.tester.jars.map((jar, i) => ({ obj: jar.g, value: i }));
-          let ch = await L.choose(opts, objs);
+          const ch = await L.choose(opts, objs);
           let msg;
           if (ch === k) msg = `صحيح: ${n(J.doses[k], "ملغم/لتر")} أقل جرعة وصلت بالعكارة إلى ${n(f1(R[k]), "NTU")}.`;
           else if (ch < k) msg = `جرعة ${n(J.doses[ch], "ملغم/لتر")} لم تكفِ: بقيت العكارة ${n(f1(R[ch]), "NTU")}، أعلى من الحد. الجرعة المثلى ${n(J.doses[k], "ملغم/لتر")}.`;
           else msg = `جرعة ${n(J.doses[ch], "ملغم/لتر")} أعطت عكارة ${n(f1(R[ch]), "NTU")}، أعلى من جرة ${n(J.doses[k])}. الشب الزائد يعكس شحنة الحبيبات فتعود للتنافر وتبقى عالقة (إعادة التثبيت)، فضلاً عن هدر المادة. الجرعة المثلى ${n(J.doses[k], "ملغم/لتر")}.`;
           L.show(`<div class="notice ${ch === k ? "info" : "warn"}"><div>${msg}</div></div>`);
           S.tags[k].cls("dose good best");
-          S.optW = k;
         },
         done: `الجرعة المثلى لماء الشتاء: ${n(J.doses[optIdx(J.runs.winter.res)], "ملغم/لتر")}. ولاحظ أن جرعة 30 أسوأ منها.` },
       { t: "كرّر التجربة بماء الصيف", cam: "intro", act: "نفّذ تجربة ماء الصيف", actIcon: "play",
-        say: `<p>نعيد الخطوات نفسها على ماء عكارته ${n(J.raw, "NTU")} أيضاً، لكن حرارته ${n(J.runs.summer.T, "°م")}. ستُنفَّذ الخطوات تلقائياً وبسرعة لأنك تعرفها الآن.</p>`,
+        say: `<p>نعيد الخطوات نفسها على ماء عكارته ${n(J.raw, "NTU")} أيضاً، لكن حرارته ${n(J.runs.summer.T, "°م")}. ستُنفَّذ تلقائياً وبسرعة لأنك نفّذتها بيدك قبل قليل.</p>`,
         async run(L) {
           const S = L.S, T = S.tester, raw = turbLook(J.raw);
           T.jars.forEach(j => j.liq.to(0, 0.8)); S.F.reset(); await L.sleep(0.9);
           S.tags.forEach((t, i) => t.set(n(i + 1)).cls("dose"));
-          await L.pourRow(S.jug, T.jars, { to: T.jh * 0.74, color: raw[0], dstColor: raw[0], dstOpacity: raw[1], streamOpacity: 0.75, dur: 0.4, glide: 0.25, srcDrop: 0.0, tiltDur: 0.4, move: 0.6 });
+          await L.pourRow(S.jug, T.jars, { to: S.fillH, color: raw[0], dstColor: raw[0], dstOpacity: raw[1], streamOpacity: 0.75, dur: 0.4, glide: 0.25, srcDrop: 0.0, tiltDur: 0.4, move: 0.6 });
           const jw = S.jug.g.position;
           await L.arcTo(S.thermo.g, [jw.x, 0.45, jw.z], 0.5, 0.6); await S.thermo.to(J.runs.summer.T, 0.8);
           const tl = L.label(S.thermo.g, n(J.runs.summer.T, "°م"), { dy: 1.35, cls: "read" }); await L.sleep(0.5); tl.remove();
           await L.arcTo(S.thermo.g, [-4.1, 0, 1.4], 0.5, 0.6);
           S.tags.forEach((t, i) => t.set(n(J.doses[i], "ملغم/ل")));
           await jarRun(L, "summer", true);
-          await jarRead(L, "summer", true);
+          for (let i = 0; i < T.jars.length; i++) { jarRecord(L, "summer", i); await L.sleep(0.25); }
         },
         done: "سُجّلت نتائج ماء الصيف بجانب نتائج الشتاء." },
       { t: "قارن الموسمين واستنتج", cam: "jars", auto: true,
@@ -289,22 +319,20 @@
     src: A.src,
     materials: ["محلول رصاص قياسي من Pb(NO₃)₂", `أربعة دوارق مخروطية، في كل منها ${n(A.V * 1000, "مل")}`, `كاربون منشّط من ليف النخيل (نُشّط بـ 900°م، مساحته السطحية ${n(A.bet, "م²/غم")})`, "جهاز pH ومحلولا NaOH وHNO₃ مخففان", "ميزان حساس", `هزاز حاضن بدرجة ${n(A.T, "°م")}`, `جهاز طرد مركزي ${n(A.rpm, "دورة/دقيقة")}`, "ورق ترشيح Whatman رقم 42", "جهاز الامتصاص الذري AAS"],
     tools: [
-      { id: "pip", name: "الماصة والمحلول القياسي", icon: "pipette", why: "نحضّر بها محاليل الرصاص في البداية." },
-      { id: "ph", name: "جهاز pH", icon: "gauge", why: "نضبط به حموضة المحاليل قبل إضافة المادة المازة." },
-      { id: "bal", name: "الميزان والكاربون", icon: "scale", why: "نزن به المادة المازة بعد ضبط pH." },
-      { id: "shk", name: "الهزاز", icon: "waves", why: "نرجّ به الدوارق بعد إضافة الكاربون." },
-      { id: "cen", name: "الطرد المركزي", icon: "disc", why: "نفصل به الكاربون بعد انتهاء الرج." },
-      { id: "fil", name: "ورق الترشيح", icon: "filter", why: "نرشّح به بعد الطرد المركزي." },
-      { id: "aas", name: "الامتصاص الذري", icon: "monitor", why: "نقيس به الرصاص المتبقي في آخر التجربة." }
+      { id: "pip", name: "الماصة", icon: "pipette", why: "نحضّر بها محاليل الرصاص في البداية." },
+      { id: "probe", name: "مجس pH", icon: "gauge", why: "نضبط به الحموضة بعد تحضير المحاليل." },
+      { id: "spat", name: "الملعقة", icon: "scale", why: "نغرف بها الكاربون ونزنه بعد ضبط pH." },
+      { id: "hand", name: "اليد", icon: "hand", why: "ننقل بها الدوارق والأنابيب بعد إضافة الكاربون." }
     ],
     views: {
       intro: { t: [-0.4, 1.0, 0.2], r: 10.5, th: 0, ph: 1.12 },
-      flasks: { t: [0, 0.55, 0.6], r: 5.2, th: 0, ph: 1.15 },
-      bal: { t: [2.6, 0.6, -0.5], r: 5, th: 0.25, ph: 1.1 },
-      shk: { t: [-0.3, 0.6, -0.6], r: 6.4, th: 0, ph: 0.88 },
-      cen: { t: [3.6, 0.6, 0.6], r: 5.4, th: 0.35, ph: 1.08 },
-      fil: { t: [0, 0.7, 1.2], r: 5.2, th: 0, ph: 1.12 },
-      aas: { t: [-4.3, 0.8, -0.3], r: 6, th: -0.3, ph: 1.08 },
+      flasks: { t: [0, 0.55, 0.4], r: 5.6, th: 0, ph: 1.12 },
+      bal: { t: [1.4, 0.6, -0.1], r: 6.6, th: 0.15, ph: 1.1 },
+      shk: { t: [-0.3, 0.6, -0.4], r: 6.6, th: 0, ph: 0.9 },
+      tubes: { t: [1.8, 0.6, 1.0], r: 7.2, th: 0.1, ph: 1.08 },
+      cen: { t: [3.8, 0.6, 1.0], r: 5.2, th: 0.3, ph: 1.0 },
+      fil: { t: [1.0, 0.7, 1.4], r: 6.4, th: 0, ph: 1.12 },
+      aas: { t: [-2.0, 0.8, 0.5], r: 8, th: -0.15, ph: 1.08 },
       chart: { t: [-0.4, 1.0, 0.2], r: 9, th: 0, ph: 1.15 }
     },
     nb: ["Cₒ (ملغم/لتر)", "Cₑ (ملغم/لتر)", "الإزالة", "qₑ (ملغم/غم)"],
@@ -360,121 +388,159 @@
         S.bk.forEach(b => { if (!b.ions.mesh.visible) return; b.ions.p.forEach((p, i) => { const a = performance.now() / 1400 + i * 2.4, rr = 0.07 + (i % 4) * 0.035; p.set(Math.cos(a) * rr, 0.04 + ((i * 0.37) % 1) * Math.max(0.05, b.liq.h * 0.8), Math.sin(a) * rr); }); b.ions.sync(); });
       });
       L.S.C = adsCalc();
+      S.dil = [1.35, 0.45, -0.45, -1.35].map((x, i) => { const v = L.put(L.MK.volflask({ rb: 0.17, rn: 0.04, h: 0.75, color: 0xeef2f6, opacity: 0.25, level: 0.55 }), x, 0, -0.2); L.label(v.g, "تخفيف " + n(A.Co[i]), { dy: 0.85, cls: "dose" }); return v; });
+      S.ph.probe.visible = false;
+      { const g = new THREE.Group(); L.mesh(new THREE.CylinderGeometry(0.03, 0.022, 0.75, 12), L.MAT.dark, 0, 0.375, 0, g); L.mesh(new THREE.SphereGeometry(0.024, 10, 8), L.MAT.rim, 0, 0.0, 0, g); S.probe = L.put({ g, h: 0.8, r: 0.05 }, -1.8, 0, -1.05); }
+      S.spat.g.children.forEach(c => { c.position.z += 0.5; });
+      { const tip = new THREE.Mesh(new THREE.ConeGeometry(0.055, 0.04, 12), new THREE.MeshStandardMaterial({ color: 0x15191b, roughness: 0.95 })); tip.position.set(0, 0.03, 0); tip.visible = false; S.spat.g.add(tip); S.spat.load = v => { tip.visible = v; }; S.spat.h = 0.1; S.spat.r = 0.15; }
+      S.shk.g.updateMatrixWorld(true);
+      S.bk.forEach(b => { b.fun.g.visible = false; });
+      S.slots = [[0.68, 0.24], [0.23, 0.24], [-0.23, 0.24], [-0.68, 0.24]].map(([x, z]) => S.shk.plat.localToWorld(new THREE.Vector3(x, 0.03, z - 0.29)));
+      S.shkBtn = L.hitbox(S.shk.g, 0.65, 0.17, 0.62, 0.18);
+      S.cenBtn = L.hitbox(S.cen.g, 0, 0.3, 0.68, 0.18);
+      S.aasBtn = L.hitbox(S.aas.g, -0.55, 0.62, 0.57, 0.3);
     },
     steps: [
       { t: "ما هو الامتزاز؟", cam: "intro",
-        say: `<p>الامتزاز التصاق أيونات الملوث على <b>سطح</b> مادة صلبة مسامية. الكاربون المنشّط مليء بمسام دقيقة تعطي مساحة هائلة: غرام واحد من كاربون ليف النخيل في هذا البحث مساحة سطحه ${n(A.bet, "م²")}.</p><p>نضع الكمية نفسها من الكاربون (${n(A.m, "غم")}) في أربعة محاليل رصاص مختلفة التركيز، ونقيس ما يبقى من الرصاص بعد التوازن.</p>`,
+        say: `<p>الامتزاز التصاق أيونات الملوث على <b>سطح</b> مادة صلبة مسامية. الكاربون المنشّط مليء بمسام دقيقة تعطي مساحة هائلة: غرام واحد من كاربون ليف النخيل في هذا البحث مساحة سطحه ${n(A.bet, "م²")}.</p><p>نضع الكمية نفسها من الكاربون (${n(A.m, "غم")}) في أربعة محاليل رصاص مختلفة التركيز، ونقيس ما يبقى من الرصاص بعد التوازن.</p><p>في كل خطوة تأخذ الأداة من الصينية بيدك وتضعها على الهدف المضيء.</p>`,
         info: "ليف النخيل مخلّف زراعي متوفر بكثرة في العراق، وتحويله إلى مادة مازة يعالج مشكلتين معاً." },
       { t: "حضّر محاليل الرصاص", cam: "flasks", tool: "pip",
-        say: `<p>بالتخفيف من المحلول القياسي، حضّر أربعة محاليل تراكيزها ${A.Co.join(" و")} ملغم/لتر، وانقل ${n(A.V * 1000, "مل")} من كل منها إلى دورق.</p><p class="lb-eq">C₁ × V₁ = C₂ × V₂</p>`,
+        say: `<p>حضّرنا من المحلول القياسي أربعة تخافيف (${A.Co.join(" و")} ملغم/لتر) في القناني الحجمية الخلفية. خذ الماصة وانقل ${n(A.V * 1000, "مل")} من كل تخفيف إلى الدورق المقابل له.</p><p class="lb-eq">C₁ × V₁ = C₂ × V₂</p>`,
         info: "النقاط البنفسجية داخل الدوارق تمثيل توضيحي لأيونات Pb²⁺: عددها يتناسب مع التركيز، فالدورق الأخير فيه أربعة أضعاف الأول.",
         async run(L) {
-          const S = L.S;
-          const home = S.pip.g.position.toArray();
-          for (let i = 0; i < 4; i++) {
-            const f = S.fl[i];
-            await L.pipetteTo(S.pip, S.stock, f, { to: 0.26, color: 0xeef2f6, stay: true });
+          const S = L.S, p = S.pip;
+          await L.grab(p);
+          await L.repeat(S.fl, async (f, i) => {
+            const zs = await L.dropOn(L.zone(S.dil[i], { r: 0.3 }), { hint: `اسحب من تخفيف ${A.Co[i]} ملغم/لتر: ضع الماصة فوق قنينته` });
+            await L.moveTo(p.g, [zs.pos.x, 0.12, zs.pos.z], 0.35); await p.fill(0.7, 0xeef2f6, 0.35); S.dil[i].liq.to(0.3, 0.35); await L.moveTo(p.g, [zs.pos.x, 1.2, zs.pos.z], 0.35);
+            const z = await L.dropOn(L.zone(f, { r: 0.36 }), { hint: `انقله إلى الدورق ${i + 1}` });
+            await L.moveTo(p.g, [z.pos.x, 0.55, z.pos.z], 0.35);
+            await Promise.all([p.fill(0, null, 0.5), f.liq.to(0.26, 0.5)]);
             f.ions.mesh.visible = true;
-          }
-          await L.arcTo(S.pip.g, home, 0.4, 0.8);
+            await L.moveTo(p.g, [z.pos.x, 1.2, z.pos.z], 0.3);
+          }, { autoAfter: 1 });
+          await L.letGo();
         },
         done: "حُضّرت المحاليل الأربعة. لاحظ تزايد الأيونات من اليمين إلى اليسار." },
-      { t: `اضبط pH إلى ${A.pH}`, cam: "flasks", tool: "ph",
-        say: `<p>اضبط حموضة كل محلول إلى ${n(A.pH)} بقطرات من NaOH أو HNO₃ المخفف، وتأكد بجهاز pH.</p>`,
-        info: `وجد البحث أن أفضل امتزاز بين pH 6.5 و7. فوق 7 يترسب الرصاص هيدروكسيداً فلا نعرف هل أزاله الكاربون أم الترسيب، وفي الوسط الحامضي تنافس أيونات H⁺ الرصاصَ على مواقع الامتزاز.`,
+      { t: `اضبط pH إلى ${A.pH}`, cam: "flasks", tool: "probe",
+        say: `<p>خذ مجس جهاز pH واغمره في كل دورق، فيقرأ الجهاز الحموضة ثم نضبطها إلى ${n(A.pH)} بقطرات من NaOH أو HNO₃ المخفف.</p>`,
+        info: "وجد البحث أن أفضل امتزاز بين pH 6.5 و7. فوق 7 يترسب الرصاص هيدروكسيداً فلا نعرف هل أزاله الكاربون أم الترسيب، وفي الوسط الحامضي تنافس أيونات H⁺ الرصاصَ على مواقع الامتزاز.",
         async run(L) {
-          const S = L.S, arm = S.ph.arm, home = arm.position.clone();
-          S.ph.g.updateMatrixWorld(true);
-          for (let i = 0; i < 4; i++) {
-            const f = S.fl[i], fw = f.g.getWorldPosition(new THREE.Vector3());
-            const local = S.ph.g.worldToLocal(fw.clone()).add(new THREE.Vector3(0.58, 0.95, 0));
-            await L.moveTo(arm, [local.x, local.y, local.z], 0.6);
-            S.ph.screen.set([`pH ${f2(A.pH + 0.9 - i * 0.25)}`, "قبل الضبط"]);
-            await L.drops(new THREE.Vector3(fw.x + 0.15, 1.1, fw.z), f, 2, 0xf4f4f4, 0.12);
+          const S = L.S;
+          await L.grab(S.probe);
+          await L.repeat(S.fl, async (f, i) => {
+            const z = await L.dropOn(L.zone(f, { r: 0.36 }), { hint: `اغمر المجس في الدورق ${i + 1}` });
+            await L.moveTo(S.probe.g, [z.pos.x, 0.08, z.pos.z], 0.35);
+            S.ph.screen.set([`pH ${f2(A.pH + 0.9 - i * 0.25)}`, "قبل الضبط"]); await L.sleep(0.5);
+            await L.drops(new THREE.Vector3(z.pos.x + 0.15, 1.0, z.pos.z), f, 2, 0xf4f4f4, 0.12);
             S.ph.screen.set([`pH ${f2(A.pH)}`, `دورق ${i + 1}`]); await L.sleep(0.35);
-          }
-          await L.moveTo(arm, [home.x, home.y, home.z], 0.6);
+            await L.moveTo(S.probe.g, [z.pos.x, 1.2, z.pos.z], 0.3);
+          }, { autoAfter: 1 });
+          await L.letGo();
         },
         done: `كل المحاليل الآن بـ pH ${n(A.pH)}.` },
-      { t: "زن الكاربون المنشّط", cam: "bal", tool: "bal",
-        say: `<p>زن ${n(A.m, "غم")} من الكاربون المنشّط لكل دورق، وأضفه إلى المحلول.</p>`,
+      { t: "زن الكاربون المنشّط", cam: "bal", tool: "spat",
+        say: `<p>خذ الملعقة واغرف الكاربون من قنينته، وضعه على كفة الميزان حتى يقرأ ${n(A.m.toFixed(4), "غم")}، ثم انقله إلى الدورق.</p>`,
         async run(L) {
-          const S = L.S, sp = S.spat.g, pan = S.bal.g.localToWorld(S.bal.pan.clone()), c = S.carbon.g.position;
+          const S = L.S, sp = S.spat, pan = S.bal.g.localToWorld(S.bal.pan.clone());
           const pile = L.mesh(new THREE.ConeGeometry(0.09, 0.05, 16), new THREE.MeshStandardMaterial({ color: 0x15191b, roughness: 0.95 }), pan.x, pan.y + 0.025, pan.z, L.group); pile.scale.setScalar(0.01);
-          for (let i = 0; i < 4; i++) {
-            await L.arcTo(sp, [c.x, 0.75, c.z + 0.3], 0.3, i ? 0.4 : 0.7);
-            await L.arcTo(sp, [pan.x, pan.y + 0.18, pan.z + 0.45], 0.3, 0.6);
-            await L.anim(0.6, (k, kk) => { pile.scale.setScalar(Math.max(0.01, kk)); S.bal.screen.set(`${(A.m * kk).toFixed(4)} g`); });
+          await L.grab(sp, { y: 1.0 });
+          await L.repeat(S.fl, async (f, i) => {
+            await L.dropOn(L.zone(S.carbon, { r: 0.32 }), { hint: "اغرف الكاربون: ضع الملعقة فوق قنينة الكاربون" });
+            sp.load(true);
+            await L.dropOn(L.zone(S.bal, { pos: pan, top: 0.3, r: 0.3 }), { hint: "ضع الكاربون على كفة الميزان" });
+            sp.load(false);
+            await L.anim(0.7, (k, kk) => { pile.scale.setScalar(Math.max(0.01, kk)); S.bal.screen.set(`${(A.m * kk).toFixed(4)} g`); });
             S.bal.screen.set(`${A.m.toFixed(4)} g`);
-            const f = S.fl[i], fw = f.g.getWorldPosition(new THREE.Vector3());
-            await L.arcTo(sp, [fw.x, 1.05, fw.z + 0.35], 0.4, 0.6);
+            const z = await L.dropOn(L.zone(f, { r: 0.36 }), { hint: `انقل الكاربون الموزون إلى الدورق ${i + 1}` });
             pile.scale.setScalar(0.01); S.bal.screen.set("0.0000 g");
             f.carb.mesh.visible = true; f.liq.color(0x9aa3a6, 0.45, 0.6);
-            await L.sleep(0.3);
-          }
-          L.group.remove(pile); await L.arcTo(sp, [3.3, 0.02, -0.15], 0.4, 0.8);
+            await L.sleep(0.25);
+          }, { autoAfter: 1 });
+          L.group.remove(pile); await L.letGo();
         },
         done: "في كل دورق الآن نصف غرام من الكاربون." },
-      { t: `رجّ الدوارق ${A.time} دقيقة`, cam: "shk", tool: "shk",
-        say: `<p>ضع الدوارق على الهزاز الحاضن بدرجة ${n(A.T, "°م")}، ورجّها ${n(A.time, "دقيقة")}، وهو زمن التوازن الذي وجده البحث لليف النخيل.</p>`,
+      { t: `رجّ الدوارق ${A.time} دقيقة`, cam: "shk", tool: "hand",
+        say: `<p>انقل الدوارق بيدك إلى منصة الهزاز الحاضن، ثم اضغط زر تشغيله ليرجّها ${n(A.time, "دقيقة")} بدرجة ${n(A.T, "°م")}، وهو زمن التوازن الذي وجده البحث لليف النخيل.</p>`,
         info: "أثناء الرج تتصادم الأيونات بحبيبات الكاربون وتلتصق بمواقعها الفعالة (مجاميع الهيدروكسيل والكاربوكسيل). راقب النقاط البنفسجية وهي تلتصق بالحبيبات السوداء.",
         async run(L) {
-          const S = L.S, plat = S.shk.plat, pos = [[0.68, 0.24], [0.23, 0.24], [-0.23, 0.24], [-0.68, 0.24]];
-          S.shk.g.updateMatrixWorld(true);
-          for (let i = 0; i < 4; i++) { const w = plat.localToWorld(new THREE.Vector3(pos[i][0], 0.03, -0.05)); await L.arcTo(S.fl[i].g, [w.x, w.y, w.z], 0.4, 0.6); plat.attach(S.fl[i].g); }
+          const S = L.S, plat = S.shk.plat;
+          await L.repeat(S.fl, async (f, i) => {
+            await L.takeFrom([f], { hint: `اضغط على الدورق ${i + 1} لتمسكه`, y: 1.2 });
+            const z = await L.dropOn(L.zone(S.shk, { pos: S.slots[i], top: 0.4, r: 0.24 }), { hint: "ضعه على منصة الهزاز في الموضع المضيء" });
+            await L.letGo({ to: [z.pos.x, z.pos.y, z.pos.z] }); plat.attach(f.g);
+          }, { autoAfter: 1 });
+          await L.press([{ obj: S.shkBtn, halo: true, r: 0.16, label: "تشغيل" }], { hint: "اضغط زر تشغيل الهزاز", label: "شغّل الهزاز" });
           S.shk.on = true; S.mode = "shake"; S.shk.screen.set(["150 rpm", `${A.T}°C`]);
-          S.fl.forEach((f, i) => { const free = Math.max(1, Math.round(A.Ce[i] * 4)); f.ip.forEach((p, j) => { p.bound = j < f.ions.n - free ? Math.floor(Math.random() * 34) : -1; p.boundLater = p.bound; p.bound = -1; }); });
+          S.fl.forEach((f, i) => { const free = Math.max(1, Math.round(A.Ce[i] * 4)); f.ip.forEach((p, j) => { p.boundLater = j < f.ions.n - free ? Math.floor(Math.random() * 34) : -1; p.bound = -1; }); });
           const bind = L.loop(() => { S.fl.forEach(f => f.ip.forEach(p => { if (p.boundLater >= 0 && p.bound < 0 && Math.random() < 0.012 * L.speed) p.bound = p.boundLater; })); });
           await L.wait({ mins: A.time, sec: 8, label: `الرج بدرجة ${A.T}°م` });
           bind(); S.fl.forEach(f => f.ip.forEach(p => { if (p.boundLater >= 0) p.bound = p.boundLater; }));
           S.shk.on = false; S.mode = "still"; S.shk.screen.set(["0 rpm", `${A.T}°C`]);
-          for (let i = 0; i < 4; i++) { L.detach(S.fl[i]); await L.arcTo(S.fl[i].g, S.fl[i].home, 0.4, 0.5); }
+          for (let i = 0; i < 4; i++) { L.detach(S.fl[i]); await L.arcTo(S.fl[i].g, S.fl[i].home, 0.4, 0.45); }
         },
         done: "وصلت الدوارق إلى التوازن. أغلب الأيونات التصقت بالكاربون في الدوارق الأولى." },
-      { t: "افصل الكاربون بالطرد المركزي", cam: "cen", tool: "cen",
-        say: `<p>انقل كل مزيج إلى أنبوب، وشغّل الطرد المركزي ${n(A.rpm, "دورة/دقيقة")} لمدة ${n(A.spin, "دقائق")}، فيترسب الكاربون في قاع الأنبوب.</p>`,
+      { t: "افصل الكاربون بالطرد المركزي", cam: "tubes", tool: "hand",
+        say: `<p>اسكب كل مزيج في أنبوب (أمسك الدورق ثم اضغط مطولاً فوق الأنبوب)، ثم ضع الأنابيب في جهاز الطرد المركزي متقابلة حتى يتوازن، وشغّله ${n(A.rpm, "دورة/دقيقة")} لمدة ${n(A.spin, "دقائق")}.</p>`,
         async run(L) {
           const S = L.S;
-          for (let i = 0; i < 4; i++) { await L.pour(S.fl[i], S.tubes[i], { to: 0.38, color: 0x8d969a, srcTo: 0, dur: 0.5, move: 0.6, tiltDur: 0.4 }); S.fl[i].ions.mesh.visible = false; S.fl[i].carb.mesh.visible = false; }
-          await S.cen.open(true);
+          await L.repeat(S.fl, async (f, i) => {
+            await L.takeFrom([f], { hint: `أمسك الدورق ${i + 1}`, y: 1.1 });
+            await L.pourInto([L.zone(S.tubes[i], { to: 0.38, r: 0.2 })], { rate: 0.45, color: 0x8d969a, dstColor: 0x8d969a, dstOpacity: 0.9, srcRate: 0.4, hint: `اسكبه في الأنبوب ${i + 1}: حرّكه فوقه واضغط مطولاً` });
+            f.ions.mesh.visible = false; f.carb.mesh.visible = false; f.liq.set(0);
+            await L.letGo();
+          }, { autoAfter: 1 });
+          L.cam("cen"); await S.cen.open(true);
           S.cen.g.updateMatrixWorld(true);
-          for (let i = 0; i < 4; i++) { const a = i / 4 * Math.PI * 2, w = S.cen.g.localToWorld(new THREE.Vector3(Math.cos(a) * 0.3, 0.26, Math.sin(a) * 0.3)); await L.arcTo(S.tubes[i].g, [w.x, w.y, w.z], 0.7, 0.55); S.cen.rotor.attach(S.tubes[i].g); }
+          const slot = i => { const a = [0, 3, 1, 4][i] / 6 * Math.PI * 2; return S.cen.g.localToWorld(new THREE.Vector3(Math.cos(a) * 0.3, 0.26, Math.sin(a) * 0.3)); };
+          await L.repeat(S.tubes, async (t, i) => {
+            await L.takeFrom([t], { hint: `أمسك الأنبوب ${i + 1}`, r: 0.2, y: 1.1 });
+            const w = slot(i), z = await L.dropOn(L.zone(S.cen, { pos: w, top: 0.6, r: 0.16 }), { hint: "ضعه في الفتحة المضيئة: كل أنبوبين متقابلان حتى يتوازن الجهاز" });
+            await L.letGo({ to: [w.x, w.y, w.z] }); S.cen.rotor.attach(t.g);
+          }, { autoAfter: 1 });
+          await L.press([{ obj: S.cenBtn, halo: true, r: 0.16, label: "تشغيل" }], { hint: "اضغط زر تشغيل جهاز الطرد المركزي", label: "شغّل الجهاز" });
           await S.cen.open(false);
           S.cen.rpm = A.rpm; S.cen.screen.set([`${A.rpm} rpm`]);
           await L.wait({ mins: A.spin, sec: 4, label: `الطرد المركزي ${A.rpm} دورة/دقيقة` });
           S.cen.rpm = 0; S.cen.screen.set(["0 rpm"]);
           await S.cen.open(true);
-          for (let i = 0; i < 4; i++) { const t = S.tubes[i]; L.detach(t); t.g.rotation.set(0, 0, 0); t.pel.visible = true; t.liq.color(0xe6eef2, 0.25, 0.3); await L.arcTo(t.g, t.home, 0.7, 0.55); }
-          await S.cen.open(false);
+          for (let i = 0; i < 4; i++) { const t = S.tubes[i]; L.detach(t); t.g.rotation.set(0, 0, 0); t.pel.visible = true; t.liq.color(0xe6eef2, 0.25, 0.3); await L.arcTo(t.g, t.home, 0.7, 0.5); }
+          await S.cen.open(false); L.cam("tubes");
         },
-        done: "ترسب الكاربون في القاع، والمحلول فوقه صافٍ." },
-      { t: "رشّح المحلول الصافي", cam: "fil", tool: "fil",
-        say: "<p>اسكب المحلول الصافي من كل أنبوب على ورق الترشيح Whatman رقم 42، واجمع الراشح في دورق صغير.</p>",
+        done: "ترسب الكاربون في قاع الأنابيب، والمحلول فوقه صافٍ." },
+      { t: "رشّح المحلول الصافي", cam: "fil", tool: "hand",
+        say: "<p>أمسك كل أنبوب واسكب المحلول الصافي على ورق الترشيح Whatman رقم 42 في القمع المقابل، فيُجمع الراشح في الدورق الصغير.</p>",
         info: "الترشيح بعد الطرد المركزي يزيل آخر الحبيبات الدقيقة، لأنها لو دخلت جهاز الامتصاص الذري لسدّت أنبوبه الشعري وأفسدت القراءة.",
         async run(L) {
           const S = L.S;
-          for (let i = 0; i < 4; i++) {
-            const t = S.tubes[i], b = S.bk[i];
-            await L.pour(t, { g: b.g, liq: b.liq, h: 1.2, r: 0.26 }, { to: 0.32, color: 0xe6eef2, srcTo: 0.05, dur: 0.7, move: 0.6, tiltDur: 0.35 });
+          for (const b of S.bk) { const f = b.fun.g; f.visible = true; f.position.y = 1.3; L.anim(0.45, k => { f.position.y = 1.3 - 0.74 * k; }); await L.sleep(0.12); }
+          await L.sleep(0.4);
+          await L.repeat(S.tubes, async (t, i) => {
+            const b = S.bk[i];
+            await L.takeFrom([t], { hint: `أمسك الأنبوب ${i + 1}`, r: 0.2, y: 1.5 });
+            await L.pourInto([L.zone(b, { to: 0.32, top: 1.2, r: 0.3 })], { rate: 0.3, color: 0xe6eef2, dstColor: 0xe6eef2, dstOpacity: 0.2, srcRate: 0.4, srcMin: 0.05, hint: `اسكبه في القمع ${i + 1}: اضغط مطولاً فوقه` });
             b.ions.mesh.visible = true;
-          }
+            await L.letGo();
+          }, { autoAfter: 1 });
         },
         done: "لاحظ النقاط البنفسجية في الراشح: قليلة جداً في الأول وكثيرة في الأخير." },
-      { t: "قِس الرصاص المتبقي Cₑ", cam: "aas", tool: "aas",
-        say: "<p>شغّل جهاز الامتصاص الذري بمصباح الرصاص، واسحب كل راشح إلى اللهب لقراءة التركيز المتبقي عند التوازن Cₑ.</p>",
+      { t: "قِس الرصاص المتبقي Cₑ", cam: "aas", tool: "hand",
+        say: "<p>اضغط شاشة جهاز الامتصاص الذري لتشغيله بمصباح الرصاص، ثم انقل كل راشح إلى موضع السحب أمام الجهاز ليقرأ التركيز المتبقي عند التوازن Cₑ.</p>",
         info: "يمتص بخار ذرات الرصاص في اللهب ضوءاً بطول موجي خاص به (283.3 نانومتر) يصدر من مصباح الرصاص، وكمية الضوء الممتص تتناسب مع التركيز.",
         async run(L) {
           const S = L.S, C2 = S.C;
+          await L.press([{ obj: S.aasBtn, halo: true, r: 0.3, label: "تشغيل الجهاز" }], { hint: "اضغط شاشة الجهاز لتشغيله", label: "شغّل الجهاز" });
           S.aas.lamp(0xb493ff); S.aas.flame.visible = true; S.aas.screen.set(["Pb 283.3 nm", "معايرة ✓"]); await L.sleep(0.8);
-          for (let i = 0; i < 4; i++) {
-            const b = S.bk[i];
-            await L.arcTo(b.g, [S.sampleAt.x, 0, S.sampleAt.z], 0.6, 0.8);
+          await L.repeat(S.bk, async (b, i) => {
+            await L.takeFrom([b], { hint: `أمسك راشح الدورق ${i + 1}`, r: 0.3, y: 1.4 });
+            const z = await L.dropOn(L.zone(S.aas, { pos: S.sampleAt, top: 0.6, r: 0.3 }), { hint: "ضعه في موضع السحب أمام الجهاز" });
+            await L.letGo({ to: [S.sampleAt.x, 0, S.sampleAt.z] });
             S.aas.screen.set(["…", "سحب العيّنة"]); await L.sleep(0.6);
             S.aas.screen.set([`${f2(A.Ce[i])} mg/L`, `Pb · Co = ${A.Co[i]}`]);
             L.nb.row(i, [n(A.Co[i]), n(f2(A.Ce[i])), n(Math.round(C2.R[i]), "%"), n(U.fmt(C2.qe[i], 3))]);
             S.rem[i] = Math.round(C2.R[i]); upd();
-            await L.sleep(0.4); await L.arcTo(b.g, b.home, 0.6, 0.8);
-          }
+            await L.sleep(0.4); await L.arcTo(b.g, b.home, 0.6, 0.6);
+          }, { autoAfter: 1 });
           S.aas.flame.visible = false;
         },
         done: `نسبة الإزالة نزلت من ${n(Math.round(adsCalc().R[0]), "%")} إلى ${n(Math.round(adsCalc().R[3]), "%")} كلما زاد التركيز.` },
@@ -558,6 +624,67 @@
     return end;
   }
 
+    /* نسخ يدوية: المستخدم يمسك الماصة أو القطارة أو القنينة بنفسه */
+  const STOP_OFF = [0.42, 0.12, 0.18];
+  async function shakeBottle(L, b) { await L.rotTo(b.g, [0, 0, 0.5], 0.25); await L.rotTo(b.g, [0, 0, -0.5], 0.3); await L.rotTo(b.g, [0, 0, 0], 0.25); }
+  async function fixBy(L, b, nm) {
+    const S = L.S;
+    await L.moveTo(b.stop, STOP_OFF, 0.3);
+    for (const [p, src, col, what] of [[S.pMn, S.mn, 0xf1d6e0, "كبريتات المنغنيز"], [S.pAl, S.alk, 0xf4f4f4, "القاعدي يوديد-أزيد"]]) {
+      await L.grab(p);
+      const zs = await L.dropOn(L.zone(src, { r: 0.3 }), { hint: `اسحب 1 مل من ${what}: ضع الماصة فوق قنينته` });
+      await L.moveTo(p.g, [zs.pos.x, 0.12, zs.pos.z], 0.3); await p.fill(0.5, col, 0.3); await L.moveTo(p.g, [zs.pos.x, zs.top + 0.3, zs.pos.z], 0.3);
+      const z = await L.dropOn(L.zone(b, { r: 0.4 }), { hint: `أضفه إلى قنينة ${nm} المضيئة` });
+      const tip = new THREE.Vector3(z.pos.x, z.top + 0.04, z.pos.z);
+      await L.moveTo(p.g, [tip.x, tip.y, tip.z], 0.3);
+      await Promise.all([L.drops(tip, b, 2, col, 0.1), p.fill(0, null, 0.4)]);
+      await L.letGo();
+    }
+    await L.moveTo(b.stop, [0, b.h, 0], 0.3);
+    b.prec.mesh.visible = true; b.precK = 1; b.liq.color(0xa77a3f, 0.62, 0.9);
+    await shakeBottle(L, b); await L.sleep(0.4);
+  }
+  async function acidBy(L, b, nm) {
+    const S = L.S, d = S.dAc;
+    await L.moveTo(b.stop, STOP_OFF, 0.3);
+    await L.grab(d);
+    const zs = await L.dropOn(L.zone(S.h2, { r: 0.3 }), { hint: "اسحب الحامض: ضع القطارة فوق قنينة H₂SO₄" });
+    await L.moveTo(d.g, [zs.pos.x, 0.15, zs.pos.z], 0.3); await L.moveTo(d.g, [zs.pos.x, zs.top + 0.3, zs.pos.z], 0.3);
+    const z = await L.dropOn(L.zone(b, { r: 0.4 }), { hint: `أضف 1 مل إلى قنينة ${nm}` });
+    const tip = new THREE.Vector3(z.pos.x, z.top + 0.04, z.pos.z);
+    await L.moveTo(d.g, [tip.x, tip.y, tip.z], 0.3);
+    await L.drops(tip, b, 2, 0xf3eeee, 0.12);
+    await L.letGo();
+    await L.moveTo(b.stop, [0, b.h, 0], 0.3);
+    await shakeBottle(L, b);
+    await L.anim(1.0, k => { b.precK = 1 - k; }); b.prec.mesh.visible = false;
+    await b.liq.color(WINK.amber[0], WINK.amber[1], 0.6);
+  }
+  async function titrBy(L, b, end, nm) {
+    const S = L.S, f = S.flask, e1 = +(end * 0.86).toFixed(2);
+    if (f.liq.h > 0.01) await f.liq.to(0, 0.4);
+    S.bur.setRead(0);
+    await L.arcTo(f.g, S.flaskOut, 0.3, 0.6);
+    await L.moveTo(b.stop, STOP_OFF, 0.3);
+    await L.takeFrom([b], { hint: `أمسك قنينة ${nm}`, y: 1.3 });
+    await L.pourInto([L.zone(f, { to: 0.34, r: 0.45 })], { rate: 0.35, color: WINK.amber[0], dstColor: WINK.amber[0], dstOpacity: WINK.amber[1], srcRate: 0.6, srcMin: 0.1, hint: "اسكب 200 مل في الدورق: حرّك القنينة فوقه واضغط مطولاً" });
+    await L.letGo();
+    await L.arcTo(f.g, S.flaskHome, 0.3, 0.6);
+    await L.titrate({ bur: S.bur, flask: f, end: e1, colors: WINK.s1, tip: "الثايوسلفات يستهلك اليود فيخفّ اللون. توقف عندما يصبح قشياً باهتاً", doneText: "لون قشي باهت" });
+    await L.grab(S.dSt);
+    const zs = await L.dropOn(L.zone(S.starch, { r: 0.3 }), { hint: "خذ قطارة النشا: ضعها فوق قنينة النشا" });
+    await L.moveTo(S.dSt.g, [zs.pos.x, 0.15, zs.pos.z], 0.3); await L.moveTo(S.dSt.g, [zs.pos.x, zs.top + 0.3, zs.pos.z], 0.3);
+    const z = await L.dropOn(L.zone(f, { r: 0.45 }), { hint: "أضف قطرات النشا إلى الدورق تحت السحاحة" });
+    const tip = new THREE.Vector3(z.pos.x + 0.07, z.top + 0.02, z.pos.z - 0.06);
+    await L.moveTo(S.dSt.g, [tip.x, tip.y, tip.z], 0.3);
+    await L.drops(tip, f, 2, 0xf3f3f3, 0.15);
+    await f.liq.color(0x26346e, 0.84, 0.6);
+    await L.letGo();
+    L.toast("صار اللون أزرق بالنشا. أكمل التسحيح حتى يختفي الأزرق.");
+    await L.titrate({ bur: S.bur, flask: f, from: e1, end, colors: [[e1 / end, 0x26346e, 0.84], [0.95, 0x34418a, 0.8], [0.995, 0x8d97c9, 0.45], [1, 0xe6f2f4, 0.16]], tip: "أكمل حتى يختفي اللون الأزرق تماماً", doneText: "اختفى الأزرق" });
+    return end;
+  }
+
   LAB.reg({
     id: "bod", title: "المتطلب الحيوي للأوكسجين BOD₅", cat: "تلوث · ماء دجلة في تكريت", icon: "drops", hue: "#93dd8a",
     blurb: "كم أوكسجيناً تستهلك بكتيريا الماء في 5 أيام؟ بطريقة ونكلر",
@@ -565,19 +692,20 @@
     src: TG.src,
     materials: ["عيّنتا ماء من دجلة في تكريت (شتاء المحطة 1، صيف المحطة 5)", `قناني ونكلر معتمة سعة ${n(B.bottle, "مل")}`, "ماء تخفيف مهوّى فيه المغذيات (منظم الفوسفات، MgSO₄، CaCl₂، FeCl₃)", "كواشف ونكلر: كبريتات المنغنيز، والقاعدي يوديد-أزيد، وحامض الكبريتيك المركز", `ثايوسلفات الصوديوم ${n(B.titrN, "عياري")}`, "محلول النشا دليلاً", "سحاحة ودورق مخروطي", `حاضنة بدرجة ${n(B.Tinc, "°م")}`],
     tools: [
-      { id: "air", name: "مضخة التهوية", icon: "wind", why: "نهوّي بها ماء التخفيف في البداية." },
-      { id: "cyl", name: "الأسطوانة المدرجة", icon: "tube", why: "نقيس بها حجم العيّنة لملء القناني." },
-      { id: "fix", name: "MnSO₄ والقاعدي", icon: "pipette", why: "كواشف تثبيت الأوكسجين، نضيفها قبل التسحيح." },
-      { id: "acid", name: "حامض الكبريتيك", icon: "drop", why: "نضيفه بعد تكوّن الراسب البني." },
-      { id: "bur", name: "سحاحة الثايوسلفات", icon: "pipette", why: "نسحّح بها بعد إضافة الحامض." },
-      { id: "inc", name: "الحاضنة", icon: "box", why: "نحضن فيها قنينتي DO₅ لخمسة أيام." }
+      { id: "air", name: "حجر التهوية", icon: "wind", why: "نهوّي به ماء التخفيف في البداية." },
+      { id: "cyl", name: "الأسطوانة المدرجة", icon: "cyl", why: "نقيس بها حجم العيّنة بعد حساب التخفيف." },
+      { id: "fix", name: "ماصتا التثبيت", icon: "pipette", why: "MnSO₄ والقاعدي: نضيفهما بعد ملء القناني." },
+      { id: "acid", name: "قطارة الحامض", icon: "drop", why: "نضيف بها H₂SO₄ بعد تكوّن الراسب البني." },
+      { id: "hand", name: "اليد", icon: "hand", why: "ننقل بها القناني ونصب منها ونفتح الحاضنة." }
     ],
     views: {
       intro: { t: [-0.3, 1.1, 0], r: 11, th: 0, ph: 1.12 },
-      carboy: { t: [-3.8, 0.9, -0.9], r: 5.2, th: -0.2, ph: 1.1 },
-      bottles: { t: [1.6, 0.55, 0.35], r: 7.2, th: 0.12, ph: 1.08 },
-      titr: { t: [-1.6, 1.3, 0.4], r: 5.4, th: -0.12, ph: 1.2 },
-      inc: { t: [-5.2, 0.8, -0.7], r: 5.4, th: -0.05, ph: 1.12 },
+      carboy: { t: [-3.3, 0.9, -0.8], r: 5.4, th: -0.15, ph: 1.1 },
+      bottles: { t: [1.6, 0.55, 0.2], r: 7.2, th: 0.12, ph: 1.08 },
+      fill: { t: [2.4, 0.6, 0.3], r: 8.2, th: 0.1, ph: 1.08 },
+      titr: { t: [-0.6, 1.1, 0.6], r: 6.6, th: -0.08, ph: 1.15 },
+      incw: { t: [-2.0, 0.8, 0.0], r: 9.6, th: -0.1, ph: 1.1 },
+      inc: { t: [-5.0, 0.8, -0.4], r: 5.6, th: -0.05, ph: 1.12 },
       wide: { t: [-0.3, 1.1, 0], r: 9.6, th: 0, ph: 1.15 }
     },
     nb: ["العيّنة", "DO₀ (ملغم/لتر)", "DO₅ (ملغم/لتر)", "الاستنزاف", "BOD₅ (ملغم/لتر)"],
@@ -597,7 +725,7 @@
       S.js = L.put(L.MK.jug({ label: [s.label, `${s.T}°م · تكريت`], color: 0xc9d8c0, opacity: 0.5, cap: 0xe6ae4f }), 4.1, 0, 0.35);
       S.carboy = L.put(L.MK.carboy({ label: ["ماء تخفيف", "مهوّى + مغذيات"], color: 0xdcecef, opacity: 0.28 }), -3.7, 0, -1.25);
       S.cyl = L.put(L.MK.gradcyl({ color: 0xc9d8c0, opacity: 0.5 }), 3.0, 0, -0.1);
-      S.dil = L.put(L.MK.bottle({ label: ["ماء تخفيف"], cap: 0x2c8d9c, r: 0.26, h: 0.7, color: 0xdcecef, opacity: 0.28 }), 3.3, 0, -0.9);
+      S.dil = L.put(L.MK.bottle({ label: ["ماء تخفيف"], cap: 0x2c8d9c, r: 0.26, h: 0.7, color: 0xdcecef, opacity: 0.28 }), 3.4, 0, -0.95);
       const names = ["شتاء · DO₀", "شتاء · DO₅", "صيف · DO₀", "صيف · DO₅"], xs = [2.0, 1.15, 0.3, -0.55];
       S.bot = xs.map((x, i) => {
         const b = L.put(L.MK.winkler({ amber: i % 2 === 1, color: 0xdcecef, opacity: 0.3 }), x, 0, 0.75); b.home = [x, 0, 0.75];
@@ -608,26 +736,44 @@
       });
       L.loop(sdt => S.bot.forEach(b => { if (!b.prec.mesh.visible) return; b.pp.forEach((p, i) => { p.a += sdt * 0.4; p.y = Math.max(0.04, p.y - sdt * 0.04); b.prec.p[i].set(Math.cos(p.a) * p.r, p.y, Math.sin(p.a) * p.r); b.prec.s[i] = Math.max(0.01, b.precK); }); b.prec.sync(); }));
       const rb = (lbl, cap, x, amber) => L.put(L.MK.bottle({ label: lbl, cap, r: 0.17, h: 0.42, amber, color: 0xeef2f2, opacity: 0.3 }), x, 0, -1.55);
-      rb(["MnSO₄"], 0xd16f9a, 1.6); rb(["NaOH·KI·NaN₃", "قاعدي يوديد-أزيد"], 0xe7ecee, 2.2); rb(["H₂SO₄", "مركّز"], 0xb8392f, 2.8, true); rb(["نشا 1%"], 0x5e8f3a, 1.0);
+      S.mn = rb(["MnSO₄"], 0xd16f9a, 1.6); S.alk = rb(["NaOH·KI·NaN₃", "قاعدي يوديد-أزيد"], 0xe7ecee, 2.2); S.h2 = rb(["H₂SO₄", "مركّز"], 0xb8392f, 2.8, true); S.starch = rb(["نشا 1%"], 0x5e8f3a, 1.0);
       S.thio = rb(["Na₂S₂O₃", `${B.titrN} N`], 0x2f5fb3, 0.4);
+      S.pMn = L.put(L.MK.pipette({ color: 0xf1d6e0, len: 1.2 }), 1.6, 0, -1.08);
+      S.pAl = L.put(L.MK.pipette({ color: 0xf4f4f4, len: 1.2 }), 2.2, 0, -1.08);
+      S.dAc = L.put(L.MK.dropper({ bulb: 0xb8392f }), 2.8, 0, -1.1);
+      S.dSt = L.put(L.MK.dropper({ bulb: 0x5e8f3a }), 1.0, 0, -1.1);
       S.bur = L.put(L.MK.burette({ color: 0xeef4f5, opacity: 0.22 }), -1.6, 0, 0.35); S.bur.setRead(0);
       S.bur.g.updateMatrixWorld(true);
       const fp = S.bur.g.localToWorld(S.bur.flaskPos.clone());
+      S.flaskHome = [fp.x, fp.y, fp.z]; S.flaskOut = [fp.x + 0.55, 0, fp.z + 0.95];
       S.flask = L.put(L.MK.erlen({ rb: 0.42, h: 1.05, color: WINK.amber[0], opacity: 0 }), fp.x, fp.y, fp.z);
       S.inc = L.put(L.MK.incubator(), -5.4, 0, -1.0); S.inc.screen.set([`${B.Tinc.toFixed(1)}°C`]);
+      S.door = L.hitbox(S.inc.door, S.inc.w - 0.3, S.inc.h / 2 - 0.04, 0.1, 0.2);
+      // حجر التهوية وأنبوبه
+      { const g = new THREE.Group(); L.mesh(new THREE.CylinderGeometry(0.014, 0.014, 1.6, 6), new THREE.MeshStandardMaterial({ color: 0xe0e8e8, transparent: true, opacity: 0.8 }), 0, 0.85, 0, g); L.mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.12, 14), new THREE.MeshStandardMaterial({ color: 0x8d99a0, roughness: 0.95 }), 0, 0.06, 0, g); S.air = L.put({ g, h: 1.7, r: 0.08 }, -2.55, 0, -0.95); g.rotation.z = 0.1; }
       // فقاعات التهوية
       const bub = new L.Swarm(40, new THREE.SphereGeometry(0.02, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6 }), S.carboy.g); bub.mesh.visible = false; S.bub = bub;
       const bp = Array.from({ length: 40 }, () => ({ y: Math.random(), a: Math.random() * 6.28, r: Math.random() * 0.12 }));
-      L.loop(sdt => { if (!bub.mesh.visible) return; bp.forEach((p, i) => { p.y += sdt * 0.6; if (p.y > 1) p.y = 0; bub.p[i].set(0.05 + Math.cos(p.a) * p.r, 0.1 + p.y * S.carboy.h * 0.7, Math.sin(p.a) * p.r); }); bub.sync(); });
+      L.loop(sdt => { if (!bub.mesh.visible) return; bp.forEach((p, i) => { p.y += sdt * 0.6; if (p.y > 1) p.y = 0; bub.p[i].set(Math.cos(p.a) * p.r, 0.1 + p.y * S.carboy.h * 0.7, Math.sin(p.a) * p.r); }); bub.sync(); });
     },
     steps: [
       { t: "ما هو BOD₅؟", cam: "intro",
-        say: `<p>البكتيريا في الماء تتغذى على المادة العضوية وتستهلك الأوكسجين المذاب. <b>BOD₅</b> هو مقدار الأوكسجين الذي تستهلكه في <b>5 أيام</b> في الظلام بدرجة ثابتة، فكلما زاد التلوث العضوي زاد BOD₅.</p><p>نملأ قنينتين متطابقتين من كل عيّنة: نقيس الأوكسجين في الأولى الآن (DO₀)، ونحضن الثانية 5 أيام ثم نقيسه (DO₅). الفرق هو ما استهلكته البكتيريا.</p>`,
+        say: `<p>البكتيريا في الماء تتغذى على المادة العضوية وتستهلك الأوكسجين المذاب. <b>BOD₅</b> هو مقدار الأوكسجين الذي تستهلكه في <b>5 أيام</b> في الظلام بدرجة ثابتة، فكلما زاد التلوث العضوي زاد BOD₅.</p><p>نملأ قنينتين متطابقتين من كل عيّنة: نقيس الأوكسجين في الأولى الآن (DO₀)، ونحضن الثانية 5 أيام ثم نقيسه (DO₅). الفرق هو ما استهلكته البكتيريا.</p><p>في كل خطوة تأخذ الأداة من الصينية بيدك وتضعها على الهدف المضيء.</p>`,
         info: "القناني معتمة حتى لا تنتج الطحالب أوكسجيناً بالتركيب الضوئي فتخفي الاستهلاك الحقيقي." },
       { t: "هوِّ ماء التخفيف", cam: "carboy", tool: "air",
-        say: "<p>ماء التخفيف ماء مقطر نضيف إليه المغذيات التي تحتاجها البكتيريا (منظم الفوسفات، وكبريتات المغنيسيوم، وكلوريد الكالسيوم، وكلوريد الحديديك، 1 مل من كل منها للتر)، ثم نهوّيه حتى يتشبع بالأوكسجين.</p>",
+        say: "<p>ماء التخفيف ماء مقطر نضيف إليه المغذيات التي تحتاجها البكتيريا (منظم الفوسفات، وكبريتات المغنيسيوم، وكلوريد الكالسيوم، وكلوريد الحديديك، 1 مل من كل منها للتر). خذ حجر التهوية وضعه داخل قنينة ماء التخفيف الكبيرة حتى يتشبع بالأوكسجين.</p>",
         info: "بدون المغذيات قد يتوقف نمو البكتيريا لنقص النيتروجين أو الفوسفور لا لنقص المادة العضوية، فتظهر قيمة BOD أقل من الحقيقة.",
-        async run(L) { L.S.bub.mesh.visible = true; await L.wait({ mins: 30, sec: 4, label: "تهوية ماء التخفيف" }); L.S.bub.mesh.visible = false; },
+        async run(L) {
+          const S = L.S;
+          await L.grab(S.air);
+          const z = await L.dropOn(L.zone(S.carboy, { r: 0.45 }), { hint: "ضع حجر التهوية فوق قنينة ماء التخفيف المضيئة" });
+          await L.moveTo(S.air.g, [z.pos.x + 0.05, 0.1, z.pos.z], 0.6);
+          S.bub.mesh.visible = true;
+          await L.wait({ mins: 30, sec: 4, label: "تهوية ماء التخفيف" });
+          S.bub.mesh.visible = false;
+          await L.moveTo(S.air.g, [z.pos.x, z.top + 0.3, z.pos.z], 0.5);
+          await L.letGo();
+        },
         done: "ماء التخفيف مشبع بالأوكسجين وجاهز." },
       { t: "لماذا نخفف العيّنة؟", cam: "bottles", act: "احسب نسبة التخفيف", actIcon: "spark",
         say: `<p>أقصى أوكسجين يذوب في الماء بدرجة ${n(B.Tinc, "°م")} هو نحو ${n(f2(B.DOsat), "ملغم/لتر")} فقط. ماء دجلة في تكريت قد يستهلك أكثر من ذلك في 5 أيام، فلو حضنّاه دون تخفيف لنفد الأوكسجين قبل نهاية الحضن ولم نعرف القيمة.</p>`,
@@ -636,43 +782,56 @@
           L.show(`<p class="lb-eq">P = حجم العيّنة ÷ حجم القنينة = ${B.sample} ÷ ${B.bottle} = ${B.P}</p>${kv([["حجم العيّنة", n(B.sample, "مل")], ["حجم القنينة", n(B.bottle, "مل")], ["نسبة التخفيف P", n(B.P)]])}<p>نضع ${n(B.sample, "مل")} من العيّنة ونكمل القنينة بماء التخفيف. وفي النهاية نقسم الاستهلاك على P لنعود إلى تركيز العيّنة الأصلية.</p><p class="muted lb-small">البحث نشر قيمة BOD₅ النهائية لكل عيّنة. القراءات الوسطية التي ستراها (DO₀ وDO₅ وحجم الثايوسلفات) محسوبة منها بمعادلة الطريقة، مع قيمة التشبع ${f2(B.DOsat)} ملغم/لتر بدرجة ${B.Tinc}°م (معادلة Benson وKrause المعتمدة في Standard Methods).</p>`);
         },
         done: `نسبة التخفيف P = ${n(B.P)}.` },
-      { t: "املأ قناني ونكلر", cam: "bottles", tool: "cyl",
-        say: `<p>ضع ${n(B.sample, "مل")} من عيّنة الشتاء في القنينتين الأوليين، و${n(B.sample, "مل")} من عيّنة الصيف في الأخريين، ثم أكمل كل قنينة بماء التخفيف حتى تمتلئ تماماً وأغلقها دون فقاعات هواء.</p>`,
-        info: "أي فقاعة هواء محبوسة تضيف أوكسجيناً من خارج العيّنة وتفسد القياس.",
+      { t: `ضع ${B.sample} مل من كل عيّنة`, cam: "fill", tool: "cyl",
+        say: `<p>خذ الأسطوانة المدرجة وضعها عند إبريق عيّنة الشتاء لتمتلئ، ثم اسكب ${n(B.sample, "مل")} في كل من قنينتي الشتاء (أمسك الأسطوانة فوق القنينة واضغط مطولاً). كرر ذلك مع عيّنة الصيف وقنينتيها.</p>`,
+        info: "نغسل الأسطوانة بقليل من العيّنة الجديدة قبل قياسها حتى لا تختلط العيّنتان.",
         async run(L) {
           const S = L.S, cyl = S.cyl, bot = S.bot;
-          await Promise.all(bot.map(b => L.moveTo(b.stop, [0.42, 0.12, 0.18], 0.45)));
-          cyl.liq.set(cyl.h * 0.75); cyl.liq.color(0xc9d8c0, 0.5, 0);
-          await L.pourRow(cyl, [bot[0], bot[1]], { to: 0.36, color: 0xc9d8c0, dstColor: 0xd3e2d0, dstOpacity: 0.4, dur: 0.7, srcDrop: 0.6, glide: 0.4 });
-          cyl.liq.set(cyl.h * 0.75);
-          await L.pourRow(cyl, [bot[2], bot[3]], { to: 0.36, color: 0xc9d8c0, dstColor: 0xd3e2d0, dstOpacity: 0.4, dur: 0.7, srcDrop: 0.6, glide: 0.4 });
-          await L.pourRow(S.dil, bot, { to: bot[0].h - 0.03, color: 0xdcecef, dur: 0.8, srcDrop: 0.05, glide: 0.45 });
+          await Promise.all(bot.map(b => L.moveTo(b.stop, STOP_OFF, 0.45)));
+          await L.grab(cyl);
+          for (const [jug, pair, nm] of [[S.jw, [bot[0], bot[1]], "الشتاء"], [S.js, [bot[2], bot[3]], "الصيف"]]) {
+            const z = await L.dropOn(L.zone(jug, { r: 0.5 }), { hint: `ضع الأسطوانة عند إبريق عيّنة ${nm} لتملأها` });
+            await L.moveTo(cyl.g, [z.pos.x, 0, z.pos.z + 0.95], 0.45);
+            await L.pour(jug, cyl, { to: cyl.h * 0.72, color: 0xc9d8c0, dur: 0.8, move: 0.5, tiltDur: 0.4, srcDrop: 0.1 });
+            await L.pourInto(pair.map(b => L.zone(b, { to: 0.36, r: 0.4 })), { rate: 0.4, color: 0xc9d8c0, dstColor: 0xd3e2d0, dstOpacity: 0.4, srcRate: 0.45, srcMin: 0.02, hint: `اسكب ${B.sample} مل في كل قنينة من قنينتي ${nm}: حرّك الأسطوانة فوقها واضغط مطولاً` });
+            cyl.liq.set(0);
+          }
+          await L.letGo();
+        },
+        done: `في كل قنينة الآن ${n(B.sample, "مل")} من العيّنة.` },
+      { t: "أكمل القناني بماء التخفيف", cam: "fill", tool: "hand",
+        say: "<p>أمسك قنينة ماء التخفيف واسكب منها في القناني الأربع حتى تمتلئ تماماً، ثم نغلقها دون فقاعات هواء.</p>",
+        info: "أي فقاعة هواء محبوسة تضيف أوكسجيناً من خارج العيّنة وتفسد القياس.",
+        async run(L) {
+          const S = L.S, bot = S.bot;
+          await L.takeFrom([S.dil], { hint: "اضغط على قنينة ماء التخفيف لتمسكها", y: 1.3 });
+          await L.pourInto(bot.map(b => L.zone(b, { to: b.h - 0.05, r: 0.4 })), { rate: 0.55, color: 0xdcecef, srcRate: 0.04, srcMin: 0.1, hint: "املأ كل قنينة حتى الحافة: حرّك القنينة فوقها واضغط مطولاً" });
+          await L.letGo();
           await Promise.all(bot.map(b => L.moveTo(b.stop, [0, b.h, 0], 0.4)));
         },
         done: "أربع قناني مملوءة ومغلقة: اثنتان لكل عيّنة." },
       { t: "ثبّت الأوكسجين في قنينتي DO₀", cam: "bottles", tool: "fix",
-        say: "<p>أضف إلى قنينتي DO₀ (الشتاء والصيف) 1 مل من كبريتات المنغنيز ثم 1 مل من محلول القاعدي يوديد-أزيد، وأغلق القنينة واقلبها.</p>",
+        say: "<p>بماصة لكل كاشف: أضف إلى قنينة DO₀ 1 مل من كبريتات المنغنيز، ثم 1 مل من محلول القاعدي يوديد-أزيد. نغلق القنينة ونقلبها فيظهر راسب بني. ابدأ بقنينة الشتاء ثم الصيف.</p>",
         info: "يتفاعل المنغنيز مع الأوكسجين المذاب فيكوّن راسباً بنياً من أكاسيد المنغنيز. لون الراسب البني دليل على وجود الأوكسجين، وكلما زاد الأوكسجين زاد الراسب.",
-        async run(L) { const S = L.S; await winklerFix(L, S.bot[0]); await winklerFix(L, S.bot[2], true); },
+        async run(L) { const S = L.S; await L.repeat([S.bot[0], S.bot[2]], (b, i) => fixBy(L, b, i ? "DO₀ الصيفية" : "DO₀ الشتوية"), { autoAfter: 1 }); },
         done: "تكوّن الراسب البني: الأوكسجين أصبح «مثبّتاً» ولن يتغير بعد الآن." },
       { t: "أذب الراسب بالحامض", cam: "bottles", tool: "acid",
-        say: "<p>أضف 1 مل من حامض الكبريتيك المركز وأعد القلب حتى يذوب الراسب كله.</p>",
+        say: "<p>خذ قطارة الحامض وأضف 1 مل من حامض الكبريتيك المركز إلى كل قنينة DO₀، ثم نقلبها حتى يذوب الراسب كله.</p>",
         info: "الحامض يحرر اليود من يوديد البوتاسيوم بكمية تكافئ الأوكسجين الأصلي تماماً، فيصبح لون المحلول أصفر بنياً. الآن نقيس اليود بدلاً من الأوكسجين.",
-        async run(L) { const S = L.S; await winklerAcid(L, S.bot[0]); await winklerAcid(L, S.bot[2], true); },
+        async run(L) { const S = L.S; await L.repeat([S.bot[0], S.bot[2]], (b, i) => acidBy(L, b, i ? "DO₀ الصيفية" : "DO₀ الشتوية"), { autoAfter: 1 }); },
         done: "ظهر لون اليود الأصفر. القنينتان جاهزتان للتسحيح." },
-      { t: "سحّح DO₀ لعيّنة الشتاء", cam: "titr", tool: "bur",
-        say: `<p>انقل 200 مل (بعد تصحيح الحجم الذي أزاحته الكواشف) من قنينة الشتاء إلى الدورق، وسحّح بالثايوسلفات ${n(B.titrN, "عياري")}. أولاً حتى يصبح اللون قشياً باهتاً، ثم نضيف النشا فيزرقّ، ونكمل حتى يختفي الأزرق.</p><p class="lb-eq">كل 1 مل من الثايوسلفات = 1 ملغم/لتر أوكسجين</p>`,
-        info: "اضغط مع الاستمرار على زر الصنبور. يبطؤ التدفق قرب نقطة النهاية مثل التسحيح الحقيقي، أو فعّل «سحّح تلقائياً».",
+      { t: "سحّح DO₀ لعيّنة الشتاء", cam: "titr", tool: "hand",
+        say: `<p>أمسك قنينة الشتاء واسكب 200 مل منها في الدورق (بعد تصحيح الحجم الذي أزاحته الكواشف)، ثم سحّح بالثايوسلفات ${n(B.titrN, "عياري")} حتى يصبح اللون قشياً باهتاً. بعدها أضف النشا بالقطارة فيزرقّ، وأكمل حتى يختفي الأزرق.</p><p class="lb-eq">كل 1 مل من الثايوسلفات = 1 ملغم/لتر أوكسجين</p>`,
+        info: "زر الصنبور: اضغط مع الاستمرار. يبطؤ التدفق قرب نقطة النهاية مثل التسحيح الحقيقي، أو فعّل «سحّح تلقائياً».",
         async run(L) {
           const S = L.S;
-          await toFlask(L, S.bot[0]);
-          await doTitr(L, "w0", B.DOsat, true);
+          await titrBy(L, S.bot[0], B.DOsat, "DO₀ الشتوية");
           L.nb.row("w", [B.samples[0].label, n(f2(B.DOsat)), "—", "—", "—"]);
           S.cd.d0[0] = B.DOsat; upd();
         },
         done: `DO₀ لعيّنة الشتاء = ${n(f2(B.DOsat), "ملغم/لتر")}.` },
       { t: "DO₀ لعيّنة الصيف", cam: "titr", act: "سحّح عيّنة الصيف", actIcon: "play",
-        say: "<p>نكرر التسحيح نفسه لقنينة DO₀ الصيفية (يُنفَّذ تلقائياً).</p>",
+        say: "<p>نكرر التسحيح نفسه لقنينة DO₀ الصيفية (يُنفَّذ تلقائياً لأنك سحّحت الأولى بيدك).</p>",
         async run(L) {
           const S = L.S;
           await toFlask(L, S.bot[2], true);
@@ -681,30 +840,42 @@
           S.cd.d0[1] = B.DOsat; upd();
         },
         done: `DO₀ لعيّنة الصيف = ${n(f2(B.DOsat), "ملغم/لتر")} أيضاً، لأن القنينتين خُففتا بماء مشبع.` },
-      { t: "احضن قنينتي DO₅ خمسة أيام", cam: "inc", tool: "inc",
-        say: `<p>ضع القنينتين المعتمتين في الحاضنة بدرجة ${n(B.Tinc, "°م")} لمدة ${n(B.days, "أيام")} في الظلام.</p>`,
+      { t: "احضن قنينتي DO₅ خمسة أيام", cam: "incw", tool: "hand",
+        say: `<p>افتح باب الحاضنة، وانقل إليها القنينتين المعتمتين (DO₅) بيدك، ثم أغلقها. تبقيان ${n(B.days, "أيام")} في الظلام بدرجة ${n(B.Tinc, "°م")}.</p>`,
         info: `البحث حضن العيّنات بدرجة ${B.Tinc}°م كما في طرائقه؛ والطريقة القياسية الدولية تستعمل 20°م. لذلك عند مقارنة النتائج مع بحوث أخرى يجب التأكد من درجة الحضن.`,
         async run(L) {
-          const S = L.S, inc = S.inc;
+          const S = L.S, inc = S.inc, door = S.door;
+          await L.press([{ obj: door, halo: true, r: 0.2, label: "مقبض الباب" }], { hint: "افتح الحاضنة: اضغط مقبض بابها", label: "افتح الباب" });
           await inc.open(true);
           inc.g.updateMatrixWorld(true);
-          const spots = [[0.25, 0.12, 0], [-0.25, 0.12, 0]];
-          for (let i = 0; i < 2; i++) { const b = S.bot[i * 2 + 1], w = inc.g.localToWorld(new THREE.Vector3(...spots[i])); b.tag.el.hidden = true; await L.arcTo(b.g, [w.x, w.y, w.z], 0.8, 0.9); }
+          const spots = [[0.25, 0.12, 0], [-0.25, 0.12, 0]], front = inc.g.localToWorld(new THREE.Vector3(0.05, 0, inc.d / 2 + 0.6));
+          await L.repeat([S.bot[1], S.bot[3]], async (b, i) => {
+            await L.takeFrom([b], { hint: `أمسك قنينة DO₅ ${i ? "الصيفية" : "الشتوية"} (المعتمة)`, y: 1.2 });
+            b.tag.el.hidden = true;
+            await L.dropOn(L.zone(inc, { pos: front, top: 0.95, r: 0.5 }), { hint: "ضعها أمام باب الحاضنة المفتوح لتدخلها" });
+            const w = inc.g.localToWorld(new THREE.Vector3(...spots[i]));
+            await L.letGo({ to: [w.x, w.y, front.z] });
+            await L.moveTo(b.g, [w.x, w.y, w.z], 0.5);
+          }, { autoAfter: 1 });
+          L.cam("inc");
+          await L.press([{ obj: door, halo: true, r: 0.2, label: "أغلق الباب" }], { hint: "أغلق باب الحاضنة", label: "أغلق الباب" });
           await inc.open(false);
           await L.wait({ mins: B.days * 1440, sec: 8, label: `الحضن بدرجة ${B.Tinc}°م في الظلام` });
+          await L.press([{ obj: door, halo: true, r: 0.2, label: "افتح الباب" }], { hint: "مرّت 5 أيام: افتح الحاضنة", label: "افتح الباب" });
           await inc.open(true);
-          for (let i = 0; i < 2; i++) { const b = S.bot[i * 2 + 1]; await L.arcTo(b.g, b.home, 0.8, 0.9); b.tag.el.hidden = false; }
+          for (let i = 0; i < 2; i++) { const b = S.bot[i * 2 + 1]; await L.moveTo(b.g, [b.g.position.x, b.g.position.y, front.z], 0.4); await L.arcTo(b.g, b.home, 0.6, 0.8); b.tag.el.hidden = false; }
           await inc.open(false);
         },
         done: "مرت 5 أيام. القنينتان خرجتا من الحاضنة." },
-      { t: "ثبّت وسحّح DO₅ لعيّنة الشتاء", cam: "titr", tool: "fix",
-        say: "<p>كرر التثبيت بالمنغنيز والقاعدي ثم الحامض على قنينة الشتاء المحضونة، وسحّح كما فعلت سابقاً. لاحظ أن الراسب البني أقل هذه المرة.</p>",
+      { t: "ثبّت أوكسجين DO₅ لعيّنة الشتاء", cam: "bottles", tool: "fix",
+        say: "<p>كرر التثبيت على قنينة الشتاء المحضونة: MnSO₄ ثم القاعدي، ثم قطارة الحامض. لاحظ أن الراسب البني أقل هذه المرة، لأن البكتيريا استهلكت جزءاً من الأوكسجين.</p>",
+        async run(L) { const S = L.S, b = S.bot[1]; await fixBy(L, b, "DO₅ الشتوية"); await acidBy(L, b, "DO₅ الشتوية"); },
+        done: "القنينة جاهزة للتسحيح." },
+      { t: "سحّح DO₅ لعيّنة الشتاء", cam: "titr", tool: "hand",
+        say: "<p>اسكب 200 مل من قنينة الشتاء المحضونة في الدورق وسحّح كما فعلت سابقاً.</p>",
         async run(L) {
-          const S = L.S, b = S.bot[1], d5 = DO5(B.samples[0]);
-          L.cam("bottles"); await winklerFix(L, b, true); await winklerAcid(L, b, true); L.cam("titr");
-          await toFlask(L, b);
-          await doTitr(L, "w5", d5, true);
-          S.d5w = d5;
+          const S = L.S, d5 = DO5(B.samples[0]);
+          await titrBy(L, S.bot[1], d5, "DO₅ الشتوية");
           L.nb.row("w", [B.samples[0].label, n(f2(B.DOsat)), n(f2(d5)), "—", "—"]);
           S.cd.d5[0] = d5; upd();
         },
@@ -769,14 +940,16 @@
     tools: [
       { id: "edta", name: "قنينة EDTA", icon: "milk", why: "نملأ بها السحاحة في البداية." },
       { id: "pip", name: "ماصة 50 مل", icon: "pipette", why: "نأخذ بها العيّنة بعد ملء السحاحة." },
-      { id: "buf", name: "المحلول المنظم", icon: "drop", why: "نضيفه بعد وضع العيّنة في الدورق." },
-      { id: "ebt", name: "دليل EBT", icon: "spark", why: "نضيفه بعد المحلول المنظم." },
+      { id: "buf", name: "قطارة المنظم", icon: "drop", why: "نضيف بها المحلول المنظم بعد وضع العيّنة." },
+      { id: "ebt", name: "ملعقة EBT", icon: "spark", why: "نضيف بها الدليل بعد المحلول المنظم." },
       { id: "bur", name: "صنبور السحاحة", icon: "pipette", why: "نفتحه بعد ظهور اللون الأحمر الخمري." }
     ],
     views: {
       intro: { t: [0.4, 1.2, 0], r: 10, th: 0, ph: 1.12 },
+      fill: { t: [0.6, 2.6, 0.2], r: 7.2, th: 0.1, ph: 1.18 },
       bur: { t: [0, 2.2, 0.2], r: 6.2, th: 0.1, ph: 1.2 },
-      flask: { t: [0, 0.9, 0.5], r: 5, th: 0.12, ph: 1.15 },
+      flask: { t: [0.6, 0.9, 0.4], r: 6, th: 0.1, ph: 1.12 },
+      bench: { t: [-0.8, 0.8, 0.0], r: 6, th: -0.1, ph: 1.12 },
       jugs: { t: [2.6, 0.8, 0.5], r: 5.8, th: 0.2, ph: 1.1 }
     },
     nb: ["العيّنة", "حجم EDTA (مل)", "العسرة (ملغم/لتر CaCO₃)", "التصنيف"],
@@ -804,34 +977,70 @@
       S.drop = L.put(L.MK.dropper(), -1.1, 0, -0.75);
       S.spat = L.put(L.MK.spatula(), -1.9, 0.02, -0.55); S.spat.g.rotation.y = -0.5;
       S.funnel = L.put(L.MK.funnel(), 0.9, 0, -0.6); S.funnel.g.scale.setScalar(0.6);
+      S.spat.g.children.forEach(c => { c.position.z += 0.5; });
+      { const tip = new THREE.Mesh(new THREE.ConeGeometry(0.045, 0.035, 12), new THREE.MeshStandardMaterial({ color: 0x2a1a20, roughness: 0.95 })); tip.position.set(0, 0.025, 0); tip.visible = false; S.spat.g.add(tip); S.spat.load = v => { tip.visible = v; }; S.spat.h = 0.1; S.spat.r = 0.15; }
+      { const b = S.bur, top = b.g.localToWorld(new THREE.Vector3(0, b.yB + b.L + 0.2, 0.13)); S.funnel.g.position.copy(top); S.funnelHome = [0.9, 0, -0.6]; }
     },
     steps: [
       { t: "ما هي العسرة؟", cam: "intro",
-        say: `<p>العسرة مجموع أيونات <b>الكالسيوم Ca²⁺</b> و<b>المغنيسيوم Mg²⁺</b> الذائبة، وتُكتب بما يكافئها من كاربونات الكالسيوم. الماء العسر يكوّن قشوراً في الأنابيب والمراجل ويقلل رغوة الصابون.</p><p>نقدّرها بالتسحيح مع <b>EDTA</b> الذي يمسك الأيونين بقوة. الدليل <b>EBT</b> لونه أحمر خمري وهو مرتبط بالمغنيسيوم، وأزرق عندما يكون حراً.</p>`,
+        say: `<p>العسرة مجموع أيونات <b>الكالسيوم Ca²⁺</b> و<b>المغنيسيوم Mg²⁺</b> الذائبة، وتُكتب بما يكافئها من كاربونات الكالسيوم. الماء العسر يكوّن قشوراً في الأنابيب والمراجل ويقلل رغوة الصابون.</p><p>نقدّرها بالتسحيح مع <b>EDTA</b> الذي يمسك الأيونين بقوة. الدليل <b>EBT</b> لونه أحمر خمري وهو مرتبط بالمغنيسيوم، وأزرق عندما يكون حراً.</p><p>في كل خطوة تأخذ الأداة من الصينية بيدك وتضعها على الهدف المضيء.</p>`,
         info: "عند نقطة النهاية يكون EDTA قد سحب كل الكالسيوم والمغنيسيوم، حتى المرتبط بالدليل، فيتحرر الدليل ويظهر لونه الأزرق." },
-      { t: "املأ السحاحة بمحلول EDTA", cam: "bur", tool: "edta",
-        say: `<p>اغسل السحاحة بقليل من المحلول، ثم املأها بـ EDTA ${n(TH.M, "مولاري")} عبر القمع واضبط القراءة على الصفر.</p>`,
-        info: "اقرأ السحاحة دائماً عند أسفل التقعر (الهلال) وعينك بمستواه.",
+      { t: "املأ السحاحة بمحلول EDTA", cam: "fill", tool: "edta",
+        say: `<p>خذ قنينة EDTA ${n(TH.M, "مولاري")} وحرّكها فوق القمع أعلى السحاحة، ثم <b>اضغط مطولاً</b> لتصب حتى تمتلئ السحاحة. بعدها نرفع القمع ونضبط القراءة على الصفر.</p>`,
+        info: "نرفع القمع قبل التسحيح لأن قطرة متبقية فيه قد تنزل أثناء القراءة فتغيّرها. واقرأ السحاحة دائماً عند أسفل التقعر (الهلال) وعينك بمستواه.",
         async run(L) {
-          const S = L.S, b = S.bur, top = b.g.localToWorld(new THREE.Vector3(0, b.yB + b.L + 0.2, 0.13));
-          await L.arcTo(S.funnel.g, [top.x, top.y, top.z], 0.3, 0.7);
-          await L.pour(S.edta, { g: S.funnel.g, liq: b.liq, h: 0.45, r: 0.15, liqY: -(b.L + 0.2) }, { to: b.L, color: 0xeef4f5, dur: 1.4, srcDrop: 0.15 });
-          await L.arcTo(S.funnel.g, [0.9, 0, -0.6], 0.3, 0.7);
+          const S = L.S, b = S.bur;
+          await L.grab(S.edta);
+          const fz = L.zone({ g: S.funnel.g, liq: b.liq, h: 0.4, r: 0.15 }, { to: b.L, liqY: -(b.L + 0.2), r: 0.35, rate: 0.8 });
+          await L.pourInto([fz], { color: 0xeef4f5, srcRate: 0.03, hint: "حرّك القنينة فوق القمع المضيء واضغط مطولاً لتصب" });
+          await L.letGo();
+          await L.arcTo(S.funnel.g, S.funnelHome, 0.3, 0.7);
           b.setRead(0);
         },
         done: "السحاحة ممتلئة والقراءة صفر." },
       { t: `خذ ${TH.Vs} مل من عيّنة الشتاء`, cam: "flask", tool: "pip",
-        say: `<p>اسحب بالماصة الحجمية ${n(TH.Vs, "مل")} من عيّنة الشتاء (المحطة 2) وضعها في الدورق المخروطي تحت السحاحة.</p>`,
-        async run(L) { const S = L.S; S.flask.liq.color(0xc9d8c0, 0.4, 0); await L.pipetteTo(S.pip, S.jw, S.flask, { to: 0.22, color: 0xc9d8c0 }); },
+        say: `<p>خذ الماصة الحجمية وضعها في إبريق عيّنة الشتاء (المحطة 2) لتسحب ${n(TH.Vs, "مل")}، ثم أفرغها في الدورق المخروطي تحت السحاحة.</p>`,
+        async run(L) {
+          const S = L.S, p = S.pip;
+          S.flask.liq.color(0xc9d8c0, 0.4, 0);
+          await L.grab(p);
+          const zj = await L.dropOn(L.zone(S.jw, { r: 0.5 }), { hint: `ضع الماصة فوق إبريق عيّنة الشتاء لتسحب ${TH.Vs} مل` });
+          await L.moveTo(p.g, [zj.pos.x, 0.25, zj.pos.z], 0.4); await p.fill(0.6, 0xc9d8c0, 0.45); await L.moveTo(p.g, [zj.pos.x, zj.top + 0.3, zj.pos.z], 0.4);
+          const z = await L.dropOn(L.zone(S.flask, { r: 0.45 }), { hint: "أفرغها في الدورق المخروطي المضيء تحت السحاحة" });
+          await L.moveTo(p.g, [z.pos.x + 0.07, z.top - 0.35, z.pos.z - 0.06], 0.4);
+          await Promise.all([p.fill(0, null, 0.6), S.flask.liq.to(0.22, 0.6)]);
+          await L.moveTo(p.g, [z.pos.x + 0.07, z.top + 0.3, z.pos.z - 0.06], 0.35);
+          await L.letGo();
+        },
         done: "العيّنة في الدورق." },
-      { t: "أضف المحلول المنظم", cam: "flask", tool: "buf",
-        say: `<p>أضف ${n(TH.buffer, "مل")} من محلول الأمونيا المنظم ليصبح pH نحو 10.</p>`,
+      { t: "أضف المحلول المنظم", cam: "bench", tool: "buf",
+        say: `<p>خذ القطارة واسحب من قنينة محلول الأمونيا المنظم، ثم أضف ${n(TH.buffer, "مل")} إلى الدورق ليصبح pH نحو 10.</p>`,
         info: "عند pH 10 يرتبط EDTA بالكالسيوم والمغنيسيوم ارتباطاً كاملاً ويعطي الدليل لونه الواضح. في الوسط الحامضي لا يكتمل التفاعل.",
-        async run(L) { const S = L.S, d = S.drop.g, fw = S.flask.g.getWorldPosition(new THREE.Vector3()), bw = S.buf.g.position; await L.arcTo(d, [bw.x, 0.55, bw.z], 0.3, 0.6); await L.arcTo(d, [fw.x + 0.18, 1.25, fw.z + 0.1], 0.4, 0.8); await L.drops(new THREE.Vector3(fw.x + 0.18, 1.25, fw.z + 0.1), S.flask, 4, 0xf3f3f3, 0.12); await L.arcTo(d, [-1.1, 0, -0.75], 0.4, 0.8); },
+        async run(L) {
+          const S = L.S, d = S.drop;
+          await L.grab(d);
+          const zb = await L.dropOn(L.zone(S.buf, { r: 0.3 }), { hint: "ضع القطارة فوق قنينة المحلول المنظم" });
+          await L.moveTo(d.g, [zb.pos.x, 0.15, zb.pos.z], 0.3); await L.moveTo(d.g, [zb.pos.x, zb.top + 0.3, zb.pos.z], 0.3);
+          const z = await L.dropOn(L.zone(S.flask, { r: 0.45 }), { hint: "أضف المحلول إلى الدورق تحت السحاحة" });
+          const tip = new THREE.Vector3(z.pos.x + 0.07, z.top + 0.02, z.pos.z - 0.06);
+          await L.moveTo(d.g, [tip.x, tip.y, tip.z], 0.3);
+          await L.drops(tip, S.flask, 4, 0xf3f3f3, 0.12);
+          await L.letGo();
+        },
         done: "الوسط الآن قاعدي (pH 10)." },
-      { t: "أضف دليل EBT", cam: "flask", tool: "ebt",
-        say: `<p>أضف ${n(TH.ebt, "غم")} من مسحوق دليل EBT بالملعقة الصغيرة، ورجّ الدورق.</p>`,
-        async run(L) { const S = L.S, sp = S.spat.g, fw = S.flask.g.getWorldPosition(new THREE.Vector3()), ew = S.ebt.g.position; await L.arcTo(sp, [ew.x, 0.5, ew.z + 0.4], 0.3, 0.6); await L.arcTo(sp, [fw.x, 1.25, fw.z + 0.45], 0.4, 0.8); await S.flask.liq.color(EBT[0][1], EBT[0][2], 1.0); await L.arcTo(sp, [-1.9, 0.02, -0.55], 0.4, 0.8); },
+      { t: "أضف دليل EBT", cam: "bench", tool: "ebt",
+        say: `<p>خذ الملعقة الصغيرة واغرف ${n(TH.ebt, "غم")} من مسحوق دليل EBT، وأضفه إلى الدورق.</p>`,
+        async run(L) {
+          const S = L.S, sp = S.spat;
+          await L.grab(sp, { y: 0.9 });
+          await L.dropOn(L.zone(S.ebt, { r: 0.3 }), { hint: "اغرف الدليل: ضع الملعقة فوق قنينة EBT" });
+          sp.load(true);
+          const z = await L.dropOn(L.zone(S.flask, { r: 0.45 }), { hint: "أضف الدليل إلى الدورق تحت السحاحة" });
+          await L.moveTo(sp.g, [z.pos.x + 0.07, z.top + 0.03, z.pos.z - 0.06], 0.3);
+          sp.load(false);
+          await S.flask.liq.color(EBT[0][1], EBT[0][2], 1.0);
+          await L.letGo();
+        },
         done: "صار اللون أحمر خمرياً: الدليل مرتبط بأيونات العسرة." },
       { t: "سحّح حتى يصبح اللون أزرق", cam: "bur", tool: "bur",
         say: "<p>افتح الصنبور وسحّح مع الرج المستمر. قرب النهاية يتحول الأحمر إلى بنفسجي، ثم أزرق صافٍ دون أي أثر للأحمر. هنا تتوقف.</p>",
@@ -892,6 +1101,19 @@
   const bcf = (k, st) => H.sediment[k][st] ? H.plant[k].root[st] / H.sediment[k][st] : null;
   const ppm = v => v === 0 ? "0.000" : U.fmt(v, 3);
 
+    const HM_NAMES = ["جذور م1", "سيقان م1", "أوراق م1", "جذور م5", "سيقان م5", "أوراق م5"];
+  async function hmToDishes(L, reed, base) {
+    const S = L.S, parts = ["root", "stem", "leaf"];
+    for (let j = 0; j < 3; j++) {
+      const d = S.dish[base + j], w = d.g.getWorldPosition(new THREE.Vector3()), g = reed.parts[parts[j]];
+      L.detach(g); g.updateMatrixWorld(true);
+      const box = new THREE.Box3().setFromObject(g), c = box.getCenter(new THREE.Vector3());
+      const piv = new THREE.Group(); piv.position.copy(c); L.group.add(piv); piv.attach(g);
+      await L.anim(0.6, k => { piv.position.lerpVectors(c, new THREE.Vector3(w.x, 0.12, w.z), k); piv.position.y += Math.sin(Math.PI * k) * 0.5; piv.scale.setScalar(U.lerp(1, 0.22, k)); });
+      d.part = piv;
+    }
+  }
+
   LAB.reg({
     id: "hm", title: "العناصر الثقيلة في القصب", cat: "تلوث · قناة مصفى بيجي", icon: "leaf", hue: "#ef5a64",
     blurb: "هضم النبات وقياس Pb وCu وCd وNi بالامتصاص الذري",
@@ -899,21 +1121,19 @@
     src: H.src,
     materials: ["نبات القصب من المحطتين 1 و5", `فرن تجفيف بدرجة ${n(H.dryT, "°م")}`, "هاون خزفي", "ميزان حساس", `حامضا ${H.acid}`, "صفيحة تسخين داخل خزانة الغازات", `قناني حجمية ${n(H.V, "مل")} وماء منزوع الأيونات`, `جهاز الامتصاص الذري ${H.aas} مع مصابيح Pb وCu وCd وNi`],
     tools: [
-      { id: "cut", name: "مقص", icon: "scissors", why: "نفصل به أجزاء النبات أولاً." },
-      { id: "oven", name: "فرن التجفيف", icon: "oven", why: "نجفف فيه الأجزاء بعد فصلها." },
-      { id: "mortar", name: "الهاون والميزان", icon: "scale", why: "نطحن ونزن بعد التجفيف." },
-      { id: "acid", name: "الأحماض والتسخين", icon: "flame", why: "نهضم بها العيّنة بعد الوزن." },
-      { id: "fill", name: "القنينة الحجمية", icon: "rflask", why: "نكمل بها الحجم بعد الهضم." },
-      { id: "aas", name: "الامتصاص الذري", icon: "monitor", why: "نقيس به العناصر في النهاية." }
+      { id: "cut", name: "مقص", icon: "scissors", why: "نفصل به الجذور والسيقان والأوراق أولاً." },
+      { id: "hand", name: "اليد", icon: "hand", why: "ننقل بها الجفنات والدوارق ونفتح الأجهزة." },
+      { id: "pestle", name: "مدقة الهاون", icon: "pot", why: "نطحن بها الأجزاء بعد التجفيف." },
+      { id: "acid", name: "ماصة الأحماض", icon: "pipette", why: "نهضم بها العيّنة بعد الطحن والوزن." }
     ],
     views: {
       intro: { t: [0, 1.2, -0.1], r: 11.5, th: 0, ph: 1.12 },
-      reed: { t: [-4.2, 0.4, 0.9], r: 4.8, th: -0.15, ph: 1.0 },
-      oven: { t: [-4.6, 0.7, -0.4], r: 5, th: -0.2, ph: 1.12 },
-      mortar: { t: [-2.0, 0.5, 0.1], r: 4.4, th: 0, ph: 1.05 },
+      reed: { t: [-4.0, 0.2, 1.05], r: 4.4, th: 0, ph: 0.78 },
+      oven: { t: [-4.2, 0.7, -0.3], r: 6.2, th: -0.15, ph: 1.1 },
+      mortar: { t: [-2.0, 0.5, 0.1], r: 4.8, th: 0, ph: 1.0 },
       hood: { t: [1.2, 1.1, -0.6], r: 5.6, th: 0.05, ph: 1.15 },
-      flasks: { t: [1.6, 0.7, 1.0], r: 5.2, th: 0.15, ph: 1.12 },
-      aas: { t: [5.0, 0.8, -0.2], r: 5.4, th: 0.45, ph: 1.08 }
+      fill: { t: [1.5, 0.8, 0.2], r: 6.8, th: 0.1, ph: 1.08 },
+      aas: { t: [3.0, 0.8, 0.4], r: 7.2, th: 0.25, ph: 1.08 }
     },
     nb: ["العنصر", "الجزء", "المحطة 1", "المحطة 5"],
     chartTitle: "تركيز العنصر في أجزاء القصب", chartSub: "ppm وزن جاف",
@@ -944,74 +1164,123 @@
       S.aas = L.put(L.MK.aas(), 5.0, 0, -0.95); L.loop(sdt => S.aas.tick(sdt));
       S.aas.g.updateMatrixWorld(true); S.sampleAt = S.aas.g.localToWorld(S.aas.sampleAt.clone());
       S.measured = new Set();
+      // المقص: نصلان يدوران حول المحور، ورأسه عند نقطة القص
+      {
+        const g = new THREE.Group(), red = new THREE.MeshStandardMaterial({ color: 0xc8322b, roughness: 0.5 });
+        const half = s => { const pv = new THREE.Group(); pv.position.set(0, 0, 0.3); g.add(pv); L.mesh(new THREE.BoxGeometry(0.03, 0.012, 0.3), L.MAT.steel, 0, 0, -0.15, pv); const h = L.mesh(new THREE.TorusGeometry(0.055, 0.014, 8, 20), red, s * 0.04, 0, 0.13, pv); h.rotation.x = Math.PI / 2; return pv; };
+        const a = half(1), b = half(-1);
+        S.sc = L.put({ g, h: 0.05, r: 0.2 }, -3.1, 0.02, 1.65, 0.5);
+        S.sc.blades = f => { const t = 0.04 + 0.3 * f; a.rotation.y = t; b.rotation.y = -t; };
+        S.sc.blades(0.1);
+      }
+      S.pst = { g: S.mortar.pestle, h: 0.7, r: 0.12 };
+      S.spat = L.put(L.MK.spatula(), -1.95, 0.02, 0.35, 0.4); S.spat.g.children.forEach(c => { c.position.z += 0.5; });
+      { const tip = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.035, 12), new THREE.MeshStandardMaterial({ color: 0xb3a36e, roughness: 0.95 })); tip.position.set(0, 0.025, 0); tip.visible = false; S.spat.g.add(tip); S.spat.load = v => { tip.visible = v; }; S.spat.h = 0.1; S.spat.r = 0.15; }
+      S.pA = L.put(L.MK.pipette({ color: 0xe8d9a6, len: 1.25 }), 0.45, 0, -1.6);
+      S.wash = L.put(L.MK.bottle({ label: ["ماء منزوع", "الأيونات"], cap: 0x2c8d9c, r: 0.22, h: 0.6, color: 0xeef4f5, opacity: 0.25 }), 3.7, 0, 1.55);
+      S.ovDoor = L.hitbox(S.oven.door, S.oven.w - 0.3, S.oven.h / 2 - 0.04, 0.1, 0.2);
+      S.hpKnob = L.hitbox(S.hp.g, 0.48, 0.08, 0.5, 0.12);
     },
     steps: [
       { t: "لماذا القصب؟", cam: "intro",
-        say: `<p>نبات القصب ينمو بكثرة على ضفاف القنوات الملوثة، وجذوره تحتجز العناصر الثقيلة من الرواسب. لذلك نستعمله <b>مؤشراً حيوياً</b> على التلوث، ووسيلة للمعالجة النباتية.</p><p>نقارن نباتاً من <b>المحطة 1</b> عند بداية قناة مصافي بيجي، ونباتاً من <b>المحطة 5</b> قرب مصبها في دجلة، على بعد نحو كيلومتر.</p>`,
+        say: `<p>نبات القصب ينمو بكثرة على ضفاف القنوات الملوثة، وجذوره تحتجز العناصر الثقيلة من الرواسب. لذلك نستعمله <b>مؤشراً حيوياً</b> على التلوث، ووسيلة للمعالجة النباتية.</p><p>نقارن نباتاً من <b>المحطة 1</b> عند بداية قناة مصافي بيجي، ونباتاً من <b>المحطة 5</b> قرب مصبها في دجلة، على بعد نحو كيلومتر.</p><p>في كل خطوة تأخذ الأداة من الصينية بيدك وتستعملها على الهدف المضيء.</p>`,
         info: "معامل الانتقال TF = تركيز الجزء الهوائي ÷ تركيز الجذور. إذا كان أقل من 1 فالنبات يحبس العنصر في جذوره (تثبيت نباتي)." },
-      { t: "اغسل النبات وافصل أجزاءه", cam: "reed", tool: "cut",
-        say: "<p>اغسل النبات بماء الحنفية ثم بالماء المقطر لإزالة الطين، وافصل الجذور والسيقان والأوراق، وضع كل جزء في جفنة خزفية.</p>",
+      { t: "افصل أجزاء النبات بالمقص", cam: "reed", tool: "cut",
+        say: "<p>غسلنا النبات بماء الحنفية ثم بالماء المقطر. خذ المقص و<b>اسحبه على الخط المتقطع</b> (اضغط واسحب) لتقطع الجذور عن الساق، ثم الأوراق عن الساق. كل جزء يذهب إلى جفنة خزفية.</p>",
         info: "الغسل ضروري: ذرات الطين الملتصقة بالجذور غنية بالعناصر الثقيلة، ولو بقيت لظهرت النتيجة أعلى من الحقيقة.",
         async run(L) {
           const S = L.S;
           S.rl1.remove(); S.rl5.remove();
-          const go = async (reed, base) => {
-            const parts = ["root", "stem", "leaf"];
-            await Promise.all(parts.map((p, j) => L.moveTo(reed.parts[p], [(j - 1) * 0.35, 0, 0], 0.5)));
-            for (let j = 0; j < 3; j++) {
-              const d = S.dish[base + j], w = d.g.getWorldPosition(new THREE.Vector3()), g = reed.parts[parts[j]];
-              L.detach(g); g.updateMatrixWorld(true);
-              const box = new THREE.Box3().setFromObject(g), c = box.getCenter(new THREE.Vector3());
-              const piv = new THREE.Group(); piv.position.copy(c); L.group.add(piv); piv.attach(g);
-              await L.anim(0.7, k => { piv.position.lerpVectors(c, new THREE.Vector3(w.x, 0.12, w.z), k); piv.position.y += Math.sin(Math.PI * k) * 0.5; piv.scale.setScalar(U.lerp(1, 0.22, k)); });
-              d.part = piv;
-            }
-          };
-          await go(S.r1, 0); await go(S.r5, 3);
-          S.dt = S.dish.map((d, i) => L.label(d.g, ["جذور م1", "سيقان م1", "أوراق م1", "جذور م5", "سيقان م5", "أوراق م5"][i], { dy: 0.35, cls: "dose" }));
+          await L.grab(S.sc, { y: 0.25 });
+          const cuts = [[S.r1, -0.61, "الجذور عن الساق", 1], [S.r1, 1.0, "الأوراق عن الساق", 1], [S.r5, -0.61, "الجذور عن الساق", 5], [S.r5, 1.0, "الأوراق عن الساق", 5]];
+          await L.repeat(cuts, async ([reed, x, what, st], i) => {
+            reed.g.updateMatrixWorld(true);
+            const pts = []; for (let k = 0; k <= 12; k++) { const w = reed.g.localToWorld(new THREE.Vector3(x, 0.05, -0.27 + k * 0.54 / 12)); pts.push([w.x, w.y, w.z]); }
+            await L.scrub(pts, { y: 0.22, tol: 0.12, hint: `اقطع ${what} في نبات المحطة ${st}: اضغط واسحب المقص على الخط المتقطع` });
+            await L.moveTo(x < 0 ? reed.parts.root : reed.parts.leaf, [x < 0 ? -0.2 : 0.2, 0, 0], 0.35);
+            if (i % 2 === 1) await hmToDishes(L, reed, i < 2 ? 0 : 3);
+          }, { autoAfter: 2 });
+          await L.letGo();
+          S.dt = S.dish.map((d, i) => L.label(d.g, HM_NAMES[i], { dy: 0.35, cls: "dose" }));
         },
         done: "ست جفنات: جذور وسيقان وأوراق لكل محطة." },
-      { t: `جفّف بدرجة ${H.dryT}°م لمدة ${H.dryH} ساعة`, cam: "oven", tool: "oven",
-        say: `<p>ضع الجفنات في فرن التجفيف بدرجة ${n(H.dryT, "°م")} لمدة ${n(H.dryH, "ساعة")} حتى يثبت وزنها.</p>`,
+      { t: `جفّف بدرجة ${H.dryT}°م لمدة ${H.dryH} ساعة`, cam: "oven", tool: "hand",
+        say: `<p>افتح باب فرن التجفيف، وانقل الجفنات الست إليه بيدك، ثم أغلقه. يبقى بدرجة ${n(H.dryT, "°م")} لمدة ${n(H.dryH, "ساعة")} حتى يثبت الوزن.</p>`,
         info: "نحسب التراكيز على أساس الوزن الجاف لأن نسبة الماء في النبات تتغير من يوم لآخر. ودرجة 70 تكفي للتجفيف دون أن تتطاير العناصر.",
         async run(L) {
           const S = L.S, ov = S.oven;
+          S.dt.forEach(t => { t.el.hidden = true; });
+          S.dish.forEach(d => { d.home = d.g.position.toArray(); if (d.part) d.g.attach(d.part); });
+          await L.press([{ obj: S.ovDoor, halo: true, r: 0.2, label: "مقبض الباب" }], { hint: "افتح باب الفرن: اضغط مقبضه", label: "افتح الباب" });
           await ov.open(true); ov.screen.set([`${H.dryT}°C`]);
           ov.g.updateMatrixWorld(true);
-          S.dt.forEach(t => { t.el.hidden = true; });
-          for (let i = 0; i < 6; i++) { const d = S.dish[i], w = ov.g.localToWorld(new THREE.Vector3(-0.38 + (i % 3) * 0.38, 0.2 + Math.floor(i / 3) * 0.42, -0.05)); d.home = d.g.position.toArray(); const pw = d.part.position.clone().sub(d.g.position); d.g.attach(d.part); await L.arcTo(d.g, [w.x, w.y, w.z], 0.4, 0.45); }
+          const front = ov.g.localToWorld(new THREE.Vector3(0.1, 0, ov.d / 2 + 0.6));
+          await L.repeat(S.dish, async (d, i) => {
+            await L.takeFrom([d], { hint: `أمسك جفنة «${HM_NAMES[i]}»`, r: 0.3, y: 0.9 });
+            await L.dropOn(L.zone(ov, { pos: front, top: 0.5, r: 0.5 }), { hint: "ضعها أمام باب الفرن المفتوح لتدخله" });
+            const w = ov.g.localToWorld(new THREE.Vector3(-0.38 + (i % 3) * 0.38, 0.2 + Math.floor(i / 3) * 0.42, -0.05));
+            await L.letGo({ to: [w.x, w.y, front.z] });
+            await L.moveTo(d.g, [w.x, w.y, w.z], 0.4);
+          }, { autoAfter: 1 });
+          await L.press([{ obj: S.ovDoor, halo: true, r: 0.2, label: "أغلق الباب" }], { hint: "أغلق باب الفرن", label: "أغلق الباب" });
           await ov.open(false);
           await L.wait({ mins: H.dryH * 60, sec: 6, label: `التجفيف بدرجة ${H.dryT}°م` });
+          await L.press([{ obj: S.ovDoor, halo: true, r: 0.2, label: "افتح الباب" }], { hint: "انتهى التجفيف: افتح الفرن", label: "افتح الباب" });
           await ov.open(true);
           for (let i = 0; i < 6; i++) {
             const d = S.dish[i];
             d.part.traverse(o => { if (o.material && o.material.color) { o.material = o.material.clone(); o.material.color.lerp(new THREE.Color(0x8b7a4e), 0.6); } });
-            await L.arcTo(d.g, d.home, 0.4, 0.45);
+            await L.moveTo(d.g, [d.g.position.x, d.g.position.y, front.z], 0.25);
+            await L.arcTo(d.g, d.home, 0.4, 0.4);
           }
           await ov.open(false);
           S.dt.forEach(t => { t.el.hidden = false; });
         },
         done: "جفّت الأجزاء وتغيّر لونها." },
-      { t: `اطحن وزن ${H.m} غم`, cam: "mortar", tool: "mortar",
-        say: `<p>اطحن كل جزء جافاً في الهاون حتى يصبح مسحوقاً ناعماً، وزن ${n(H.m, "غم")} منه بالميزان الحساس.</p>`,
+      { t: `اطحن وزن ${H.m} غم`, cam: "mortar", tool: "pestle",
+        say: `<p>وضعنا جذور المحطة 1 الجافة في الهاون. خذ المدقة و<b>حرّكها في دوائر</b> داخل الهاون حتى يصبح الجزء مسحوقاً ناعماً، ثم اغرف بالملعقة ${n(H.m, "غم")} وضعها على الميزان.</p>`,
+        info: "الطحن الناعم يزيد سطح العيّنة فيصل إليها الحامض كلها أثناء الهضم، ولا تبقى قطع غير مهضومة.",
         async run(L) {
-          const S = L.S, m = S.mortar, ps = m.pestle;
-          m.powder.visible = true;
-          await L.anim(2.2, (k, kk) => { const a = kk * Math.PI * 8; ps.rotation.z = -0.45 + Math.sin(a) * 0.12; ps.rotation.x = Math.cos(a) * 0.12; });
-          S.bal.screen.set(["0.0000 g"]);
-          await L.anim(1, (k, kk) => S.bal.screen.set([`${(H.m * kk).toFixed(4)} g`]));
+          const S = L.S, m = S.mortar, mw = m.g.position;
+          if (S.dish[0].part) S.dish[0].part.visible = false;
+          const c0 = new THREE.Color(0x5f6a34), c1 = new THREE.Color(0xb3a36e);
+          m.powder.visible = true; m.powder.material.color.copy(c0); m.powder.scale.set(1, 2.4, 1);
+          await L.grab(S.pst, { y: 0.55 });
+          await L.grind([mw.x, 0.4, mw.z], { y: 0.14, r: 0.12, turns: 3, hint: "اضغط وحرّك المدقة في دوائر داخل الهاون", onProgress: f => { m.powder.material.color.copy(c0).lerp(c1, f); m.powder.scale.y = U.lerp(2.4, 1, f); } });
+          await L.letGo();
+          await L.grab(S.spat, { y: 0.8 });
+          await L.dropOn(L.zone(m, { r: 0.42, top: 0.35 }), { hint: "اغرف المسحوق: ضع الملعقة فوق الهاون" });
+          S.spat.load(true);
+          const pan = S.bal.g.localToWorld(S.bal.pan.clone());
+          await L.dropOn(L.zone(S.bal, { pos: pan, top: 0.3, r: 0.3 }), { hint: `ضعه على كفة الميزان حتى يقرأ ${H.m.toFixed(4)} غم` });
+          S.spat.load(false);
+          await L.anim(0.9, (k, kk) => S.bal.screen.set([`${(H.m * kk).toFixed(4)} g`]));
           S.bal.screen.set([`${H.m.toFixed(4)} g`]);
-          L.toast("كرّرنا الطحن والوزن لكل جزء من الأجزاء الستة.");
+          await L.letGo();
+          L.toast("طحنّا ووزنّا الأجزاء الخمسة الباقية بالطريقة نفسها.");
           S.dish.forEach(d => { if (d.part) d.part.visible = false; }); (S.dt || []).forEach(t => t.remove());
         },
         done: `ست عيّنات، وزن كل منها ${n(H.m, "غم")}.` },
       { t: "الهضم الرطب بالأحماض", cam: "hood", tool: "acid",
-        say: `<p>ضع كل عيّنة في دورق هضم داخل <b>خزانة الغازات</b>، وأضف خليط ${n(H.acid)}، وسخّن على الصفيحة حتى يصفو المحلول.</p>`,
+        say: `<p>العيّنات الست في دوارق الهضم داخل <b>خزانة الغازات</b>. خذ ماصة الأحماض واسحب HNO₃ ثم HClO₄ (بنسبة 2:1)، وأضف الخليط إلى كل دورق، ثم شغّل الصفيحة الساخنة حتى يصفو المحلول.</p>`,
         info: "الأحماض المؤكسدة تحطّم المادة العضوية كلها فتبقى العناصر ذائبة في المحلول. الأبخرة البنية هي ثاني أوكسيد النيتروجين، وهي سامة، لذلك نعمل داخل خزانة الغازات دائماً.",
         async run(L) {
-          const S = L.S;
-          S.dg.forEach(f => { f.liq.set(0.14); f.liq.color(0x3b2410, 0.85, 0.6); });
-          await L.sleep(0.6);
+          const S = L.S, p = S.pA;
+          await L.grab(p);
+          for (const [src, what, fr] of [[S.acidN, "HNO₃ (جزءان)", 0.5], [S.acidP, "HClO₄ (جزء واحد)", 0.75]]) {
+            const z = await L.dropOn(L.zone(src, { r: 0.3 }), { hint: `اسحب ${what}: ضع الماصة فوق قنينته` });
+            await L.moveTo(p.g, [z.pos.x, 0.12, z.pos.z], 0.3); await p.fill(fr, 0xe8d9a6, 0.3); await L.moveTo(p.g, [z.pos.x, z.top + 0.3, z.pos.z], 0.3);
+          }
+          await L.repeat(S.dg, async (f, i) => {
+            const z = await L.dropOn(L.zone(f, { r: 0.22 }), { hint: `أضف الخليط إلى دورق الهضم «${HM_NAMES[i]}»` });
+            const tip = new THREE.Vector3(z.pos.x, z.top + 0.04, z.pos.z);
+            await L.moveTo(p.g, [tip.x, tip.y, tip.z], 0.25);
+            await L.drops(tip, f, 2, 0xe8d9a6, 0.08);
+            f.liq.to(0.14, 0.4); f.liq.color(0x3b2410, 0.85, 0.5);
+            await p.fill(0.75 * (1 - (i + 1) / 6), null, 0.15);
+          }, { autoAfter: 2 });
+          await L.letGo();
+          await L.press([{ obj: S.hpKnob, halo: true, r: 0.14, label: "مفتاح التسخين" }], { hint: "شغّل الصفيحة الساخنة: اضغط مفتاحها", label: "شغّل التسخين" });
           await S.hp.heat(true);
           const fm = L.fumes(new THREE.Vector3(1.2, 0.75, -1.1), { color: 0x9a5f2a, spread: 1.2, height: 1.4, n: 22, opacity: 0.4 });
           S.dg.forEach(f => f.liq.color(0xe8d48a, 0.45, 7));
@@ -1019,42 +1288,56 @@
           fm.stop(); await S.hp.heat(false);
         },
         done: "صفا المحلول: تحطمت المادة العضوية وبقيت العناصر ذائبة." },
-      { t: `أكمل الحجم إلى ${H.V} مل`, cam: "flasks", tool: "fill",
-        say: `<p>بعد أن يبرد المحلول رشّحه إلى قنينة حجمية ${n(H.V, "مل")}، وأكمل بالماء منزوع الأيونات حتى العلامة.</p>`,
+      { t: `أكمل الحجم إلى ${H.V} مل`, cam: "fill", tool: "hand",
+        say: `<p>بعد أن يبرد المحلول، أمسك كل دورق هضم واسكبه في القنينة الحجمية التي تحمل اسمه. بعدها أكمل كل قنينة بالماء منزوع الأيونات حتى العلامة البيضاء (${n(H.V, "مل")}).</p>`,
         async run(L) {
           const S = L.S;
-          for (let i = 0; i < 6; i++) await L.pour(S.dg[i], S.vf[i], { to: S.vf[i].markH * 0.35, color: 0xe8d48a, srcTo: 0, dur: 0.5, move: 0.55, tiltDur: 0.35 });
-          await Promise.all(S.vf.map(v => v.liq.to(v.markH, 0.9)));
-          S.vf.forEach(v => v.liq.color(0xf3efd6, 0.22, 0.6));
+          await L.repeat(S.dg, async (f, i) => {
+            await L.takeFrom([f], { hint: `أمسك دورق الهضم «${HM_NAMES[i]}»`, r: 0.22, y: 1.1 });
+            await L.pourInto([L.zone(S.vf[i], { to: S.vf[i].markH * 0.35, r: 0.28 })], { y: 1.2, rate: 0.3, color: 0xe8d48a, dstColor: 0xe8d48a, dstOpacity: 0.45, srcRate: 0.3, srcMin: 0, hint: `اسكبه في القنينة «${HM_NAMES[i]}»: حرّكه فوقها واضغط مطولاً` });
+            f.liq.set(0);
+            await L.letGo();
+          }, { autoAfter: 1 });
+          await L.takeFrom([S.wash], { hint: "أمسك قنينة الماء منزوع الأيونات", y: 1.3 });
+          await L.pourInto(S.vf.map(v => L.zone(v, { to: v.markH, r: 0.28 })), { rate: 0.55, color: 0xeef4f5, dstColor: 0xf3efd6, dstOpacity: 0.22, srcRate: 0.015, hint: "أكمل كل قنينة حتى العلامة: حرّك القنينة فوقها واضغط مطولاً" });
+          await L.letGo();
         },
         done: `ست قناني جاهزة للقياس، حجم كل منها ${n(H.V, "مل")}.` },
-      { t: "اقرأ العناصر بالامتصاص الذري", cam: "aas", tool: "aas",
-        say: "<p>اختر مصباح العنصر، فيُشعل الجهاز اللهب ويُعايَر بمحاليل قياسية، ثم تُسحب كل عيّنة إلى اللهب. ابدأ بالرصاص، ثم يمكنك قياس عناصر أخرى.</p>",
+      { t: "اقرأ العناصر بالامتصاص الذري", cam: "aas", tool: "hand",
+        say: "<p>اختر مصباح العنصر، فيُشعل الجهاز اللهب ويُعايَر بمحاليل قياسية. بعدها انقل كل قنينة بيدك إلى موضع السحب أمام الجهاز. ابدأ بالرصاص، ثم يمكنك قياس عناصر أخرى.</p>",
         info: `لكل عنصر مصباح خاص يصدر طوله الموجي (Pb ${metal("Pb").nm}، Cu ${metal("Cu").nm}، Cd ${metal("Cd").nm}، Ni ${metal("Ni").nm} نانومتر). يحسب برنامج الجهاز التركيز بالوزن الجاف من وزن العيّنة (${H.m} غم) وحجمها النهائي (${H.V} مل).`,
         async run(L) {
           const S = L.S;
           let k = await L.ask(H.metals.map(m => ({ label: `${m.name} ${m.key}`, value: m.key, primary: m.key === "Pb" })), { q: "اختر مصباح العنصر:" });
           for (;;) {
-            const M = metal(k);
+            const M = metal(k), byHand = !S.measured.size;
             S.aas.lamp(M.color); S.aas.flame.visible = true;
             S.aas.screen.set([`${M.key} ${M.nm} nm`, "معايرة…"]); await L.sleep(1.1);
             S.aas.screen.set([`${M.key} ${M.nm} nm`, "معايرة ✓"]); await L.sleep(0.5);
             S.cd.st1.fill(null); S.cd.st5.fill(null);
             const ch = Chart.getChart && Chart.getChart(document.getElementById("lb-chart"));
             if (ch) { ch.options.plugins.title = { display: true, text: `${M.name} (${M.key})`, color: C.text }; ch.update(); }
-            for (let i = 0; i < 6; i++) {
-              const v = S.vf[i], st = i < 3 ? 0 : 4, part = H.parts[i % 3].key, val = H.plant[k][part][st];
-              await L.arcTo(v.g, [S.sampleAt.x - 0.05, 0, S.sampleAt.z], 0.5, S.measured.size ? 0.45 : 0.7);
-              await L.sleep(0.35);
+            const read = i => {
+              const st = i < 3 ? 0 : 4, part = H.parts[i % 3].key, val = H.plant[k][part][st];
               S.aas.screen.set([`${ppm(val)} mg/kg`, `${M.key} · ${["جذور", "سيقان", "أوراق"][i % 3]} م${st + 1}`]);
               (i < 3 ? S.cd.st1 : S.cd.st5)[i % 3] = val; if (ch) ch.update();
               if (i >= 3) L.nb.row(`${k}-${part}`, [`${M.name} ${M.key}`, H.parts[i % 3].name, n(ppm(H.plant[k][part][0])), n(ppm(val))]);
-              await L.arcTo(v.g, v.home, 0.5, S.measured.size ? 0.45 : 0.7);
+            };
+            if (byHand) {
+              await L.repeat(S.vf, async (v, i) => {
+                await L.takeFrom([v], { hint: `أمسك القنينة «${HM_NAMES[i]}»`, r: 0.28, y: 1.2 });
+                await L.dropOn(L.zone(S.aas, { pos: S.sampleAt, top: 0.6, r: 0.32 }), { hint: "ضعها في موضع السحب المضيء أمام الجهاز" });
+                await L.letGo({ to: [S.sampleAt.x - 0.05, 0, S.sampleAt.z] });
+                await L.sleep(0.35); read(i); await L.sleep(0.3);
+                await L.arcTo(v.g, v.home, 0.5, 0.5);
+              }, { autoAfter: 1 });
+            } else {
+              for (let i = 0; i < 6; i++) { const v = S.vf[i]; await L.arcTo(v.g, [S.sampleAt.x - 0.05, 0, S.sampleAt.z], 0.5, 0.45); await L.sleep(0.3); read(i); await L.arcTo(v.g, v.home, 0.5, 0.45); }
             }
             S.measured.add(k); S.aas.flame.visible = false;
             const left = H.metals.filter(m => !S.measured.has(m.key));
             if (!left.length) break;
-            const nx = await L.ask(left.map(m => ({ label: `قِس ${m.name} ${m.key}`, value: m.key })).concat([{ label: "يكفي، التالي", value: "", primary: true }]), { q: "هل تريد قياس عنصر آخر بالعيّنات نفسها؟" });
+            const nx = await L.ask(left.map(m => ({ label: `قِس ${m.name} ${m.key}`, value: m.key })).concat([{ label: "يكفي، التالي", value: "", primary: true }]), { q: "هل تريد قياس عنصر آخر بالعيّنات نفسها؟ (يُقاس تلقائياً)" });
             if (!nx) break; k = nx;
           }
         },

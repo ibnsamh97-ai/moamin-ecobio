@@ -86,7 +86,7 @@
   const anims = new Set(), loops = new Set();
   let speed = 1;
   function anim(dur, fn, ease = EASE.io) {
-    const p = new Promise((res, rej) => anims.add({ t: 0, d: Math.max(1e-3, dur * RF), fn, ease, res, rej }));
+    const p = new Promise((res, rej) => anims.add({ t: 0, d: Math.max(1e-3, dur * RF * (IA.autoAll ? 0.45 : 1)), fn, ease, res, rej }));
     p.catch(() => {});
     return p;
   }
@@ -686,13 +686,33 @@
     camApply();
   }
   function camTo(v) { if (!v) return; CAM.goal = { t: V3(...v.t), r: v.r, th: v.th ?? 0, ph: v.ph ?? 1.12 }; }
+  /* إن كان هدف المهمة أو الأداة الممسوكة خارج الصورة، نبتعد بالكاميرا حتى يظهر الجميع */
+  let fitCam = null;
+  function fits(t, r, th, ph, pts) {
+    if (!fitCam) fitCam = new THREE.PerspectiveCamera();
+    fitCam.copy(camera); fitCam.updateProjectionMatrix();
+    const s = Math.sin(ph), a = camera.aspect || 1.6, rr = r * (a < 1.5 ? Math.pow(1.5 / a, 0.85) : 1);
+    fitCam.position.set(t.x + rr * s * Math.sin(th), t.y + rr * Math.cos(ph), t.z + rr * s * Math.cos(th)); fitCam.lookAt(t); fitCam.updateMatrixWorld(true);
+    return pts.every(p => { const q = p.clone().project(fitCam); return Math.abs(q.x) < 0.84 && q.y < 0.72 && q.y > -0.86 && q.z < 1; });
+  }
+  function frameFor(pts) {
+    if (!camera || !pts.length) return;
+    const G = CAM.goal || { t: CAM.t.clone(), r: CAM.r, th: CAM.th, ph: CAM.ph };
+    if (fits(G.t, G.r, G.th, G.ph, pts)) return;
+    const c = new THREE.Box3().setFromPoints(pts).getCenter(V3(0, 0, 0)), t = G.t.clone().lerp(c, 0.75);
+    let r = Math.max(G.r, 3);
+    for (let i = 0; i < 16 && !fits(t, r, G.th, G.ph, pts); i++) r *= 1.1;
+    CAM.goal = { t, r: Math.min(r, 16), th: G.th, ph: G.ph };
+  }
 
   function bindPointer() {
     canvas.addEventListener("pointerdown", e => {
       canvas.setPointerCapture && canvas.setPointerCapture(e.pointerId);
+      if (handMode()) { iaDown(e); return; }
       CAM.ptr.set(e.pointerId, [e.clientX, e.clientY]); CAM.moved = 0; CAM.down = [e.clientX, e.clientY];
     });
     canvas.addEventListener("pointermove", e => {
+      if (handMode()) { iaMove(e); return; }
       if (!CAM.ptr.has(e.pointerId)) { hoverPick(e); return; }
       const [px, py] = CAM.ptr.get(e.pointerId);
       if (CAM.ptr.size === 1) {
@@ -707,6 +727,7 @@
       CAM.ptr.set(e.pointerId, [e.clientX, e.clientY]);
     });
     const up = e => {
+      if (handMode()) { CAM.ptr.delete(e.pointerId); iaUp(e); return; }
       const was = CAM.ptr.has(e.pointerId); CAM.ptr.delete(e.pointerId); if (CAM.ptr.size < 2) CAM.pinch = 0;
       if (was && CAM.moved < 6 && e.type === "pointerup") clickPick(e);
     };
@@ -750,7 +771,284 @@
   }
   function tickRings(dt) { for (const m of rings) { m.userData.t += dt; const s = 1 + 0.06 * Math.sin(m.userData.t * 4); m.scale.set(s, s, 1); m.material.opacity = 0.45 + 0.3 * Math.sin(m.userData.t * 4); } }
 
-  function frame(dt) { tickAnims(dt); camTick(dt); tickRings(dt); updateLabels(); }
+  /* ------------------------------------------------------------------
+     اليد: تُمسك الأداة فتتبع المؤشر أو الإصبع، وتوضع على الهدف المضيء،
+     أو يُضغط مطولاً فوقه للصب، أو تُسحب على خط القص، أو تُدار للطحن.
+  ------------------------------------------------------------------ */
+  class Skip extends Error { constructor() { super("skip"); this.skip = true; } }
+  const IA = { mode: null, held: null, planeY: 1.3, lift: 0, p: V3(0, 0, 0), pressed: false, zones: [], hz: null, pz: null, tilt: 0, opt: {}, autoP: false, autoAll: false, count: 0, need: 0 };
+  const hPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+  const handMode = () => !!(IA.mode && IA.mode !== "press" && IA.held);
+  function planeAt(e, y) {
+    const r = canvas.getBoundingClientRect(); ndc.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1);
+    ray.setFromCamera(ndc, camera); hPlane.constant = -y;
+    return ray.ray.intersectPlane(hPlane, V3(0, 0, 0));
+  }
+  function zone(item, o = {}) {
+    const g = item.g || item; g.updateMatrixWorld(true);
+    const p = o.pos ? V3(...(o.pos.isVector3 ? o.pos.toArray() : o.pos)) : g.getWorldPosition(V3(0, 0, 0));
+    const { pos, top, ...rest } = o;
+    return Object.assign({ item, liq: item.liq, done: false, r: Math.max(0.3, (item.r || 0.3) * 1.2) }, rest, { pos: p, top: p.y + (top ?? item.h ?? 1) });
+  }
+  const zMat = () => new THREE.MeshBasicMaterial({ color: 0x4fc8dc, transparent: true, opacity: 0.7, depthWrite: false, side: THREE.DoubleSide });
+  function zoneRing(z) {
+    let m;
+    if (z.halo) { m = mesh(new THREE.SphereGeometry(z.r, 20, 14), zMat(), z.pos.x, z.pos.y, z.pos.z, expGroup); m.material.opacity = 0.25; }
+    else { m = mesh(new THREE.RingGeometry(z.r * 0.8, z.r, 44), zMat(), z.pos.x, z.pos.y + 0.012, z.pos.z, expGroup); m.rotation.x = -Math.PI / 2; }
+    m.renderOrder = 6; m.userData.t = Math.random() * 6; z.ring = m;
+    if (z.label) z.lbl = label(V3(z.pos.x, z.halo ? z.pos.y + z.r : z.top + 0.25, z.pos.z), z.label, { cls: "dose tgt" });
+  }
+  function ringsTick(dt) {
+    for (const z of IA.zones) {
+      const m = z.ring; if (!m) continue;
+      m.visible = !z.done; if (z.lbl) z.lbl.el.hidden = !!z.done;
+      m.userData.t += dt;
+      const hov = z === IA.hz && !z.done, s = hov ? 1.14 : 1 + 0.06 * Math.sin(m.userData.t * 4);
+      m.scale.set(s, s, z.halo ? s : 1); m.material.color.set(hov ? 0x93dd8a : 0x4fc8dc);
+      m.material.opacity = z.halo ? (hov ? 0.4 : 0.16 + 0.1 * Math.sin(m.userData.t * 4)) : (hov ? 0.95 : 0.5 + 0.28 * Math.sin(m.userData.t * 4));
+    }
+  }
+  function clearZones() {
+    IA.zones.forEach(z => { if (z.ring) { expGroup.remove(z.ring); z.ring.geometry.dispose(); z.ring.material.dispose(); z.ring = null; } if (z.lbl) { z.lbl.remove(); z.lbl = null; } });
+    IA.zones = []; IA.hz = null;
+  }
+  function zoneAt(p) {
+    let best = null, bd = 1e9;
+    for (const z of IA.zones) { if (z.done) continue; const d = Math.hypot(p.x - z.pos.x, p.z - z.pos.z); if (d < z.r * 1.3 && d < bd) { best = z; bd = d; } }
+    return best;
+  }
+  /* سطر المهمة الحالية داخل البطاقة مع زر «نفّذها عني» */
+  function taskBox() {
+    const a = $("lb-act"); if (!a) return null;
+    let t = a.querySelector(".lb-task");
+    if (!t) { t = U.el("div", { class: "lb-task" }, `${ic("hand")}<span class="lb-task-t"></span><div class="lb-helps"></div><div class="lb-prog" hidden><i></i></div>`); a.prepend(t); }
+    return t;
+  }
+  function setTask(hint) { const t = taskBox(); if (t) { t.hidden = false; t.querySelector(".lb-task-t").innerHTML = hint || ""; } const c = U.$("#lb-chip span"); if (c) c.textContent = (hint || "").replace(/<[^>]+>/g, ""); }
+  function addHelp(lbl, fn, cls = "") {
+    const t = taskBox(); if (!t) return { remove() {} };
+    const b = U.el("button", { type: "button", class: "lb-help " + cls }, lbl); b.onclick = fn; t.querySelector(".lb-helps").appendChild(b);
+    t.hidden = false;
+    return { remove() { b.remove(); tidyTask(); } };
+  }
+  function tidyTask() { const t = U.$("#lb-act .lb-task"); if (!t) return; t.hidden = !t.querySelector(".lb-task-t").textContent.trim() && !t.querySelector(".lb-help"); }
+  function setProg(f) { const t = taskBox(); if (!t) return; const pr = t.querySelector(".lb-prog"); pr.hidden = f == null; if (f != null) pr.firstChild.style.width = Math.round(U.clamp(f, 0, 1) * 100) + "%"; }
+  function waitMode(mode, o, setup) {
+    return new Promise((res, rej) => {
+      const tok = S.tok;
+      IA.mode = mode; IA.opt = o; IA.res = res; IA.rej = rej; IA.count = 0; IA.autoP = false;
+      setup();
+      const pts = [];
+      IA.zones.forEach(z => { pts.push(z.pos.clone()); if (z.top != null) pts.push(V3(z.pos.x, z.top, z.pos.z)); });
+      (IA.pts || []).forEach(q => pts.push(q.p));
+      frameFor(pts);
+      setTask(o.hint);
+      IA.help = o.help === false ? null : addHelp(o.helpLabel || "نفّذها عني", () => skipNow());
+      $("lb-stage").classList.toggle("holding", handMode());
+      IA.chk = setInterval(() => { if (tok !== S.tok) { endMode(); rej(new Cancel()); } }, 300);
+      if (IA.autoAll) setTimeout(() => skipNow(), 40);
+    });
+  }
+  function endMode() {
+    clearInterval(IA.chk); IA.mode = null; IA.pressed = false; IA.autoP = false; IA.pz = null;
+    clearZones(); picks.clear();
+    if (IA.help) { IA.help.remove(); IA.help = null; }
+    if (IA.stream) IA.stream.visible = false;
+    if (IA.guide) { expGroup.remove(IA.guide); const c = IA.guide.children[0]; if (c) { c.geometry.dispose(); c.material.dispose(); } IA.guide = null; }
+    (IA.marks || []).forEach(m => { expGroup.remove(m); m.geometry.dispose(); }); IA.marks = []; IA.pts = null;
+    setProg(null); const t = U.$("#lb-act .lb-task .lb-task-t"); if (t) t.textContent = ""; tidyTask();
+    $("lb-stage").classList.remove("holding");
+    canvas.style.cursor = "";
+  }
+  function finishMode(v) { const r = IA.res; IA.res = null; endMode(); if (r) r(v); }
+  function skipNow() { if (!IA.mode || IA.autoP) return; IA.autoP = true; if (IA.help) { IA.help.remove(); IA.help = null; } Promise.resolve(IA.onSkip && IA.onSkip()).catch(() => {}); }
+  /* المسك والإرجاع */
+  async function grab(item, o = {}) {
+    if (IA.held && IA.held !== item) await letGo();
+    const g = item.g;
+    IA.par0 = g.parent; expGroup.attach(g);
+    IA.held = item; IA.home = g.position.clone(); IA.rot0 = g.rotation.clone();
+    IA.planeY = o.y ?? (g.position.y + 1.2); IA.lift = 0; IA.tilt = 0; IA.wob = 0;
+    IA.p.set(g.position.x, IA.planeY, g.position.z);
+    await anim(0.35, k => { g.position.y = U.lerp(IA.home.y, IA.planeY, EASE.out(k)); g.rotation.x = U.lerp(IA.rot0.x, o.rx ?? 0, k); g.rotation.z = U.lerp(IA.rot0.z, 0, k); });
+    IA.rotZ0 = 0;
+  }
+  async function letGo(o = {}) {
+    const it = IA.held; if (!it) return;
+    IA.held = null; IA.tilt = 0;
+    const to = o.to || IA.home, par = o.parent || IA.par0;
+    await arcTo(it.g, Array.isArray(to) ? to : [to.x, to.y, to.z], 0.3, 0.55);
+    it.g.rotation.copy(o.to ? new THREE.Euler(0, IA.rot0.y, 0) : IA.rot0);
+    if (par && par !== expGroup && !o.to) par.attach(it.g);
+  }
+  function handTick(dt) {
+    ringsTick(dt);
+    const it = IA.held; if (!it || !IA.mode || IA.mode === "press") return;
+    const g = it.g, H = it.mouth ? it.mouth.y : (it.h || 1);
+    const pouring = IA.mode === "pour" && IA.pressed && IA.hz && !IA.hz.done;
+    if (pouring) IA.pz = IA.hz;
+    IA.tilt += ((pouring ? 1 : 0) - IA.tilt) * Math.min(1, dt * (pouring ? 5 : 7));
+    const th = IA.tilt * (it.tiltMax || 1.7);
+    let tx = IA.p.x, ty = IA.planeY + IA.lift, tz = IA.p.z;
+    if (IA.tilt > 0.002 && IA.pz) {
+      const z = IA.pz, mx = z.pos.x + 0.05, my = z.top + 0.1, s = EASE.io(Math.min(1, IA.tilt * 1.15));
+      tx = U.lerp(tx, mx + Math.sin(th) * H, s); ty = U.lerp(ty, my - Math.cos(th) * H, s); tz = U.lerp(tz, z.pos.z, s);
+    }
+    if (IA.mode === "grind" && IA.gc) { const dx = tx - IA.gc.x, dz = tz - IA.gc.z, d = Math.hypot(dx, dz), m = IA.opt.r || 0.2; if (d > m) { tx = IA.gc.x + dx / d * m; tz = IA.gc.z + dz / d * m; } }
+    const k = 1 - Math.exp(-dt * 18);
+    g.position.x += (tx - g.position.x) * k; g.position.y += (ty - g.position.y) * k; g.position.z += (tz - g.position.z) * k;
+    if (IA.mode === "scrub" && IA.pressed) IA.wob = Math.sin(performance.now() / 70) * 0.25; else IA.wob *= 0.8;
+    g.rotation.z = th + (it.restZ || 0);
+    if (it.blades) it.blades(IA.mode === "scrub" && IA.pressed ? 0.5 + 0.5 * Math.sin(performance.now() / 90) : 0.6);
+    if (IA.mode === "pour") pourTick(dt);
+  }
+  function pourTick(dt) {
+    const z = IA.pz, o = IA.opt, it = IA.held;
+    if (!IA.stream) {
+      const sg = new THREE.CylinderGeometry(0.018, 0.026, 1, 10); sg.translate(0, -0.5, 0);
+      IA.stream = new THREE.Mesh(sg, new THREE.MeshStandardMaterial({ color: 0xd9eef2, transparent: true, opacity: 0.6, roughness: 0.1, depthWrite: false }));
+      IA.stream.renderOrder = 2; scene.add(IA.stream);
+    }
+    const active = IA.pressed && z && IA.hz === z && !z.done && IA.tilt > 0.72;
+    IA.stream.visible = active; if (!active) return;
+    IA.stream.material.color.set(o.color ?? 0xd9eef2);
+    it.g.updateMatrixWorld(true);
+    const H = it.mouth ? it.mouth.y : (it.h || 1), mouth = it.g.localToWorld(V3(0, H, 0));
+    const lv = Math.min(z.to, z.liq.h + (z.rate || o.rate || 0.45) * dt * speed);
+    if (o.dstColor != null || z.dstColor != null) {
+      if (!z.c0) { z.c0 = z.liq.mat.color.clone(); z.o0 = z.liq.h > 0.02 ? z.liq.mat.opacity : (z.dstOpacity ?? o.dstOpacity ?? z.liq.mat.opacity); z.h0 = z.liq.h; }
+      const f = U.clamp((lv - z.h0) / Math.max(1e-3, z.to - z.h0), 0, 1), c1 = new THREE.Color(z.dstColor ?? o.dstColor);
+      z.liq.mat.color.copy(z.c0).lerp(c1, z.h0 < 0.02 ? 1 : f); z.liq.mat.opacity = U.lerp(z.o0, z.dstOpacity ?? o.dstOpacity ?? z.o0, z.h0 < 0.02 ? 1 : f);
+    }
+    z.liq.set(lv);
+    const surf = z.pos.y + (z.liqY || 0) + lv;
+    IA.stream.position.set(mouth.x - 0.04, mouth.y, mouth.z); IA.stream.scale.y = Math.max(0.02, mouth.y - surf);
+    if (it.liq && o.srcRate) it.liq.set(Math.max(o.srcMin ?? 0.04, it.liq.h - o.srcRate * dt * speed));
+    if (lv >= z.to - 1e-4) {
+      z.done = true; IA.stream.visible = false; IA.count++;
+      o.onDone && o.onDone(z);
+      if (z._r) z._r();
+      if (IA.count >= IA.need) setTimeout(() => finishMode(z), 250);
+    }
+  }
+  function iaDown(e) {
+    if (e.cancelable) e.preventDefault();
+    if (IA.autoP) return;
+    IA.pressed = true;
+    const p = planeAt(e, IA.planeY); if (p) { IA.prev = IA.p.clone(); IA.p.copy(p); }
+    IA.hz = zoneAt(IA.p);
+    if (IA.mode === "scrub") scrubAt(IA.p);
+  }
+  function iaMove(e) {
+    if (IA.autoP) return;
+    if (e.pointerType !== "mouse" && !IA.pressed) return;
+    const p = planeAt(e, IA.planeY); if (!p) return;
+    const prev = IA.p.clone(); IA.p.copy(p);
+    IA.hz = zoneAt(p);
+    canvas.style.cursor = IA.pressed ? "grabbing" : "grab";
+    if (IA.mode === "scrub" && IA.pressed) scrubAt(p, prev);
+    if (IA.mode === "grind" && IA.pressed) grindAt(prev, p);
+  }
+  function iaUp(e) {
+    if (IA.autoP) return;
+    const was = IA.pressed; IA.pressed = false;
+    if (IA.mode === "drop" && was) {
+      const p = planeAt(e, IA.planeY); if (p) IA.p.copy(p);
+      const z = zoneAt(IA.p);
+      if (z) finishMode(z); else toast(IA.opt.miss || "ضع الأداة على الهدف المضيء");
+    }
+    if (IA.mode === "pour" && was && !IA.count && !IA.hz) toast("حرّك الأداة فوق الهدف المضيء ثم اضغط مطولاً");
+  }
+  /* أنواع المهام */
+  function dropOn(zs, o = {}) {
+    const list = [].concat(zs);
+    return waitMode("drop", o, () => {
+      IA.zones = list; list.forEach(z => { z.done = false; zoneRing(z); });
+      IA.planeY = o.y ?? Math.max(...list.map(z => z.top)) + (o.above ?? 0.3);
+      IA.onSkip = async () => { const z = list[0]; IA.p.set(z.pos.x, IA.planeY, z.pos.z); IA.hz = z; await sleep(0.45); finishMode(z); };
+    });
+  }
+  function pourInto(zs, o = {}) {
+    const list = [].concat(zs);
+    return waitMode("pour", o, () => {
+      IA.zones = list; list.forEach(z => { z.done = z.liq.h >= z.to - 1e-3; zoneRing(z); });
+      IA.need = list.filter(z => !z.done).length;
+      IA.planeY = o.y ?? Math.max(...list.map(z => z.top)) + (o.above ?? 0.4);
+      if (!IA.need) setTimeout(() => finishMode(null), 30);
+      IA.onSkip = async () => {
+        for (const z of list) {
+          if (z.done) continue;
+          IA.p.set(z.pos.x, IA.planeY, z.pos.z); IA.hz = z; IA.pressed = true;
+          await new Promise(r => { z._r = r; });
+          IA.pressed = false; IA.hz = null; await sleep(0.2);
+        }
+      };
+    });
+  }
+  function scrub(pts, o = {}) {
+    return waitMode("scrub", o, () => {
+      IA.planeY = o.y ?? 0.3;
+      IA.pts = pts.map(q => ({ p: V3(...q), hit: false })); IA.marks = [];
+      /* خط القص: نقاط بيضاء فوق كل شيء، تصير بنية حين يمر عليها المقص */
+      IA.guide = new THREE.Group(); IA.guide.renderOrder = 7; expGroup.add(IA.guide);
+      const dg = new THREE.SphereGeometry(0.016, 8, 6), dm = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.95, depthTest: false });
+      IA.pts.forEach(q => { const m = new THREE.Mesh(dg, dm); m.position.copy(q.p); m.renderOrder = 7; IA.guide.add(m); q.dot = m; });
+      const a = IA.pts[0].p; IA.zones = [Object.assign({ pos: V3(a.x, a.y - 0.02, a.z), r: 0.07, top: a.y }, {})]; zoneRing(IA.zones[0]);
+      setProg(0);
+      IA.onSkip = async () => { for (const q of IA.pts) { IA.p.set(q.p.x, IA.planeY, q.p.z); IA.pressed = true; scrubHit(q); await sleep(0.03); } IA.pressed = false; scrubCheck(true); };
+    });
+  }
+  const cutMat = new THREE.MeshBasicMaterial({ color: 0x3b2614 });
+  function scrubHit(q) { if (q.hit) return; q.hit = true; if (q.dot) q.dot.visible = false; const m = mesh(new THREE.SphereGeometry(0.014, 6, 4), cutMat, q.p.x, q.p.y, q.p.z, expGroup); IA.marks.push(m); }
+  function scrubAt(p) { for (const q of IA.pts || []) if (!q.hit && Math.hypot(p.x - q.p.x, p.z - q.p.z) < (IA.opt.tol || 0.11)) scrubHit(q); scrubCheck(); }
+  function scrubCheck(force) { if (!IA.pts) return; const f = IA.pts.filter(q => q.hit).length / IA.pts.length; setProg(f); IA.opt.onProgress && IA.opt.onProgress(f); if ((f >= 0.85 || force) && IA.mode === "scrub") finishMode(true); }
+  function grind(center, o = {}) {
+    return waitMode("grind", o, () => {
+      IA.planeY = o.y ?? 0.4; IA.gc = V3(...center); IA.acc = 0; IA.need = (o.turns || 3) * Math.PI * 2;
+      IA.zones = [{ pos: V3(center[0], center[1] - 0.3, center[2]), r: o.ring || 0.42, top: center[1] }]; zoneRing(IA.zones[0]);
+      setProg(0);
+      IA.onSkip = async () => { await anim(1.6, k => { const a = k * Math.PI * 6; IA.p.set(IA.gc.x + Math.cos(a) * 0.15, IA.planeY, IA.gc.z + Math.sin(a) * 0.15); setProg(k); o.onProgress && o.onProgress(k); }, EASE.lin); finishMode(true); };
+    });
+  }
+  function grindAt(prev, p) {
+    const c = IA.gc; if (Math.hypot(p.x - c.x, p.z - c.z) > (IA.opt.reach || 0.7)) return;
+    let d = Math.atan2(p.z - c.z, p.x - c.x) - Math.atan2(prev.z - c.z, prev.x - c.x);
+    if (d > Math.PI) d -= Math.PI * 2; if (d < -Math.PI) d += Math.PI * 2;
+    IA.acc += Math.min(Math.abs(d), 0.8); const f = IA.acc / IA.need; setProg(f); IA.opt.onProgress && IA.opt.onProgress(Math.min(1, f));
+    if (f >= 1) finishMode(true);
+  }
+  /* ضغط على جزء من جهاز (زر، باب، مقبض) أو على جسم لالتقاطه */
+  function press(items, o = {}) {
+    return waitMode("press", Object.assign({ helpLabel: o.label || "نفّذها عني" }, o), () => {
+      items.forEach(it => {
+        const obj = it.obj, val = it.value ?? obj;
+        picks.add({ obj, cb: () => finishMode(val) });
+        obj.updateMatrixWorld(true);
+        const wp = obj.getWorldPosition(V3(0, 0, 0));
+        const z = it.halo ? { pos: wp, r: it.r || 0.22, halo: true, label: it.label } : { pos: V3(wp.x, it.y0 ?? wp.y, wp.z), r: it.r || 0.4, top: wp.y + (it.h || 1), label: it.label };
+        zoneRing(z); IA.zones.push(z);
+      });
+      IA.onSkip = async () => { await sleep(0.2); finishMode(items[0].value ?? items[0].obj); };
+    });
+  }
+  async function takeFrom(items, o = {}) {
+    const it = await press(items.map(x => ({ obj: x.g, value: x, r: o.r || Math.max(0.3, (x.r || 0.3) * 1.25), h: x.h })), Object.assign({ hint: "اضغط على الوعاء المضيء لتمسكه" }, o));
+    await grab(it, o);
+    return it;
+  }
+  /* تكرار مهمة على عدة أوعية، مع زر «أكمل الباقي تلقائياً» بعد أول مرات */
+  async function repeat(list, fn, o = {}) {
+    const after = o.autoAfter ?? 1; let btn = null;
+    try {
+      for (let i = 0; i < list.length; i++) {
+        if (i >= after && !btn && !IA.autoAll) btn = addHelp(o.autoLabel || "أكمل الباقي تلقائياً", () => { IA.autoAll = true; if (btn) { btn.remove(); } skipNow(); }, "all");
+        await fn(list[i], i);
+      }
+    } finally { if (btn) btn.remove(); IA.autoAll = false; }
+  }
+  function hitbox(parent, x, y, z, r = 0.14) { return mesh(new THREE.SphereGeometry(r, 10, 8), new THREE.MeshBasicMaterial({ visible: false }), x, y, z, parent); }
+
+  function frame(dt) { tickAnims(dt); camTick(dt); tickRings(dt); handTick(dt); updateLabels(); }
 
   /* ------------------------------------------------------------------
      واجهة التجربة: البطاقة والصينية والدفتر والرسم والنتائج
@@ -774,7 +1072,8 @@
     const E = S.exp, n = E.steps.length;
     $("lb-segs").innerHTML = E.steps.map((s, i) => `<i class="${S.done.has(i) ? "done" : i === S.i ? "cur" : ""}" title="${U.esc(s.t)}"></i>`).join("");
     $("lb-steplbl").textContent = `${S.i + 1} من ${n} · ${E.steps[S.i].t}`;
-    $("lb-chip").innerHTML = `<b>${S.i + 1} من ${n} · ${U.esc(E.steps[S.i].t)}</b><span>${S.done.has(S.i) ? "اكتملت الخطوة" : S.busy ? "جارٍ التنفيذ…" : S.phase === "tool" ? "اختر الأداة من الصينية" : ""}</span>`;
+    const hint = IA.mode && IA.opt && IA.opt.hint ? String(IA.opt.hint).replace(/<[^>]+>/g, "") : "";
+    $("lb-chip").innerHTML = `<b>${S.i + 1} من ${n} · ${U.esc(E.steps[S.i].t)}</b><span>${S.done.has(S.i) ? "اكتملت الخطوة" : hint ? U.esc(hint) : S.busy ? "جارٍ التنفيذ…" : S.phase === "tool" ? "اختر الأداة من الصينية" : ""}</span>`;
   }
   const textOf = (v, L) => typeof v === "function" ? v(L) : (v || "");
   function renderCard() {
@@ -842,7 +1141,7 @@
   }
   function onTool(id) {
     const E = S.exp, st = E.steps[S.i], t = E.tools.find(x => x.id === id);
-    if (S.busy) { toast("انتظر حتى تنتهي الخطوة الحالية."); return; }
+    if (S.busy) { toast(IA.held ? "الأداة في يدك الآن: استعملها على الهدف المضيء في المختبر." : "انتظر حتى تنتهي الخطوة الحالية."); return; }
     if (S.phase !== "tool") { toast(S.done.has(S.i) ? "اكتملت هذه الخطوة. اضغط «الخطوة التالية»." : "هذه الخطوة لا تحتاج أداة من الصينية."); return; }
     if (id === st.tool) { runStep(); return; }
     toast(t && t.why ? `«${t.name}»: ${t.why}` : `ليست «${t ? t.name : ""}» الأداة المطلوبة الآن. فكّر بما تقوله الخطوة.`);
@@ -1074,7 +1373,7 @@
   ------------------------------------------------------------------ */
   const API = {
     THREE: null, MK, MAT, EASE, V3, mesh, Swarm, screen, labelTex, canvasTex,
-    anim, sleep, moveTo, arcTo, rotTo, pour, pourRow, drops, pipetteTo, wait, titrate, autoTitrate, fumes, ask, pick, choose, show, label, toast, num, ic, Liquid, BoxLiquid, rbox, shadow, lathe, glassBody, profilePts, wrapLabel,
+    anim, sleep, moveTo, arcTo, rotTo, pour, pourRow, drops, pipetteTo, wait, titrate, autoTitrate, fumes, ask, pick, choose, show, label, grab, letGo, dropOn, pourInto, scrub, grind, press, takeFrom, repeat, zone, hitbox, toast, num, ic, Liquid, BoxLiquid, rbox, shadow, lathe, glassBody, profilePts, wrapLabel,
     add: o => { expGroup.add(o.g || o); return o; },
     put: (o, x, y, z, ry = 0) => { const g = o.g || o; g.position.set(x, y, z); g.rotation.y = ry; expGroup.add(g); return o; },
     attach: (parent, o) => { (parent.g || parent).attach(o.g || o); return o; },
@@ -1082,6 +1381,8 @@
     get group() { return expGroup; },
     loop: f => { loops.add(f); return () => loops.delete(f); },
     cam: name => camTo(S.exp.views[name] || name),
+    get held() { return IA.held; },
+    get auto() { return IA.autoAll; },
     nb: NB, chart,
     get data() { return ECO.LAB_DATA; },
     get speed() { return speed; },
@@ -1113,6 +1414,8 @@
   /* تحميل تجربة */
   function clearExp() {
     S.tok = (S.tok || 0) + 1; cancelAll(); picks.clear();
+    if (IA.mode) { const rj = IA.rej; endMode(); rj && rj(new Cancel()); }
+    IA.held = null; IA.autoAll = false; IA.tilt = 0; if (IA.stream) IA.stream.visible = false;
     for (const l of [...labels]) l.remove();
     for (const r of [...rings]) { expGroup.remove(r); r.geometry.dispose(); } rings.clear();
     if (expGroup) {
@@ -1163,9 +1466,19 @@
     load(m ? m[1] : LAB.EXPS[0].id);
   }
 
-  LAB._state = () => ({ id: S.exp && S.exp.id, i: S.i, n: S.exp ? S.exp.steps.length : 0, phase: S.phase, busy: S.busy, tool: S.exp && S.exp.steps[S.i] ? S.exp.steps[S.i].tool : null, done: S.done.has(S.i), finished: S.finished });
+  LAB._state = () => ({ id: S.exp && S.exp.id, i: S.i, n: S.exp ? S.exp.steps.length : 0, phase: S.phase, busy: S.busy, tool: S.exp && S.exp.steps[S.i] ? S.exp.steps[S.i].tool : null, done: S.done.has(S.i), finished: S.finished, mode: IA.mode, held: !!IA.held, cam: !!CAM.goal });
+  /* للاختبار الآلي: موضع الهدف الأول على الشاشة */
+  LAB._ia = () => ({ mode: IA.mode, held: IA.held ? IA.held.g.position.toArray().map(v => +v.toFixed(2)) : null, p: IA.p.toArray().map(v => +v.toFixed(2)), pressed: IA.pressed, planeY: IA.planeY, hit: IA.pts ? IA.pts.filter(q => q.hit).length : null, autoP: IA.autoP, hand: handMode() });
+  LAB._scrub = () => { if (!IA.pts || !camera) return null; const r = canvas.getBoundingClientRect(); return IA.pts.map(q => { const p = V3(q.p.x, IA.planeY, q.p.z).project(camera); return { x: r.left + (p.x * 0.5 + 0.5) * r.width, y: r.top + (-p.y * 0.5 + 0.5) * r.height }; }); };
+  LAB._target = () => {
+    const z = IA.zones.find(q => !q.done); if (!z || !camera) return null;
+    const r = canvas.getBoundingClientRect(), p = (z.halo ? z.pos.clone() : V3(z.pos.x, IA.mode === "press" ? (z.pos.y + (z.top ?? z.pos.y)) / 2 : IA.planeY, z.pos.z)).project(camera);
+    return { x: r.left + (p.x * 0.5 + 0.5) * r.width, y: r.top + (-p.y * 0.5 + 0.5) * r.height, mode: IA.mode };
+  };
   LAB._load = id => load(id);
   LAB._speed = v => { speed = v; };
+  /* للاختبار الآلي على معالج رسوم برمجي: ارسم إطاراً واحداً من كل n */
+  LAB._thin = k => { if (!st || st._thin) return; const r = st.renderer, orig = r.render.bind(r); let c = 0; st._thin = true; r.render = (a, b) => { if (++c % k === 0) orig(a, b); }; };
 
   ECO.views.lab = {
     init,
