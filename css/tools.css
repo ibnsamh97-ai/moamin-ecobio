@@ -858,3 +858,57 @@
 .traj-in { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
 .traj-say { margin-top: 12px; line-height: 1.9; }
 .traj-note { font-size: .78rem; line-height: 1.7; }
+/* اسأل البيانات */
+.ask-box .panel-h h3 svg { width: 18px; height: 18px; vertical-align: -3px; margin-inline-end: 6px; color: var(--river); }
+.ask-in { display: flex; gap: 10px; align-items: stretch; }
+.ask-in textarea { flex: 1; min-height: 52px; resize: vertical; }
+.ask-ex { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.ask-ex .chip { cursor: pointer; font-size: .78rem; }
+.ask-form { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; align-items: end; margin-top: 12px; }
+.ask-form .ask-wide { grid-column: 1 / -1; }
+.ask-form fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.ask-form legend { font-size: var(--fs-xs); color: var(--muted); margin-bottom: 6px; }
+.ask-form .row { gap: 6px; flex-wrap: nowrap; }
+.ask-tg { display: flex; flex-wrap: wrap; gap: 6px; }
+.ask-chip { position: relative; cursor: pointer; }
+.ask-chip input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
+.ask-chip span { display: inline-block; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--line); font-size: .82rem; transition: background .15s, border-color .15s; }
+.ask-chip.sm span { padding: 4px 9px; font-size: .74rem; }
+.ask-chip input:checked + span { background: color-mix(in srgb, var(--dc, var(--river)) 22%, transparent); border-color: var(--dc, var(--river)); }
+.ask-chip input:focus-visible + span { outline: 2px solid var(--river); outline-offset: 2px; }
+.ask-res { margin-top: 14px; }
+.ask-understood { display: flex; gap: 8px; align-items: flex-start; padding: 10px 12px; border-radius: 10px; background: color-mix(in srgb, var(--river) 10%, transparent); margin-bottom: 12px; line-height: 1.8; }
+.ask-understood svg { width: 18px; height: 18px; flex: none; margin-top: 4px; color: var(--river); }
+.ask-big { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; padding: 8px 2px 4px; }
+.ask-big b { font-size: 2.1rem; }
+.ask-big small { flex-basis: 100%; }
+.ask-sql { margin-top: 10px; }
+.ask-sql summary { cursor: pointer; color: var(--muted); font-size: .82rem; display: flex; gap: 6px; align-items: center; }
+.ask-sql summary svg { width: 15px; height: 15px; }
+.ask-sql pre { white-space: pre-wrap; word-break: break-word; font-size: .74rem; background: var(--bg-2, rgba(0,0,0,.25)); padding: 10px; border-radius: 8px; margin-top: 8px; text-align: left; }
+.ask-adv { margin-top: 14px; }
+.ask-adv > summary { cursor: pointer; display: flex; gap: 8px; align-items: center; font-weight: 600; }
+.ask-adv > summary svg { width: 16px; height: 16px; }
+@media (max-width: 640px) { .ask-in { flex-direction: column; } .ask-form { grid-template-columns: 1fr 1fr; } .ask-big b { font-size: 1.7rem; } }
+.ask-ex .chip { background: transparent; border: 1px solid var(--line-2); color: inherit; font-weight: 500; }
+.ask-ex .chip:hover { border-color: var(--river); }
+/* معايرة القمر */
+#sp-cal .panel-h h3 svg { width: 18px; height: 18px; vertical-align: -3px; margin-inline-end: 6px; color: var(--river); }
+.spc-intro { line-height: 1.9; margin: 4px 0 12px; }
+.spc-run { align-items: flex-end; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
+.spc-run .field { min-width: 200px; }
+.spc-bar { height: 6px; border-radius: 6px; background: var(--line); overflow: hidden; margin-top: 6px; }
+.spc-bar i { display: block; height: 100%; background: var(--river); transition: width .2s; }
+.spc-kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 14px 0; }
+.spc-best { display: grid; gap: 10px; margin-bottom: 12px; }
+.spc-eq { display: flex; flex-direction: column; gap: 4px; padding: 12px; border-radius: 10px; background: color-mix(in srgb, var(--river) 10%, transparent); }
+.spc-eq b { font-size: 1.1rem; font-family: var(--mono, monospace); word-break: break-word; }
+.spc-m { display: flex; flex-wrap: wrap; gap: 8px 18px; }
+.spc-all { margin-top: 10px; }
+.spc-all summary { cursor: pointer; color: var(--muted); }
+.spc-miss td { color: var(--muted); }
+.spc-colsel { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 10px; }
+.spc-ref { font-size: .78rem; line-height: 1.8; margin-top: 10px; }
+.spc-sum { margin-top: 10px; }
+#spc-apply { margin-top: 10px; }
+@media (max-width: 640px) { .spc-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; } .spc-kpis .v { font-size: 1.1rem; } }

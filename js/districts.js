@@ -75,7 +75,7 @@
   const S = { db: null, gz: null, meta: null, from: "", D: [], P: {}, d: null, tab: "overview", task: "pm25_d1",
     ts: { p: "pm2_5", span: 365, cmp: "" }, cmpP: "pm2_5", map: null, mapG: null, tigris: null, sqlLast: null, painted: {} };
   const TABS = [["overview", "لوحة القضاء", "i-home"], ["ground", "المقاس فعلاً", "i-pin"], ["sat", "من الفضاء", "i-sat"], ["series", "السلاسل الزمنية", "i-layers"], ["ai", "الذكاء الاصطناعي", "i-brain"],
-    ["plan", "خطة العينات", "i-gps"], ["compare", "مقارنة الأقضية", "i-table"], ["studies", "البحوث ومصادر التلوث", "i-book"]];
+    ["plan", "خطة العينات", "i-gps"], ["compare", "مقارنة الأقضية", "i-table"], ["ask", "اسأل البيانات", "i-chat"], ["studies", "البحوث ومصادر التلوث", "i-book"]];
   const DIST_TABS = new Set(["overview", "ground", "sat", "series", "ai", "plan", "studies"]);
 
   /* ------------------------------------------------------------------
@@ -230,7 +230,7 @@
     const el = U.$("#db-p-" + S.tab);
     if (S.painted[S.tab] === key) { if (S.tab === "overview" && S.map) setTimeout(() => S.map.invalidateSize(), 50); return; }
     S.painted[S.tab] = key;
-    try { ({ overview: rOverview, ground: rGround, sat: rSat, plan: rPlan, series: rSeries, ai: rAI, compare: rCompare, studies: rStudies })[S.tab](el); }
+    try { ({ overview: rOverview, ground: rGround, sat: rSat, plan: rPlan, series: rSeries, ai: rAI, compare: rCompare, ask: rAsk, studies: rStudies })[S.tab](el); }
     catch (e) { console.error(e); el.innerHTML = `<div class="notice warn">${ico("i-info")}<span>تعذّر عرض هذا القسم: ${esc(e.message)}</span></div>`; }
     writeHash();
   }
@@ -1113,6 +1113,202 @@
     const cal = U.$("#db-cal"); if (!cal) return;
     const rows = q(`SELECT a.date, a.cluster, r.label_ar l FROM air_regime_daily a JOIN regimes r ON r.cluster = a.cluster WHERE a.district_id = ? AND a.date > date((SELECT MAX(date) FROM air_regime_daily), '-365 day') ORDER BY a.date`, [d.id]);
     cal.innerHTML = rows.map(r => `<i style="background:${S.regPal[r.cluster % S.regPal.length]}" title="${esc(r.date)}: ${esc(r.l)}"></i>`).join("");
+  }
+
+  /* ------------------------------------------------------------------
+     اسأل البيانات بالعربي
+     الذكاء الاصطناعي يحوّل السؤال إلى خيارات استعلام فقط (المعيار، الأقضية، المدة، العملية)،
+     والمنصة تتحقق منها وتبني SQL بنفسها وتحسب من القاعدة، ويرى المستخدم كيف فُهم سؤاله قبل النتيجة.
+  ------------------------------------------------------------------ */
+  const OPS = { mean: "المتوسط", max: "أعلى قيمة", min: "أدنى قيمة", sum: "المجموع", above: "عدد الأيام فوق حد", below: "عدد الأيام تحت حد", top: "أعلى الأيام", bottom: "أدنى الأيام" };
+  const BYS = { none: "قيمة واحدة", district: "لكل قضاء", year: "لكل سنة", month: "لكل شهر", moy: "حسب أشهر السنة" };
+  const ASK_EX = ["شكد متوسط PM2.5 بتكريت بكل سنة؟", "أي قضاء أكثر غبار بصيف 2025؟", "كم يوم تجاوز PM2.5 حد منظمة الصحة ببيجي سنة 2024؟", "أعلى 10 أيام حرارة بسامراء", "شلون يتغير تصريف دجلة بالشرقاط حسب أشهر السنة؟"];
+  const isoOk = v => /^\d{4}-\d{2}-\d{2}$/.test(v || "") ? v : "";
+  function askSpec(o) {
+    o = o || {};
+    const ids = S.D.map(d => d.id);
+    let ds = Array.isArray(o.districts) ? o.districts.filter(x => ids.includes(x)) : [];
+    if (!ds.length || (Array.isArray(o.districts) && o.districts.includes("all"))) ds = Array.isArray(o.districts) && o.districts.includes("all") ? ids.slice() : [S.d];
+    const metric = COLS[o.metric] && S.P[o.metric] ? o.metric : "pm2_5";
+    const op = OPS[o.op] ? o.op : "mean";
+    let by = BYS[o.by] ? o.by : "none";
+    if (op === "top" || op === "bottom") by = "none";
+    let thr = o.threshold === "limit" ? (S.P[metric] || {}).limit_value : +o.threshold;
+    if (!U.isNum(thr)) thr = null;
+    const months = Array.from(new Set((Array.isArray(o.months) ? o.months : []).map(Number).filter(m => Number.isInteger(m) && m >= 1 && m <= 12))).sort((a, b) => a - b);
+    let from = isoOk(o.from), to = isoOk(o.to); if (from && to && from > to) [from, to] = [to, from];
+    return { metric, districts: ds, from, to, months, op, by, thr, n: Math.min(50, Math.max(1, Math.round(+o.n) || 10)) };
+  }
+  function askCompute(sp) {
+    const [t, c, monthly] = COLS[sp.metric], k = monthly ? "month" : "date";
+    const w = [`${c} IS NOT NULL`, `district_id IN (${sp.districts.map(() => "?").join(",")})`], a = sp.districts.slice();
+    if (/weather/.test(t)) { w.push("date <= ?"); a.push(today()); }
+    if (sp.from) { w.push(`${k} >= ?`); a.push(monthly ? sp.from.slice(0, 7) : sp.from); }
+    if (sp.to) { w.push(`${k} <= ?`); a.push(monthly ? sp.to.slice(0, 7) : sp.to); }
+    if (sp.months.length) w.push(`CAST(substr(${k}, 6, 2) AS INTEGER) IN (${sp.months.join(", ")})`);
+    const W = w.join(" AND ");
+    if (sp.op === "top" || sp.op === "bottom") {
+      const sql = `SELECT district_id AS d, ${k} AS x, ${c} AS v FROM ${t} WHERE ${W} ORDER BY v ${sp.op === "top" ? "DESC" : "ASC"} LIMIT ${sp.n}`;
+      return { sql, args: a, rows: q(sql, a), kind: "list", k };
+    }
+    if ((sp.op === "above" || sp.op === "below") && !U.isNum(sp.thr)) throw new Error("حدّد قيمة الحد لعدّ الأيام.");
+    const agg = { mean: `AVG(${c})`, max: `MAX(${c})`, min: `MIN(${c})`, sum: `SUM(${c})`, above: `SUM(${c} > ?)`, below: `SUM(${c} < ?)` }[sp.op];
+    const per = { year: `substr(${k}, 1, 4)`, month: `substr(${k}, 1, 7)`, moy: `CAST(substr(${k}, 6, 2) AS INTEGER)` }[sp.by] || null;
+    const multi = sp.districts.length > 1 || sp.by === "district";
+    const args = (sp.op === "above" || sp.op === "below" ? [sp.thr] : []).concat(a);
+    const gb = [multi ? "d" : "", per ? "x" : ""].filter(Boolean);
+    const sql = `SELECT ${multi ? "district_id" : "NULL"} AS d, ${per || "NULL"} AS x, ${agg} AS v, COUNT(${c}) AS n, MIN(${k}) AS a, MAX(${k}) AS b FROM ${t} WHERE ${W}${gb.length ? " GROUP BY " + gb.join(", ") : ""} ORDER BY ${per ? "x, " : ""}${multi ? "d" : "n"}`;
+    const rows = q(sql, args).filter(r => r.n > 0);
+    if (!per && multi) { const ord = S.D.map(d => d.id); rows.sort((x, y) => (U.isNum(y.v) ? y.v : -Infinity) - (U.isNum(x.v) ? x.v : -Infinity) || ord.indexOf(x.d) - ord.indexOf(y.d)); }
+    if ((sp.op === "max" || sp.op === "min") && rows.length <= 80) rows.forEach(r => {
+      const ww = [W], aa = a.slice();
+      if (multi) { ww.push("district_id = ?"); aa.push(r.d); }
+      if (per) { ww.push(`${per} = ?`); aa.push(r.x); }
+      ww.push(`${c} = ?`); aa.push(r.v);
+      const hit = q1(`SELECT ${k} AS x FROM ${t} WHERE ${ww.join(" AND ")} ORDER BY ${k} LIMIT 1`, aa); r.at = hit ? hit.x : null;
+    });
+    return { sql, args, rows, kind: per ? "per" : "one", multi, k, monthly };
+  }
+  const nmD = id => (S.D.find(d => d.id === id) || {}).name_ar || id;
+  const perLabel = (by, x) => by === "moy" ? MONTHS[x - 1] : by === "month" ? fM(x) : String(x);
+  function askSentence(sp) {
+    const P = S.P[sp.metric] || {}, unit = P.unit ? ` (${P.unit})` : "";
+    const opTxt = sp.op === "above" || sp.op === "below" ? `${OPS[sp.op]} ${U.fmt(sp.thr, "auto")}` : sp.op === "top" || sp.op === "bottom" ? `${OPS[sp.op]} (${sp.n})` : OPS[sp.op];
+    const ds = sp.districts.length === S.D.length ? "كل الأقضية" : sp.districts.map(nmD).join(" و");
+    const per = sp.from || sp.to ? `من ${sp.from ? fD(sp.from) : "بداية السجل"} إلى ${sp.to ? fD(sp.to) : "آخر قيمة"}` : "كامل السجل";
+    const mo = sp.months.length ? ` · أشهر ${sp.months.map(m => MONTHS[m - 1]).join("، ")}` : "";
+    return `${opTxt} · ${P.name_ar || sp.metric}${unit} · ${ds} · ${per}${mo}${sp.op === "top" || sp.op === "bottom" ? "" : " · " + BYS[sp.by]}`;
+  }
+  function askForm(sp) {
+    return `<div class="ask-form">
+      <div class="field"><label for="ask-m">المعيار</label><select id="ask-m" class="input">${paramOptions(sp.metric)}</select></div>
+      <div class="field"><label for="ask-op">العملية</label><select id="ask-op" class="input">${Object.entries(OPS).map(([k, l]) => `<option value="${k}"${k === sp.op ? " selected" : ""}>${l}</option>`).join("")}</select></div>
+      <div class="field ask-thr"${sp.op === "above" || sp.op === "below" ? "" : " hidden"}><label for="ask-thr">قيمة الحد</label><div class="row"><input id="ask-thr" class="input num" type="number" step="any" dir="ltr" value="${U.isNum(sp.thr) ? sp.thr : ""}"><button type="button" class="btn btn-ghost btn-sm" data-ask-lim>حد WHO</button></div></div>
+      <div class="field ask-n"${sp.op === "top" || sp.op === "bottom" ? "" : " hidden"}><label for="ask-n">كم يوماً</label><input id="ask-n" class="input num" type="number" min="1" max="50" dir="ltr" value="${sp.n}"></div>
+      <div class="field ask-by"${sp.op === "top" || sp.op === "bottom" ? " hidden" : ""}><label for="ask-by">التجميع</label><select id="ask-by" class="input">${Object.entries(BYS).map(([k, l]) => `<option value="${k}"${k === sp.by ? " selected" : ""}>${l}</option>`).join("")}</select></div>
+      <div class="field"><label for="ask-from">من</label><input id="ask-from" class="input" type="date" value="${sp.from}"></div>
+      <div class="field"><label for="ask-to">إلى</label><input id="ask-to" class="input" type="date" value="${sp.to}"></div>
+      <fieldset class="field ask-wide"><legend>الأقضية</legend><div class="ask-tg">${S.D.map(d => `<label class="ask-chip" style="--dc:${DCOL[d.id] || "var(--river)"}"><input type="checkbox" value="${d.id}"${sp.districts.includes(d.id) ? " checked" : ""}><span>${esc(d.name_ar)}</span></label>`).join("")}</div></fieldset>
+      <fieldset class="field ask-wide"><legend>أشهر معيّنة فقط (اتركها فارغة لكل السنة)</legend><div class="ask-tg">${MONTHS.map((m, i) => `<label class="ask-chip sm"><input type="checkbox" data-mo value="${i + 1}"${sp.months.includes(i + 1) ? " checked" : ""}><span>${m}</span></label>`).join("")}</div></fieldset>
+      <button type="button" class="btn btn-primary btn-sm ask-wide" id="ask-run">${ico("i-play")}احسب من القاعدة</button>
+    </div>`;
+  }
+  function askRead(el) {
+    const v = id => (el.querySelector("#" + id) || {}).value;
+    return askSpec({ metric: v("ask-m"), op: v("ask-op"), threshold: v("ask-thr") === "" ? null : +v("ask-thr"), n: +v("ask-n"), by: v("ask-by"), from: v("ask-from"), to: v("ask-to"),
+      districts: U.$$(".ask-tg input:not([data-mo]):checked", el).map(i => i.value), months: U.$$(".ask-tg input[data-mo]:checked", el).map(i => +i.value) });
+  }
+  function askShow(el, sp) {
+    clearCharts("ask");
+    const out = el.querySelector("#ask-out"), P = S.P[sp.metric] || {}, unit = P.unit || "";
+    let R;
+    try { R = askCompute(sp); } catch (e) { out.innerHTML = `<div class="notice warn">${ico("i-info")}<span>${esc(e.message)}</span></div>`; return; }
+    S.askLast = { sp, R };
+    const cnt = sp.op === "above" || sp.op === "below", dayW = R.monthly || COLS[sp.metric][2] ? "شهراً" : "يوماً";
+    const val = (r) => cnt ? `${N(r.v, 0)} <small class="muted">من ${U.fmt(r.n, 0)} (${U.fmt(100 * r.v / r.n, 0)}%)</small>` : `${N(r.v, "auto")}${r.at ? ` <small class="muted">${COLS[sp.metric][2] ? fM(r.at) : fD(r.at)}</small>` : ""}`;
+    let body = "";
+    if (!R.rows.length) body = `<p class="empty">لا توجد قيم تطابق هذه الشروط في القاعدة.</p>`;
+    else if (R.kind === "list") {
+      body = `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>#</th><th>القضاء</th><th>${COLS[sp.metric][2] ? "الشهر" : "اليوم"}</th><th class="num">${esc(P.name_ar || "")} ${esc(unit)}</th></tr></thead><tbody>${R.rows.map((r, i) => `<tr><td>${i + 1}</td><td>${esc(nmD(r.d))}</td><td>${COLS[sp.metric][2] ? fM(r.x) : fD(r.x)}</td><td class="num">${U.fmt(r.v, "auto")}</td></tr>`).join("")}</tbody></table></div>`;
+    } else if (R.kind === "one" && !R.multi) {
+      const r = R.rows[0];
+      body = `<div class="ask-big"><b>${val(r)}</b><span>${cnt ? dayW : esc(unit)}</span><small class="muted">محسوبة من ${U.fmt(r.n, 0)} ${dayW} (${R.monthly || COLS[sp.metric][2] ? fM(r.a) : fD(r.a)} ← ${R.monthly || COLS[sp.metric][2] ? fM(r.b) : fD(r.b)})</small></div>`;
+    } else {
+      body = `<div class="chart-box"><canvas id="ask-c"></canvas></div>
+        <div class="tbl-wrap"><table class="tbl"><thead><tr>${R.multi ? "<th>القضاء</th>" : ""}${R.kind === "per" ? "<th>الفترة</th>" : ""}<th class="num">${cnt ? "عدد " + (COLS[sp.metric][2] ? "الأشهر" : "الأيام") : OPS[sp.op] + (unit ? ` (${esc(unit)})` : "")}</th><th class="num">${COLS[sp.metric][2] ? "أشهر" : "أيام"} البيانات</th></tr></thead>
+        <tbody>${R.rows.map(r => `<tr>${R.multi ? `<td>${esc(nmD(r.d))}</td>` : ""}${R.kind === "per" ? `<td>${esc(perLabel(sp.by, r.x))}</td>` : ""}<td class="num">${val(r)}</td><td class="num">${U.fmt(r.n, 0)}</td></tr>`).join("")}</tbody></table></div>`;
+    }
+    const shown = R.sql.replace(/\?/g, () => "%s");
+    let ai = 0; const sqlTxt = shown.replace(/%s/g, () => { const v = R.args[ai++]; return typeof v === "number" ? String(v) : `'${String(v)}'`; });
+    out.innerHTML = `<div class="ask-res panel">
+        <div class="ask-understood">${ico("i-check")}<span><b>حُسب:</b> ${esc(askSentence(sp))}</span></div>
+        ${body}
+        <p class="db-cap">${esc(SRC_NOTE[P.category] || "")}${cnt ? ` العدّ على القيم اليومية${COLS[sp.metric][2] ? " (الشهرية لهذا المعيار)" : ""} الموجودة فعلاً، والنسبة من عدد ${dayW} المتوفرة.` : ""}</p>
+        <div class="row"><button type="button" class="btn btn-ghost btn-sm" data-ask-csv>${ico("i-down")}CSV</button><button type="button" class="btn btn-ghost btn-sm" data-explain="districts">${ico("i-spark")}اشرح لي النتيجة</button></div>
+        <details class="ask-sql"><summary>${ico("i-code")}الاستعلام الذي نُفّذ على القاعدة (SQL)</summary><pre dir="ltr">${esc(sqlTxt)}</pre></details>
+      </div>`;
+    if (R.rows.length && (R.kind === "per" || (R.kind === "one" && R.multi))) {
+      const val2 = r => cnt ? r.v : r.v;
+      let labels, ds;
+      if (R.kind === "per") {
+        labels = Array.from(new Set(R.rows.map(r => r.x))).sort((a, b) => (a > b ? 1 : a < b ? -1 : 0));
+        const grp = R.multi ? Array.from(new Set(R.rows.map(r => r.d))) : [null];
+        ds = grp.map(g => { const m = {}; R.rows.filter(r => r.d === g).forEach(r => { m[r.x] = val2(r); }); const col = g ? DCOL[g] : DCOL[sp.districts[0]] || ECO.COL.river;
+          return { label: g ? nmD(g) : (P.name_ar || ""), data: labels.map(x => m[x] ?? null), borderColor: col, backgroundColor: col + "aa", borderRadius: 4, borderWidth: sp.by === "month" ? 1.6 : 1, pointRadius: sp.by === "month" ? 0 : 3, spanGaps: false }; });
+        labels = labels.map(x => perLabel(sp.by, x));
+      } else {
+        labels = R.rows.map(r => nmD(r.d));
+        ds = [{ label: P.name_ar || "", data: R.rows.map(val2), backgroundColor: R.rows.map(r => (DCOL[r.d] || ECO.COL.river) + "bb"), borderRadius: 5 }];
+      }
+      chart("ask", el.querySelector("#ask-c"), { type: R.kind === "per" && sp.by === "month" ? "line" : "bar", data: { labels, datasets: ds },
+        options: { plugins: { legend: { display: ds.length > 1 } }, scales: { x: { ticks: xTicks }, y: { beginAtZero: cnt || ["air", "river"].includes(P.category) } } } });
+    }
+  }
+  async function askAI(el) {
+    const qtxt = el.querySelector("#ask-q").value.trim(); if (!qtxt) { el.querySelector("#ask-q").focus(); return; }
+    const out = el.querySelector("#ask-out"), btn = el.querySelector("#ask-go");
+    if (!ECO.gemini || !ECO.gemini.ready()) { out.innerHTML = `<div class="notice warn">${ico("i-info")}<span>فهم السؤال بالعربي يحتاج المساعد الذكي، وهو غير مفعّل الآن. اختر الخيارات من النموذج أدناه واضغط «احسب من القاعدة».</span></div>`; return; }
+    btn.disabled = true; out.innerHTML = `<p class="typing"><i></i><i></i><i></i></p>`;
+    const rng = {};
+    Object.entries(COLS).forEach(([code, [t, c, mo]]) => { if (!rng[t + c]) { const k = mo ? "month" : "date"; rng[t + c] = q1(`SELECT MIN(${k}) a, MAX(${k}) b FROM ${t} WHERE ${c} IS NOT NULL${/weather/.test(t) ? ` AND date <= '${today()}'` : ""}`) || {}; } });
+    const cat = Object.keys(COLS).filter(code => S.P[code]).map(code => { const P = S.P[code], [t, c, mo] = COLS[code], r = rng[t + c]; return `- ${code}: ${P.name_ar}${P.unit ? ` (${P.unit})` : ""}${mo ? "، قيمة شهرية" : "، قيمة يومية"}، متوفر ${r.a || "?"} إلى ${r.b || "?"}${U.isNum(P.limit_value) ? `، حد ${P.limit_value} (${P.limit_ref || ""})` : ""}`; }).join("\n");
+    const prompt = `السؤال: «${qtxt}»
+اليوم: ${today()}
+المعايير المتاحة:
+${cat}
+الأقضية (من الشمال إلى الجنوب): ${S.D.map(d => `${d.id} = ${d.name_ar}`).join("، ")}
+أعد JSON فقط بأحد الشكلين:
+{"ok": true, "metric": "رمز المعيار", "districts": ["رمز القضاء"] أو ["all"], "from": "YYYY-MM-DD" أو "", "to": "YYYY-MM-DD" أو "", "months": [أرقام الأشهر 1-12] أو [], "op": "mean|max|min|sum|above|below|top|bottom", "threshold": رقم أو "limit" أو null, "by": "none|district|year|month|moy", "n": 10}
+{"ok": false, "reason": "لماذا لا تجيب هذه البيانات عن السؤال", "suggest": "سؤال قريب تستطيع البيانات الإجابة عنه"}
+القواعد:
+- لا تجب عن السؤال ولا تكتب أي قيمة قياس؛ فقط حوّله إلى خيارات.
+- «أي قضاء أكثر/أقل» أو مقارنة أقضية ← by = district. «بكل سنة/سنوياً» ← year. «بكل شهر» عبر الزمن ← month. «حسب أشهر السنة/موسمياً/أي شهر» ← moy.
+- «كم يوم تجاوز/فوق» ← above، و«تحت/أقل من» ← below، مع threshold رقماً من السؤال أو "limit" إذا ذُكر حد منظمة الصحة أو الحد المسموح.
+- «أعلى/أسوأ N أيام» أو «متى كان أعلى يوم» ← top (أو bottom للأدنى) مع n.
+- «أعلى قيمة» لقيمة واحدة ← max، و«أدنى قيمة» ← min. المجموع (sum) للأمطار فقط.
+- الصيف = 6،7،8؛ الشتاء = 12،1،2؛ الربيع = 3،4،5؛ الخريف = 9،10،11. «سنة 2024» ← from 2024-01-01 to 2024-12-31. «السنة الماضية» و«الشهر الماضي» بالنسبة لليوم.
+- إذا لم يُذكر قضاء: اختر ["all"] للمقارنة وإلا ["${S.d}"]. إذا لم تُذكر مدة اترك from وto فارغين.
+- الحرارة العظمى t_max والصغرى t_min_adj والمتوسطة t_mean؛ «الحرارة» وحدها ← t_max. «تلوث الهواء» وحده ← pm2_5. «الغبار» ← dust. «التصريف/مستوى النهر/الماء بدجلة» ← discharge. «العكورة» ← ndti و«الطحالب/الكلوروفيل» ← ndci.
+- إذا طلب شيئاً غير موجود (مثل الفوسفات أو المعادن الثقيلة أو قضاء آخر أو توقّع المستقبل) فأعد ok = false.`;
+    try {
+      const txt = await ECO.gemini.generate({ json: true, temperature: 0, system: "أنت تحوّل أسئلة الباحثين بالعربية والعامية العراقية إلى خيارات استعلام لقاعدة بيانات بيئية. لا تخترع أي رقم.", contents: [{ role: "user", parts: [{ text: prompt }] }] });
+      const j = JSON.parse(String(txt).replace(/^```json|```$/g, "").trim());
+      if (!j.ok) { out.innerHTML = `<div class="notice warn">${ico("i-info")}<span>${esc(j.reason || "هذا السؤال خارج ما تحويه القاعدة.")}${j.suggest ? `<br>جرّب: <button type="button" class="linkbtn" data-ask-ex="${esc(j.suggest)}">${esc(j.suggest)}</button>` : ""}</span></div>`; btn.disabled = false; return; }
+      const sp = askSpec(j);
+      el.querySelector("#ask-form").innerHTML = askForm(sp);
+      askShow(el, sp);
+    } catch (e) {
+      out.innerHTML = `<div class="notice warn">${ico("i-info")}<span>${esc(e && e.message && !/JSON|Unexpected/.test(e.message) ? e.message : "لم أفهم السؤال بشكل منظم؛ أعد صياغته أو اختر الخيارات من النموذج أدناه.")}</span></div>`;
+    }
+    btn.disabled = false;
+  }
+  function rAsk(el) {
+    if (el.dataset.built) return;
+    el.dataset.built = "1";
+    const sp = askSpec({ metric: "pm2_5", districts: [S.d], op: "mean", by: "year" });
+    el.innerHTML = `<div class="panel ask-box">
+        <div class="panel-h"><h3>${ico("i-chat")}اسأل القاعدة بالعربي</h3><span class="sub">الذكاء الاصطناعي يفهم سؤالك فقط، والأرقام تُحسب من القاعدة نفسها</span></div>
+        <div class="ask-in"><textarea id="ask-q" class="input" rows="2" placeholder="مثلاً: كم يوم تجاوز الغبار 100 بتكريت بصيف 2025؟"></textarea><button type="button" class="btn btn-primary" id="ask-go">${ico("i-send")}اسأل</button></div>
+        <div class="ask-ex">${ASK_EX.map(x => `<button type="button" class="chip" data-ask-ex="${esc(x)}">${esc(x)}</button>`).join("")}</div>
+      </div>
+      <div id="ask-out"></div>
+      <details class="panel ask-adv" open><summary>${ico("i-gear")}خيارات السؤال (تتعبّأ من سؤالك، وتقدر تعدّلها وتعيد الحساب)</summary><div id="ask-form">${askForm(sp)}</div></details>`;
+    el.addEventListener("click", e => {
+      const ex = e.target.closest("[data-ask-ex]"); if (ex) { el.querySelector("#ask-q").value = ex.dataset.askEx; askAI(el); return; }
+      if (e.target.closest("#ask-go")) { askAI(el); return; }
+      if (e.target.closest("#ask-run")) { askShow(el, askRead(el)); return; }
+      if (e.target.closest("[data-ask-lim]")) { const P = S.P[el.querySelector("#ask-m").value] || {}; if (U.isNum(P.limit_value)) el.querySelector("#ask-thr").value = P.limit_value; else U.toast("لا يوجد حد مرجعي لهذا المعيار"); return; }
+      if (e.target.closest("[data-ask-csv]") && S.askLast) {
+        const { sp: s2, R } = S.askLast;
+        const head = R.kind === "list" ? ["district", "time", s2.metric] : ["district", "period", s2.op + "_" + s2.metric, "n", "first", "last"];
+        const rows = R.rows.map(r => R.kind === "list" ? [nmD(r.d), r.x, r.v] : [r.d ? nmD(r.d) : s2.districts.map(nmD).join("+"), r.x == null ? "" : perLabel(s2.by, r.x), r.v, r.n, r.a, r.b]);
+        save(new Blob([csvOf(head, rows)], { type: "text/csv;charset=utf-8" }), `ecobio-ask-${s2.metric}-${today()}.csv`);
+      }
+    });
+    el.addEventListener("change", e => {
+      if (e.target.id === "ask-op") { const op = e.target.value; el.querySelector(".ask-thr").hidden = !(op === "above" || op === "below"); el.querySelector(".ask-n").hidden = !(op === "top" || op === "bottom"); el.querySelector(".ask-by").hidden = op === "top" || op === "bottom"; }
+    });
+    el.querySelector("#ask-q").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); askAI(el); } });
   }
 
   /* ------------------------------------------------------------------

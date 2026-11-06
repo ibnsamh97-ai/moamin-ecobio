@@ -1040,6 +1040,17 @@
       </aside>
     </div>
     <div class="panel u-mt16" id="sp-series" hidden></div>
+    <div class="panel u-mt16" id="sp-cal">
+      <div class="panel-h"><h3><svg aria-hidden="true"><use href="#i-scan"/></svg>عاير القمر بقياساتك الحقلية</h3><span class="sub">مطابقة كل عيّنة بأقرب صورة صافية، ثم معادلة تحويل من الصورة إلى قيمتك</span></div>
+      <p class="spc-intro">عندك عيّنات عكورة أو مواد عالقة أو كلوروفيل بتاريخ وموقع؟ المنصة تجد لكل عيّنة صورة Sentinel-2 صافية بنفس الأيام، وتقرأ الانعكاس عند موقعها، وتبني معادلة تقدّر قيمتك من الصورة مع اختبار دقتها. بعدها تقدر تقدّر القيمة لأي يوم فيه صورة.</p>
+      <div class="seg" id="spc-src" role="group" aria-label="مصدر العيّنات"><button type="button" data-src="saved">عيّناتي المحفوظة</button><button type="button" data-src="table">جدول (Excel أو لصق)</button></div>
+      <div id="spc-in" class="u-mt10"></div>
+      <div class="row spc-run">
+        <div class="field"><label for="spc-win">أقصى فرق أيام بين العيّنة والصورة</label><select id="spc-win" class="input"><option value="1">±1 يوم</option><option value="3">±3 أيام</option><option value="5">±5 أيام</option><option value="7">±7 أيام</option></select></div>
+        <button type="button" class="btn btn-primary" id="spc-go"><svg aria-hidden="true"><use href="#i-sat"/></svg>طابق مع صور القمر</button>
+      </div>
+      <div id="spc-out"></div>
+    </div>
     <p class="faint sp-foot">المصدر: Copernicus Sentinel-2 Level-2A (وكالة الفضاء الأوروبية) عبر Microsoft Planetary Computer. مؤشر العكورة <bdi dir="ltr">NDTI = (B04 − B03) / (B04 + B03)</bdi> (Lacaux وآخرون، 2007)، ومؤشر الكلوروفيل <bdi dir="ltr">NDCI = (B05 − B04) / (B05 + B04)</bdi> (Mishra وMishra، 2012). المؤشرات نسبية من الانعكاسية السطحية، تصلح للمقارنة عبر الزمن والمكان، ولا تساوي تراكيز مختبرية.</p>
   </div>
 </section>
@@ -1409,6 +1420,7 @@
         <section class="an-panel" id="db-p-ai" role="tabpanel" aria-labelledby="db-t-ai" hidden></section>
         <section class="an-panel" id="db-p-plan" role="tabpanel" aria-labelledby="db-t-plan" hidden></section>
         <section class="an-panel" id="db-p-compare" role="tabpanel" aria-labelledby="db-t-compare" hidden></section>
+        <section class="an-panel" id="db-p-ask" role="tabpanel" aria-labelledby="db-t-ask" hidden></section>
         <section class="an-panel" id="db-p-studies" role="tabpanel" aria-labelledby="db-t-studies" hidden></section>
       </div>
     </div>
@@ -1526,6 +1538,7 @@
 <script src="js/samples.js"></script>
 <script src="js/contrib.js"></script>
 <script src="js/space.js"></script>
+<script src="js/s2cal.js"></script>
 <script src="js/gaps.js"></script>
 <script src="js/scholar.js"></script>
 <script src="js/palmer.js"></script>

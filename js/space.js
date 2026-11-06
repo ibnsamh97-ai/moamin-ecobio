@@ -288,7 +288,7 @@
     if (seq !== S.tseq) return;
     if (!res.length) { box.innerHTML = `<div class="notice warn"><span>تعذّرت قراءة الصور الآن. أعد المحاولة بعد قليل.</span></div>`; return; }
     res.sort((a, b) => a.date.localeCompare(b.date));
-    S.series = { lat, lon, range, at: Date.now(), points: res.map(o => ({ date: o.date, cloud: o.cloud, cls: o.cls, scl: o.scl, ndti: o.ndti, ndci: o.ndci, ndwi: o.ndwi, id: o.id })), failed: fail, candidates: list.length };
+    S.series = { lat, lon, range, at: Date.now(), points: res.map(o => ({ date: o.date, cloud: o.cloud, cls: o.cls, scl: o.scl, ndti: o.ndti, ndci: o.ndci, ndwi: o.ndwi, id: o.id, rho: o.rho ? Object.fromEntries(Object.entries(o.rho).map(([k, v]) => [k, U.isNum(v) ? +v.toFixed(5) : null])) : null })), failed: fail, candidates: list.length };
     if (!fail) cacheSet(key, S.series);
     renderSeries();
   }
