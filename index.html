@@ -661,6 +661,35 @@
   </div>
 </section>
 
+<!-- ======================= تحديات البيانات ======================= -->
+<section class="view" id="view-challenge" data-title="تحدّيات البيانات">
+  <div class="wrap">
+    <div class="view-head"><div>
+      <h2>تحدّيات البيانات</h2>
+      <p>مسائل مختبرية بأرقام مختلفة لكل طالب: منحنى المعايرة، ونسبة الإزالة والسعة، ولانكماير، والحركية، وBOD₅، وANOVA. احسبها بيدك أو بأداة المنصة، ثم تحقّق من إجابتك واعرض الحل خطوة بخطوة.</p>
+    </div></div>
+    <div class="ch-grid">
+      <aside class="ch-side">
+        <div class="ch-list" id="ch-list" role="group" aria-label="اختر التحدّي"></div>
+        <div class="panel ch-teacher">
+          <div class="panel-h"><h3><svg aria-hidden="true"><use href="#i-learn"/></svg>للأستاذ</h3></div>
+          <p class="faint">اطبع نسخاً مختلفة الأرقام لطلابك مع مفتاح الإجابة في آخر الملف.</p>
+          <div class="field"><label for="ch-t-c">التحدّي</label><select id="ch-t-c" class="input"></select></div>
+          <div class="field"><label for="ch-t-n">عدد النسخ</label><input id="ch-t-n" class="input num" type="number" min="1" max="40" value="10" dir="ltr"></div>
+          <button type="button" class="btn btn-sm" id="ch-t-go"><svg aria-hidden="true"><use href="#i-file"/></svg>النسخ ومفتاح الإجابة PDF</button>
+        </div>
+        <div class="panel ch-teacher">
+          <div class="panel-h"><h3><svg aria-hidden="true"><use href="#i-search"/></svg>عندك رمز نسخة؟</h3></div>
+          <div class="field"><label for="ch-code-c">التحدّي</label><select id="ch-code-c" class="input"></select></div>
+          <div class="field"><label for="ch-code">رمز النسخة</label><input id="ch-code" class="input num" inputmode="numeric" dir="ltr" placeholder="مثل 482913"></div>
+          <button type="button" class="btn btn-sm" id="ch-code-go">افتح نسختي</button>
+        </div>
+      </aside>
+      <div id="ch-play"></div>
+    </div>
+  </div>
+</section>
+
 <!-- ======================= العالم المجهري ======================= -->
 <section class="view" id="view-micro" data-title="العالم المجهري 3D">
   <div class="wrap">
@@ -1563,6 +1592,7 @@
 <script src="js/data-lab.js"></script>
 <script src="js/lab3d.js"></script>
 <script src="js/labexp.js"></script>
+<script src="js/challenge.js"></script>
 <script src="js/sources.js"></script>
 <script src="js/trendlib.js"></script>
 <script src="js/trend.js"></script>

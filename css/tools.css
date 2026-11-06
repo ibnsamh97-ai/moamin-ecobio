@@ -912,3 +912,29 @@
 .spc-sum { margin-top: 10px; }
 #spc-apply { margin-top: 10px; }
 @media (max-width: 640px) { .spc-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; } .spc-kpis .v { font-size: 1.1rem; } }
+/* تحديات البيانات */
+.ch-grid { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 16px; align-items: start; }
+.ch-side { display: grid; gap: 12px; }
+.ch-list { display: grid; gap: 8px; }
+.ch-pick { display: flex; gap: 10px; align-items: center; text-align: right; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel, rgba(255,255,255,.02)); color: inherit; cursor: pointer; font: inherit; }
+.ch-pick svg { width: 22px; height: 22px; flex: none; color: #b493ff; }
+.ch-pick span { display: flex; flex-direction: column; gap: 2px; }
+.ch-pick small { color: var(--muted); font-size: .76rem; }
+.ch-pick.on { border-color: #b493ff; background: color-mix(in srgb, #b493ff 12%, transparent); }
+.ch-teacher .field { margin-top: 8px; }
+.ch-teacher .btn { margin-top: 10px; }
+.ch-teacher .panel-h h3 svg, .ch-card .panel-h h3 svg { width: 18px; height: 18px; vertical-align: -3px; margin-inline-end: 6px; color: #b493ff; }
+.ch-intro { line-height: 1.9; margin-bottom: 10px; }
+.ch-tbl { max-width: 520px; }
+.ch-given { margin-top: 10px; }
+.ch-ask { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin-top: 14px; }
+.ch-res { display: block; min-height: 1.4em; font-size: .82rem; margin-top: 4px; }
+.ch-res.ok { color: #93dd8a; } .ch-res.bad { color: #ef5a64; }
+.ch-acts { gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.ch-sol { margin-top: 14px; padding: 12px 14px; border-radius: 12px; background: color-mix(in srgb, #b493ff 9%, transparent); line-height: 1.9; }
+.ch-sol h4 { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; } .ch-sol h4 svg { width: 16px; height: 16px; }
+.ch-sol ol { padding-inline-start: 20px; }
+.ch-note { font-size: .78rem; margin-top: 12px; }
+@media (max-width: 900px) { .ch-grid { grid-template-columns: 1fr; } .ch-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } .ch-side { order: 0; } }
+.ch-m { unicode-bidi: isolate; white-space: nowrap; }
+@media (max-width: 640px) { .ch-m { white-space: normal; } }
