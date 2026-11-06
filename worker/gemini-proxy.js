@@ -551,13 +551,25 @@ export default {
     let up, used;
     for (let i = 0; i < models.length; i++) {
       used = models[i];
-      up = await fetch(`${UPSTREAM}/v1beta/models/${encodeURIComponent(used)}:${m[2]}${query}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-goog-api-key": env.GEMINI_KEY },
-        body
-      });
-      // عند نفاد حصة نموذج أو عدم توفره ننتقل إلى البديل التالي
-      if ((up.status === 429 || up.status === 404 || up.status === 503) && i < models.length - 1) {
+      const last = i === models.length - 1;
+      // بعض النماذج تعلق عند Google دون رد، فيقطعها Cloudflare بخطأ 524 بعد 100 ثانية.
+      // ننتظر بداية الرد 30 ثانية فقط ثم ننتقل إلى البديل (بعد بدء الرد يكمل التدفق مهما طال)
+      const ac = new AbortController();
+      const timer = last ? 0 : setTimeout(() => ac.abort(), 30000);
+      try {
+        up = await fetch(`${UPSTREAM}/v1beta/models/${encodeURIComponent(used)}:${m[2]}${query}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-goog-api-key": env.GEMINI_KEY },
+          body, signal: ac.signal
+        });
+      } catch (e) {
+        if (!last) continue;
+        return fail(504, "UPSTREAM_TIMEOUT", "Gemini did not answer in time.");
+      } finally {
+        clearTimeout(timer);
+      }
+      // عند نفاد حصة نموذج أو عدم توفره أو تعطله ننتقل إلى البديل التالي
+      if ((up.status === 429 || up.status === 404 || up.status >= 500) && !last) {
         if (up.body) await up.body.cancel();
         continue;
       }

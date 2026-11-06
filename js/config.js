@@ -233,4 +233,7 @@ ECO.CHAT_SUGGESTIONS = [
   "اقترح عنوان بحث تخرج في المعالجة الحيوية مع خطة عمل مختبرية"
 ];
 
-ECO.GEMINI_DEFAULT_MODEL = "gemini-flash-latest";
+/* gemini-flash-latest صار يعلق عند Google (نوفمبر 2026) فيقطعه Cloudflare بخطأ 524؛
+   Gemini 3 Flash يرد خلال ثوانٍ. وإذا علق أي نموذج ينتقل المساعد تلقائياً إلى البديل السريع. */
+ECO.GEMINI_DEFAULT_MODEL = "gemini-3-flash-preview";
+ECO.GEMINI_FALLBACK_MODEL = "gemini-flash-lite-latest";

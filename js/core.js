@@ -284,7 +284,8 @@
   G.mode = () => G.key() ? "personal" : (G.proxy() ? "shared" : "");
   /* الخادم المشترك يقبل نماذج Flash فقط؛ من اختار نموذجاً آخر بلا مفتاح شخصي يُعاد إلى الافتراضي */
   G.model = () => {
-    const m = U.store.get("gemini_model", ECO.GEMINI_DEFAULT_MODEL) || ECO.GEMINI_DEFAULT_MODEL;
+    let m = U.store.get("gemini_model", ECO.GEMINI_DEFAULT_MODEL) || ECO.GEMINI_DEFAULT_MODEL;
+    if (m === "gemini-flash-latest") m = ECO.GEMINI_DEFAULT_MODEL;   // الاسم المستعار العالق سابقاً
     return !G.key() && !/flash/i.test(m) ? ECO.GEMINI_DEFAULT_MODEL : m;
   };
   G.ready = () => !!G.mode();
@@ -327,6 +328,7 @@
       if (status === 400 && /API key/i.test(msg)) return "مفتاح Gemini المحفوظ في الخادم غير صالح. (لصاحب الموقع: حدّث GEMINI_KEY في Cloudflare)";
       if (status === 403) return "مفتاح الخادم لا يملك صلاحية استخدام Gemini API.";
       if (status === 404) return "النموذج المطلوب غير متاح على خادم المساعد.";
+      if (STALL.includes(status)) return "خوادم Gemini مزدحمة الآن ولم ترد في الوقت المناسب. أعد إرسال سؤالك بعد قليل.";
       return `خطأ من خادم المساعد (${status}): ${msg || "تعذّر الاتصال"}`;
     }
     if (status === 400 && /API key/i.test(msg)) return "المفتاح غير صالح. انسخه مجدداً من Google AI Studio.";
@@ -337,17 +339,43 @@
   }
 
   /* توليد نص متدفق: contents = [{role:'user'|'model', parts:[{text}]}] */
+  /* إذا لم يبدأ النموذج بالرد خلال هذه المدة نعدّه عالقاً وننتقل إلى البديل السريع
+     (Cloudflare يقطع الطلب بخطأ 524 بعد 100 ثانية، فلا ينتظر الزائر كل هذا) */
+  const FIRST_BYTE_MS = 30000;
+  const STALL = [502, 503, 504, 520, 522, 524];
   G.generate = async ({ contents, system = ECO.SYSTEM_PROMPT, onText, signal, temperature = 0.6, json = false }) => {
     const mode = G.mode();
     if (!mode) throw new Error("NO_KEY");
     const key = mode === "personal" ? G.key() : "", shared = !key;
-    const url = endpoint(`/models/${encodeURIComponent(G.model())}:streamGenerateContent`, key, "alt=sse");
     const body = { contents, generationConfig: { temperature, maxOutputTokens: 4096 } };
     if (json) body.generationConfig.responseMimeType = "application/json";
     if (system) body.system_instruction = { parts: [{ text: system }] };
-    const r = await gfetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), signal }, shared);
+    const payload = JSON.stringify(body);
+    const first = G.model(), alt = ECO.GEMINI_FALLBACK_MODEL;
+    const models = alt && alt !== first ? [first, alt] : [first];
+    let r = null, used = first;
+    for (let i = 0; i < models.length; i++) {
+      used = models[i];
+      const last = i === models.length - 1;
+      const url = endpoint(`/models/${encodeURIComponent(used)}:streamGenerateContent`, key, "alt=sse");
+      // مهلة لبداية الرد فقط؛ بعد وصول أول بايت يكمل التدفق مهما طال
+      const ac = new AbortController();
+      const relay = () => ac.abort();
+      if (signal) { if (signal.aborted) ac.abort(); else signal.addEventListener("abort", relay, { once: true }); }
+      const timer = last ? 0 : setTimeout(() => { ac.timedOut = true; ac.abort(); }, FIRST_BYTE_MS);
+      try {
+        r = await gfetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: payload, signal: ac.signal }, shared);
+      } catch (e) {
+        if (ac.timedOut && !last) continue;
+        throw e;
+      } finally {
+        clearTimeout(timer);
+      }
+      if (!r.ok && !last && STALL.includes(r.status)) { try { await r.body.cancel(); } catch (e) { /* */ } continue; }
+      break;
+    }
     if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error(geminiError(r.status, j, shared)); }
-    G.lastModel = r.headers.get("X-EcoBio-Model") || G.model();
+    G.lastModel = r.headers.get("X-EcoBio-Model") || used;
     const reader = r.body.getReader(), dec = new TextDecoder();
     let buf = "", full = "";
     for (;;) {
