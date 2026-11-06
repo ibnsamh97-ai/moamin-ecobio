@@ -568,6 +568,167 @@
     formula: "SD = √(Σ(x − x̄)² / (n − 1))      CV = SD / x̄ × 100\nr = Σ(x − x̄)(y − ȳ) / √(Σ(x − x̄)²·Σ(y − ȳ)²)      t = r·√((n − 2)/(1 − r²))", refs: ["Zar, J.H. (2010). Biostatistical Analysis, 5th ed. Pearson."]
   });
 
+  /* ===================== إضافات نوفمبر 2026 ===================== */
+  const qn = p => ECO.stats && ECO.stats.qnorm ? ECO.stats.qnorm(p) : NaN;
+
+  C.push({
+    id: "load", cat: "water", title: "حمل الملوث في النهر", en: "Pollutant load (mass flux)",
+    desc: "كم كيلوغراماً من الملوث يعبر مقطع النهر يومياً: التركيز × التصريف، والحمل المضاف بين نقطتين.",
+    fields: [{ id: "c", label: "تركيز الملوث", unit: "mg/L" }, { id: "q", label: "تصريف النهر", unit: "m³/s" }, { id: "cu", label: "التركيز أعلى المجرى (اختياري)", unit: "mg/L" }],
+    run(f) {
+      const c = n(f.c), q = n(f.q), cu = n(f.cu); if (![c, q].every(U.isNum)) return null;
+      const L = c * q * 86.4, Ly = L * 365 / 1000, add = U.isNum(cu) ? (c - cu) * q * 86.4 : NaN;
+      return {
+        cards: [{ label: "الحمل اليومي", value: f2(L, L < 10 ? 3 : 1), unit: "kg/يوم" }, { label: "الحمل السنوي", value: f2(Ly, 2), unit: "طن/سنة" }].concat(U.isNum(add) ? [{ label: "الحمل المضاف بين النقطتين", value: f2(add, 2), unit: "kg/يوم", tone: add > 0 ? "warn" : "good", sub: add > 0 ? "مصدر تلوث بين النقطتين" : "لا إضافة صافية" }] : []),
+        interp: `خذ التصريف من «قاعدة بيانات أقضية دجلة» (GloFAS) لنفس يوم أخذ العيّنة؛ الحمل يتغير مع التصريف حتى لو ثبت التركيز.`
+      };
+    },
+    formula: "الحمل (kg/يوم) = C (mg/L) × Q (m³/s) × 86.4\nالحمل المضاف = (C أسفل المجرى − C أعلى المجرى) × Q × 86.4",
+    refs: ["Chapra, S.C. (1997). Surface Water-Quality Modeling. McGraw-Hill, New York."]
+  });
+
+  C.push({
+    id: "fish", cat: "risk", title: "المخاطر الصحية من أكل الأسماك", en: "Fish consumption risk · EDI · THQ",
+    desc: "الجرعة اليومية المقدّرة ومعامل الخطورة المستهدف لكل عنصر في لحم السمك، للبالغين أو الأطفال.",
+    fields: [{ id: "grp", label: "الفئة", type: "select", opts: [["adult", "بالغون"], ["child", "أطفال"]], def: "adult" }, { id: "fir", label: "معدل أكل السمك FIR (من مسح محلي)", unit: "g/day" }, { id: "bw", label: "وزن الجسم BW", unit: "kg", def: "70" }, { id: "ef", label: "تكرار التعرض EF", unit: "يوم/سنة", def: "365" }, { id: "ed", label: "مدة التعرض ED", unit: "سنة", def: "30" }],
+    table: { cols: [{ id: "m", label: "العنصر", type: "text" }, { id: "c", label: "التركيز mg/kg وزن رطب" }, { id: "rfd", label: "RfD mg/kg/day" }, { id: "csf", label: "CSF (mg/kg/day)⁻¹" }], rows: Object.entries(RISKDEF).map(([m, [r, c]]) => [m, "", String(r), String(c)]) },
+    onField(id, val, setF) { if (id === "grp") { if (val === "child") setF({ bw: "15", ed: "6" }); else setF({ bw: "70", ed: "30" }); } },
+    run(f, rows) {
+      const FIR = n(f.fir), BW = n(f.bw), EF = n(f.ef), ED = n(f.ed);
+      const R = rows.map(r => ({ m: r.m, c: n(r.c), rfd: n(r.rfd), csf: n(r.csf) })).filter(r => U.isNum(r.c));
+      if (!R.length || ![FIR, BW, EF, ED].every(U.isNum)) return null;
+      let T = 0, CRt = 0;
+      const t = R.map(r => { const edi = r.c * FIR / 1000 / BW, thq = U.isNum(r.rfd) ? edi * EF / 365 / r.rfd : NaN, cr = U.isNum(r.csf) ? edi * EF * ED / (70 * 365) * r.csf : NaN; if (U.isNum(thq)) T += thq; if (U.isNum(cr)) CRt += cr; return [r.m, r.c, sci(edi), U.isNum(thq) ? { html: `<b class="${thq >= 1 ? "bad" : "ok"}">${f2(thq, 3)}</b>` } : "—", U.isNum(cr) ? sci(cr) : "—"]; });
+      return {
+        cards: [{ label: "مجموع معاملات الخطورة TTHQ", value: f2(T, 3), tone: T >= 1 ? "severe" : "good", sub: T >= 1 ? "خطر غير مسرطن محتمل" : "لا خطر غير مسرطن معنوي" }, { label: "خطر السرطان", value: sci(CRt), tone: CRt > 1e-4 ? "severe" : CRt > 1e-6 ? "warn" : "good" }],
+        table: { head: ["العنصر", "C mg/kg", "EDI mg/kg/day", "THQ", "CR"], rows: t },
+        interp: "معدل أكل السمك يختلف كثيراً بين المناطق؛ خذه من مسح غذائي محلي أو بحث منشور، واذكر مصدره في الرسالة. التراكيز بالوزن الرطب (حوّل من الجاف بنسبة الرطوبة)."
+      };
+    },
+    formula: "EDI = C × FIR × 10⁻³ / BW\nTHQ = (EF × ED × FIR × C × 10⁻³) / (RfD × BW × AT)   [AT = ED × 365]\nTTHQ = Σ THQ          CR = EDI × (EF × ED)/(70 × 365) × CSF",
+    refs: ["US EPA (2000). Guidance for Assessing Chemical Contaminant Data for Use in Fish Advisories, Vol. 2: Risk Assessment and Fish Consumption Limits. EPA 823-B-00-008.", "Chien, L.C., et al. (2002). Daily intake of TBT, Cu, Zn, Cd and As for fishermen in Taiwan. Science of the Total Environment 285: 177–185.", REF.epa89]
+  });
+
+  C.push({
+    id: "pah", cat: "sed", title: "بصمة مصدر الهيدروكربونات (PAHs)", en: "PAH diagnostic ratios",
+    desc: "هل تلوث العيّنة نفطي خام (petrogenic) أم من الاحتراق (pyrogenic)؟ من نسب الهيدروكربونات العطرية المتعددة الحلقات.",
+    fields: [{ id: "ant", label: "Anthracene" }, { id: "phe", label: "Phenanthrene" }, { id: "fla", label: "Fluoranthene" }, { id: "pyr", label: "Pyrene" }, { id: "baa", label: "Benz[a]anthracene" }, { id: "chr", label: "Chrysene" }, { id: "icd", label: "Indeno[1,2,3-cd]pyrene" }, { id: "bgh", label: "Benzo[ghi]perylene" }],
+    run(f) {
+      const v = k => n(f[k]), rat = (a, b) => (U.isNum(v(a)) && U.isNum(v(b)) && v(a) + v(b) > 0 ? v(a) / (v(a) + v(b)) : NaN);
+      const R = [
+        ["Ant/(Ant+Phe)", rat("ant", "phe"), x => x < 0.1 ? ["نفطي (petrogenic)", "warn"] : ["احتراق (pyrogenic)", "bad"]],
+        ["Fla/(Fla+Pyr)", rat("fla", "pyr"), x => x < 0.4 ? ["نفطي (petrogenic)", "warn"] : x <= 0.5 ? ["احتراق وقود سائل (مركبات، نفط خام)", "bad"] : ["احتراق عشب أو خشب أو فحم", "bad"]],
+        ["BaA/(BaA+Chr)", rat("baa", "chr"), x => x < 0.2 ? ["نفطي (petrogenic)", "warn"] : x <= 0.35 ? ["مختلط (نفطي أو احتراق)", "warn"] : ["احتراق (pyrogenic)", "bad"]],
+        ["IcdP/(IcdP+BghiP)", rat("icd", "bgh"), x => x < 0.2 ? ["نفطي (petrogenic)", "warn"] : x <= 0.5 ? ["احتراق وقود سائل", "bad"] : ["احتراق عشب أو خشب أو فحم", "bad"]]
+      ].filter(r => U.isNum(r[1]));
+      if (!R.length) return null;
+      const pet = R.filter(r => r[2](r[1])[0].startsWith("نفطي")).length, pyr = R.filter(r => !r[2](r[1])[0].startsWith("نفطي") && !r[2](r[1])[0].startsWith("مختلط")).length;
+      return {
+        cards: R.map(r => { const [l, tone] = r[2](r[1]); return { label: r[0], value: f2(r[1], 3), sub: l, tone }; }),
+        interp: `${pet > pyr ? "أغلب النسب تشير إلى مصدر نفطي خام (تسرب أو مخلفات نفطية)." : pyr > pet ? "أغلب النسب تشير إلى مصدر احتراق (عوادم، حرق، شعلات)." : "النسب متعارضة؛ المصدر غالباً مختلط."} النسب تتأثر بالتجوية والتحلل بعد الترسب، فاستعمل أكثر من نسبة معاً ولا تعتمد على واحدة.`
+      };
+    },
+    formula: "Ant/(Ant+Phe): < 0.10 نفطي · > 0.10 احتراق\nFla/(Fla+Pyr): < 0.40 نفطي · 0.40–0.50 احتراق وقود سائل · > 0.50 احتراق عشب/خشب/فحم\nBaA/(BaA+Chr): < 0.20 نفطي · 0.20–0.35 مختلط · > 0.35 احتراق\nIcdP/(IcdP+BghiP): < 0.20 نفطي · 0.20–0.50 احتراق وقود سائل · > 0.50 احتراق عشب/خشب/فحم\n(أي وحدة واحدة لكل التراكيز، مثل ng/g)",
+    refs: ["Yunker, M.B., et al. (2002). PAHs in the Fraser River basin: a critical appraisal of PAH ratios as indicators of PAH source and composition. Organic Geochemistry 33: 489–515."]
+  });
+
+  C.push({
+    id: "unc", cat: "lab", title: "عدم اليقين في نتيجة المختبر", en: "Measurement uncertainty (GUM)",
+    desc: "اكتب نتيجتك 0.42 ± 0.03 mg/L: الشك من منحنى المعايرة وتكرار القراءة والأدوات الحجمية، والشك الموسّع بعامل تغطية 2.",
+    fields: [{ id: "y0", label: "متوسط امتصاصية العيّنة" }, { id: "m", label: "عدد قراءات العيّنة", def: "3" }, { id: "df", label: "معامل التخفيف", def: "1" }, { id: "pv", label: "حجم الماصة", unit: "mL" }, { id: "pt", label: "سماحية الماصة ±", unit: "mL" }, { id: "fv", label: "حجم الدورق الحجمي", unit: "mL" }, { id: "ft", label: "سماحية الدورق ±", unit: "mL" }],
+    table: { cols: [{ id: "c", label: "التركيز القياسي" }, { id: "a", label: "الامتصاصية" }], rows: [["", ""], ["", ""], ["", ""], ["", ""], ["", ""], ["", ""]] },
+    run(f, rows) {
+      const P = rows.map(r => [n(r.c), n(r.a)]).filter(p => p.every(U.isNum)); if (P.length < 3) return null;
+      const y0 = n(f.y0), m = Math.max(1, n(f.m) || 1), df = n(f.df) || 1; if (!U.isNum(y0)) return null;
+      const L = linreg(P.map(p => p[0]), P.map(p => p[1])), N = P.length, xm = U.mean(P.map(p => p[0])), ym = U.mean(P.map(p => p[1]));
+      const syx = Math.sqrt(P.reduce((s, p) => s + (p[1] - (L.slope * p[0] + L.intercept)) ** 2, 0) / (N - 2)), Sxx = P.reduce((s, p) => s + (p[0] - xm) ** 2, 0);
+      const x0 = (y0 - L.intercept) / L.slope, sx0 = syx / Math.abs(L.slope) * Math.sqrt(1 / m + 1 / N + (y0 - ym) ** 2 / (L.slope ** 2 * Sxx));
+      const rel = [[sx0 / Math.abs(x0), "منحنى المعايرة والتكرار"]];
+      const pv = n(f.pv), pt = n(f.pt), fv = n(f.fv), ft = n(f.ft);
+      if (U.isNum(pv) && U.isNum(pt) && pv > 0) rel.push([pt / Math.sqrt(3) / pv, "الماصة"]);
+      if (U.isNum(fv) && U.isNum(ft) && fv > 0) rel.push([ft / Math.sqrt(3) / fv, "الدورق الحجمي"]);
+      const uc = Math.sqrt(rel.reduce((s, r) => s + r[0] ** 2, 0)), C0 = x0 * df, U2 = 2 * uc * Math.abs(C0);
+      const out = x0 < Math.min(...P.map(p => p[0])) || x0 > Math.max(...P.map(p => p[0]));
+      return {
+        cards: [{ label: "النتيجة", value: `${f2(C0, 3)} ± ${f2(U2, 3)}`, sub: "الشك الموسّع (k = 2، ثقة ≈ 95%)", tone: out ? "warn" : "good" }, { label: "الشك النسبي الموسّع", value: f2(200 * uc, 1), unit: "%" }],
+        table: { head: ["المصدر", "الشك النسبي %", "حصته من التباين %"], rows: rel.map(r => [r[1], f2(100 * r[0], 2), f2(100 * r[0] ** 2 / (uc * uc), 1)]) },
+        interp: `${out ? "تحذير: امتصاصية العيّنة خارج مدى المحاليل القياسية، فالشك أكبر من المحسوب. " : ""}أكبر مصدر للشك هو «${rel.slice().sort((a, b) => b[0] - a[0])[0][1]}»؛ تقليله يحسّن الدقة أكثر من غيره. سماحية الأدوات مكتوبة عليها (مثل ماصة 10 mL من الفئة A: ±0.02).`
+      };
+    },
+    formula: "s(x₀) = (s(y/x)/b) × √(1/m + 1/n + (ȳ₀ − ȳ)² / (b² × Σ(xᵢ − x̄)²))\nشك الأداة الحجمية = السماحية / √3 / الحجم\nu_c = √(Σ u²ᵢ)        U = 2 × u_c × C",
+    refs: ["Miller, J.N., Miller, J.C. (2010). Statistics and Chemometrics for Analytical Chemistry, 6th ed. Pearson.", "Eurachem/CITAC (2012). Quantifying Uncertainty in Analytical Measurement, 3rd ed. (Guide CG4).", "JCGM 100:2008. Evaluation of measurement data – Guide to the expression of uncertainty in measurement (GUM)."]
+  });
+
+  C.push({
+    id: "power", cat: "stat", title: "كم عيّنة أحتاج؟", en: "Sample size & power",
+    desc: "عدد العيّنات أو المكررات لكل مجموعة حتى يظهر الفرق المتوقع معنوياً، قبل أن تبدأ التجربة.",
+    fields: [{ id: "mode", label: "نوع المقارنة", type: "select", opts: [["t", "مجموعتان (اختبار t)"], ["anova", "3 مجموعات فأكثر (ANOVA)"]], def: "t" }, { id: "d", label: "الفرق المتوقع بين المتوسطين" }, { id: "sd", label: "الانحراف المعياري المتوقع (من تجربة أولية أو بحث)" }, { id: "alpha", label: "مستوى المعنوية α", def: "0.05" }, { id: "pw", label: "القوة المطلوبة", def: "0.8" }, { id: "k", label: "عدد المجموعات (لـ ANOVA)", def: "3" }],
+    run(f) {
+      const d = Math.abs(n(f.d)), sd = n(f.sd), a = n(f.alpha) || 0.05, pw = n(f.pw) || 0.8, k = Math.round(n(f.k) || 3);
+      if (!(d > 0 && sd > 0)) return null;
+      const za = qn(1 - a / 2), zb = qn(pw); if (!U.isNum(za) || !U.isNum(zb)) return null;
+      const es = d / sd;
+      if (f.mode === "anova") {
+        const fC = es / 2, eta2 = fC * fC / (1 + fC * fC), nn = ECO.stats.nPerGroup ? ECO.stats.nPerGroup(eta2, k) : NaN;
+        return { cards: [{ label: "لكل مجموعة", value: U.isNum(nn) ? String(nn) : "—", sub: "بقوة 80% وα = 0.05", tone: "good" }, { label: "المجموع", value: U.isNum(nn) ? String(nn * k) : "—" }, { label: "حجم الأثر f لكوهين", value: f2(fC, 2) }],
+          interp: "افترضنا أن الفرق المتوقع بين أعلى وأدنى مجموعة والبقية بينهما (f = d/2σ)؛ حساب ANOVA هنا بقوة 80% فقط." };
+      }
+      const nG = Math.ceil(2 * ((za + zb) * sd / d) ** 2 + za * za / 4);
+      return {
+        cards: [{ label: "لكل مجموعة", value: String(Math.max(2, nG)), tone: "good" }, { label: "المجموع", value: String(2 * Math.max(2, nG)) }, { label: "حجم الأثر d لكوهين", value: f2(es, 2), sub: es >= 0.8 ? "كبير" : es >= 0.5 ? "متوسط" : "صغير" }],
+        interp: "إذا كان العدد أكبر مما تستطيع، فقلّل التباين (توحيد الطريقة، مكررات تحليلية) أو اختر فرقاً أكبر ذا معنى عملي."
+      };
+    },
+    formula: "n لكل مجموعة = 2 × ((z₁₋α/₂ + z₁₋β) × σ / Δ)² + z²₁₋α/₂ / 4   (تصحيح Guenther)\nANOVA: f = Δ / 2σ، والعدد من جداول القوة لكوهين",
+    refs: ["Cohen, J. (1988). Statistical Power Analysis for the Behavioral Sciences, 2nd ed. Lawrence Erlbaum.", "Guenther, W.C. (1981). Sample size formulas for normal theory t tests. The American Statistician 35(4): 243–244."]
+  });
+
+  C.push({
+    id: "lowcost", cat: "air", title: "تصحيح حساسات الهواء الرخيصة", en: "Low-cost PM2.5 sensor correction",
+    desc: "صحّح قراءات حساس PM2.5 رخيص (مثل PurpleAir) بمعادلة وكالة حماية البيئة الأمريكية، أو اشتق معادلتك المحلية من محطة مرجعية.",
+    fields: [{ id: "mode", label: "طريقة التصحيح", type: "select", opts: [["epa", "معادلة US EPA العامة"], ["local", "معادلة محلية من محطة مرجعية"]], def: "epa" }],
+    table: { cols: [{ id: "raw", label: "قراءة الحساس µg/m³" }, { id: "rh", label: "الرطوبة النسبية %" }, { id: "ref", label: "المحطة المرجعية µg/m³ (اختياري)" }], rows: [["", "", ""], ["", "", ""], ["", "", ""], ["", "", ""], ["", "", ""]] },
+    run(f, rows) {
+      const R = rows.map(r => ({ raw: n(r.raw), rh: n(r.rh), ref: n(r.ref) })).filter(r => U.isNum(r.raw) && U.isNum(r.rh)); if (!R.length) return null;
+      let eq = x => 0.524 * x.raw - 0.0862 * x.rh + 5.75, label = "PM2.5 = 0.524 × PA − 0.0862 × RH + 5.75", r2 = NaN;
+      const withRef = R.filter(r => U.isNum(r.ref));
+      if (f.mode === "local") {
+        if (withRef.length < 6 || !ECO.fit) return { cards: [{ label: "تحتاج", value: "6+", sub: "قراءات متزامنة مع المحطة المرجعية", tone: "warn" }] };
+        const o = ECO.fit.ols(withRef.map(r => [r.raw, r.rh, 1]), withRef.map(r => r.ref)); if (!o) return null;
+        eq = x => o.beta[0] * x.raw + o.beta[1] * x.rh + o.beta[2]; r2 = o.r2;
+        label = `PM2.5 = ${sci(o.beta[0])} × PA ${o.beta[1] >= 0 ? "+" : "−"} ${sci(Math.abs(o.beta[1]))} × RH ${o.beta[2] >= 0 ? "+" : "−"} ${sci(Math.abs(o.beta[2]))}`;
+      }
+      const rmse = (g) => Math.sqrt(U.mean(withRef.map(r => (g(r) - r.ref) ** 2))), bias = g => U.mean(withRef.map(r => g(r) - r.ref));
+      const cards = [{ label: "المعادلة", value: f.mode === "local" ? "محلية" : "US EPA", sub: label }];
+      if (U.isNum(r2)) cards.push({ label: "R²", value: f2(r2, 3) });
+      if (withRef.length >= 2) cards.push({ label: "الخطأ RMSE بعد التصحيح", value: f2(rmse(eq), 1), unit: "µg/m³", sub: `كان قبل التصحيح ${f2(rmse(r => r.raw), 1)}`, tone: rmse(eq) < rmse(r => r.raw) ? "good" : "warn" }, { label: "الانحياز بعد التصحيح", value: f2(bias(eq), 1), unit: "µg/m³", sub: `كان ${f2(bias(r => r.raw), 1)}` });
+      return {
+        cards,
+        table: { head: ["الحساس", "RH %", "بعد التصحيح", "المرجعية"], rows: R.map(r => [r.raw, r.rh, f2(Math.max(0, eq(r)), 1), U.isNum(r.ref) ? r.ref : "—"]) },
+        interp: f.mode === "local" ? "قيّم المعادلة المحلية على فترة لم تُستعمل في اشتقاقها قبل اعتمادها." : "معادلة US EPA اشتُقت لقراءات PurpleAir (cf_1) في الولايات المتحدة؛ في أيام الغبار الصحراوي قد تختلف دقتها، فالأفضل اشتقاق معادلة محلية من قراءات متزامنة مع محطة مرجعية."
+      };
+    },
+    formula: "US EPA: PM2.5 = 0.524 × PA(cf_1) − 0.0862 × RH + 5.75\nالمحلية: انحدار خطي متعدد PM_ref = a × PA + b × RH + c",
+    refs: ["Barkjohn, K.K., Gantt, B., Clements, A.L. (2021). Development and application of a United States-wide correction for PM2.5 data collected with the PurpleAir sensor. Atmospheric Measurement Techniques 14: 4617–4637."]
+  });
+
+  C.push({
+    id: "airq", cat: "risk", title: "الأثر الصحي لتلوث الهواء (طريقة AirQ+)", en: "PM2.5 attributable mortality",
+    desc: "كم وفاة سنوياً تُنسب إلى التعرض الطويل للجسيمات PM2.5 في مدينة أو قضاء، بدالة التركيز والاستجابة لمنظمة الصحة العالمية.",
+    fields: [{ id: "c", label: "المتوسط السنوي لـ PM2.5", unit: "µg/m³" }, { id: "c0", label: "التركيز المرجعي (إرشاد WHO 2021)", unit: "µg/m³", def: "5" }, { id: "rr", label: "الخطر النسبي لكل 10 µg/m³", def: "1.08" }, { id: "lo", label: "الحد الأدنى للخطر النسبي", def: "1.06" }, { id: "hi", label: "الحد الأعلى للخطر النسبي", def: "1.09" }, { id: "pop", label: "عدد السكان المعرّضين (البالغون)" }, { id: "rate", label: "معدل الوفيات الطبيعية", unit: "لكل 100 ألف/سنة" }],
+    run(f) {
+      const c = n(f.c), c0 = n(f.c0), pop = n(f.pop), rate = n(f.rate); if (![c, c0].every(U.isNum)) return null;
+      const calc = rr10 => { const RR = Math.exp(Math.log(rr10) * Math.max(0, c - c0) / 10), AF = (RR - 1) / RR; return { RR, AF, d: U.isNum(pop) && U.isNum(rate) ? AF * pop * rate / 1e5 : NaN }; };
+      const m = calc(n(f.rr)), lo = calc(n(f.lo)), hi = calc(n(f.hi));
+      return {
+        cards: [{ label: "الكسر المنسوب AF", value: f2(100 * m.AF, 1), unit: "%", sub: `(${f2(100 * lo.AF, 1)}–${f2(100 * hi.AF, 1)}%)`, tone: m.AF > 0.05 ? "warn" : "good" }].concat(U.isNum(m.d) ? [{ label: "وفيات منسوبة سنوياً", value: f2(m.d, 0), sub: `فترة الثقة 95%: ${f2(lo.d, 0)}–${f2(hi.d, 0)}`, tone: "warn" }] : [{ label: "لحساب عدد الوفيات", value: "—", sub: "أدخل عدد السكان ومعدل الوفيات من الإحصاءات الرسمية" }]),
+        interp: "النتيجة تقدير وبائي على مستوى السكان وليست تشخيصاً لأفراد. استعمل متوسطاً سنوياً حقيقياً (لا قراءة يوم واحد)، وخذ السكان ومعدل الوفيات من الجهاز المركزي للإحصاء أو وزارة الصحة."
+      };
+    },
+    formula: "RR(C) = exp(ln(RR₁₀) × (C − C₀) / 10)\nAF = (RR − 1) / RR\nالوفيات المنسوبة = AF × السكان × معدل الوفيات",
+    refs: ["Chen, J., Hoek, G. (2020). Long-term exposure to PM and all-cause and cause-specific mortality: a systematic review and meta-analysis. Environment International 143: 105974. (RR = 1.08، 95% CI 1.06–1.09)", "WHO (2021). WHO Global Air Quality Guidelines: particulate matter, ozone, nitrogen dioxide, sulfur dioxide and carbon monoxide.", "WHO Regional Office for Europe. AirQ+: software tool for health risk assessment of air pollution."]
+  });
+
   ECO.CALCS = C;
 
   /* ===================== الواجهة ===================== */

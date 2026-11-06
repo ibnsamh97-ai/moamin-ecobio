@@ -107,9 +107,9 @@
       need: "قراءات تجاربك الدفعية (التركيز المتبقي أو الامتصاصية)", get: "الظروف المثلى، qmax، أفضل نموذج، ΔH° وΔG°، فقرتا الطرائق والنتائج",
       kw: "امتزاز مادة مازة ليف مبردة تبريد تبخيري خشب ألياف نفايات فوسفات نترات رصاص كادميوم صبغة مثيلين ازرق دفعات batch جرعة زمن تماس تركيز ابتدائي حرارة pH نقطة الشحنة الصفرية pzc pHpzc معايرة امتصاصية LOD LOQ لانكماير فرندلش حركية رتبة ثانية كاذبة ثرموداينمك ديناميكا حرارية فانت هوف انثالبي انتروبي طاقة جبس qmax سعة قصوى مقارنة t-test دنكن بحث تخرج adsorption biosorbent cooling pad phosphate isotherm kinetics thermodynamics" },
     calc: { label: "الحاسبات العلمية", icon: "i-calc",
-      desc: "أكثر من 20 حاسبة بمعادلاتها ومراجعها: SAR وIgeo وRI وHQ وBOD والامتزاز وغيرها.",
+      desc: "أكثر من 30 حاسبة بمعادلاتها ومراجعها: SAR وIgeo وHQ والأسماك وBOD، وعدم اليقين، وعدد العيّنات، وحمل النهر، وبصمة النفط، والأثر الصحي للهواء، وتصحيح الحساسات.",
       need: "قيم مقيسة لمعادلة واحدة", get: "النتيجة وتصنيفها ومرجع المعادلة",
-      kw: "حاسبه SAR Igeo RI HQ BOD COD لانكماير فرندلش BCF معادله رواسب مخاطر صحيه معادن ثقيله رصاص كادميوم نيكل" },
+      kw: "حاسبه SAR Igeo RI HQ BOD COD لانكماير فرندلش BCF معادله رواسب مخاطر صحيه معادن ثقيله رصاص كادميوم نيكل حمل الملوث تصريف كغم يوم أسماك سمك EDI THQ اطفال PAH هيدروكربونات بصمة مصدر نفطي احتراق عدم اليقين uncertainty GUM شك موسع حجم العينة عدد المكررات قوة احصائية power حساس رخيص PurpleAir تصحيح AirQ وفيات الأثر الصحي PM2.5" },
     palmer: { label: "المجهر الذكي", icon: "i-scan",
       desc: "صوّر شريحة الطحالب بهاتفك، فيقترح الذكاء الاصطناعي الأجناس ويُحسب مؤشر Palmer للتلوث العضوي.",
       need: "صورة شريحة من المجهر", get: "الأجناس المقترحة ومؤشر Palmer وتقرير",
@@ -413,7 +413,7 @@
       const sibs = s.tools.length > 1 ? `<div class="sibs" role="list">${s.tools.map(t => `<a role="listitem" href="#${t}"${t === v ? ' aria-current="page"' : ""}>${ico(TOOLS[t].icon)}<span>${esc(TOOLS[t].label)}</span></a>`).join("")}</div>` : "";
       const cr = document.createElement("nav");
       cr.className = "crumbs"; cr.setAttribute("aria-label", "أنت هنا");
-      const lesson = !NO_LESSON.has(v) ? `<span class="c-acts"><button type="button" class="c-learn c-coach" data-coach="${v}">${ico("i-spark")}<span>علّمني خطوة بخطوة</span></button><a class="c-learn" href="#learn&t=${v}">${ico("i-learn")}<span>دليل الأداة</span></a></span>` : "";
+      const lesson = !NO_LESSON.has(v) ? `<span class="c-acts"><button type="button" class="c-learn c-coach" data-coach="${v}">${ico("i-spark")}<span>علّمني خطوة بخطوة</span></button>${v !== "assistant" ? `<button type="button" class="c-learn" data-explain="${v}">${ico("i-chat")}<span>اشرح لي النتيجة</span></button>` : ""}<a class="c-learn" href="#learn&t=${v}">${ico("i-learn")}<span>دليل الأداة</span></a></span>` : "";
       cr.innerHTML = `<div class="crumbs-in"><ol class="crumb-trail"><li><a href="#home">الرئيسية</a></li><li><a class="c-sec" href="#${s.id}">${ico(s.icon)}${s.label}</a></li><li aria-current="page">${esc(TOOLS[v].label)}</li></ol>${lesson}${sibs}</div>`;
       view.insertBefore(cr, view.firstChild);
     }

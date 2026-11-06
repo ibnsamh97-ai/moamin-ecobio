@@ -184,6 +184,20 @@
       U.$("#chat-text").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); send(U.$("#chat-text").value); } });
       U.$("#chat-text").addEventListener("input", grow);
       U.$("#chat-attach").onclick = () => U.$("#chat-file").click();
+      /* الإدخال بالصوت (يعمل في متصفحات تدعم التعرّف على الكلام؛ النص يظهر قبل الإرسال) */
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition, mic = U.$("#chat-mic");
+      if (SR && mic) {
+        mic.hidden = false; let rec = null;
+        mic.onclick = () => {
+          if (rec) { rec.stop(); return; }
+          rec = new SR(); rec.lang = "ar-IQ"; rec.interimResults = true; rec.continuous = false;
+          const base = U.$("#chat-text").value ? U.$("#chat-text").value.trim() + " " : "";
+          rec.onresult = e => { let t = ""; for (let i = 0; i < e.results.length; i++) t += e.results[i][0].transcript; U.$("#chat-text").value = base + t; grow(); };
+          rec.onerror = e => { if (e.error === "not-allowed") U.toast("اسمح للموقع باستعمال الميكروفون"); else if (e.error !== "aborted" && e.error !== "no-speech") U.toast("تعذّر التعرّف على الكلام"); };
+          rec.onend = () => { rec = null; mic.classList.remove("rec"); mic.setAttribute("aria-label", "تكلّم بدل الكتابة"); U.$("#chat-text").focus(); };
+          try { rec.start(); mic.classList.add("rec"); mic.setAttribute("aria-label", "أوقف التسجيل"); } catch (x) { rec = null; }
+        };
+      }
       U.$("#chat-file").onchange = e => { pickFile(e.target.files[0]); e.target.value = ""; };
       const chatBox = U.$(".chat");
       chatBox.addEventListener("dragover", e => { e.preventDefault(); });

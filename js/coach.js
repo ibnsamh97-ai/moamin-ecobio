@@ -101,6 +101,41 @@
   }
   ECO.coach = { start, stop };
 
+  /* ---------- «اشرح لي النتيجة»: يقرأ ما على الشاشة ويشرحه بلغة بسيطة ---------- */
+  let ex = null, exCtrl = null;
+  function screenText(id) {
+    const view = document.getElementById("view-" + id); if (!view) return "";
+    const skip = el => el.closest(".crumbs, .next-wrap, .coach, .explain, .view-head, nav, footer, script, style, [hidden]");
+    // نص النتائج المرئي فقط (الجداول، البطاقات، التنبيهات، الاستنتاجات)
+    const blocks = [...view.querySelectorAll(".panel, .notice, .calc-out, table, .sb-find, dl")].filter(el => el.offsetParent !== null && !skip(el) && !el.parentElement.closest(".panel, .calc-out, table, dl"));
+    let txt = blocks.map(b => b.innerText.replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim()).filter(Boolean).join("\n---\n");
+    // القيم التي أدخلها المستخدم
+    const ins = [...view.querySelectorAll("input:not([type=file]):not([type=checkbox]), select")].filter(i => i.offsetParent !== null && !skip(i) && String(i.value || "").trim() !== "").slice(0, 80)
+      .map(i => { const l = i.getAttribute("aria-label") || (i.id && view.querySelector(`label[for="${i.id}"]`) || {}).innerText || i.placeholder || ""; return `${String(l).trim().slice(0, 50)}: ${i.tagName === "SELECT" ? (i.options[i.selectedIndex] || {}).text : i.value}`; });
+    if (ins.length) txt = "قيم أدخلها المستخدم:\n" + ins.join("\n") + "\n\n" + txt;
+    return txt.slice(0, 9000);
+  }
+  function explain(id) {
+    if (ex) ex.remove();
+    ex = document.createElement("aside"); ex.className = "coach explain"; ex.setAttribute("role", "dialog"); ex.setAttribute("aria-label", "شرح النتيجة");
+    ex.innerHTML = `<header class="co-h"><span class="co-ic">${ico("i-chat")}</span><div><b>شرح النتيجة</b><small>${esc(label(id))}</small></div><button type="button" class="co-x" data-ex="close" aria-label="إغلاق">${ico("i-close")}</button></header><div class="co-body ex-body" aria-live="polite"></div><footer class="co-f"><span class="faint ex-note2">من الأرقام الظاهرة على شاشتك فقط</span><button type="button" class="btn btn-sm btn-ghost" data-ex="chat">${ico("i-chat")}اسأل أكثر</button></footer>`;
+    document.body.appendChild(ex);
+    const out = ex.querySelector(".ex-body");
+    ex.onclick = e => { const b = e.target.closest("[data-ex]"); if (!b) return; if (b.dataset.ex === "close") { if (exCtrl) exCtrl.abort(); ex.remove(); ex = null; } if (b.dataset.ex === "chat") { const t = `بخصوص نتيجتي في أداة «${label(id)}»: `; if (exCtrl) exCtrl.abort(); ex.remove(); ex = null; if (ECO.prefillChat) ECO.prefillChat(t); location.hash = "assistant"; } };
+    const txt = screenText(id);
+    if (!txt || txt.length < 30) { out.innerHTML = `<p>لا توجد نتائج على الشاشة بعد. أدخل بياناتك واحسب أولاً، أو اضغط «علّمني خطوة بخطوة».</p>`; return; }
+    if (!ECO.gemini || !ECO.gemini.ready()) { out.innerHTML = `<p>المساعد الذكي غير مفعّل الآن. اقرأ قسم «كيف تقرأ النتيجة» في دليل الأداة.</p><a class="btn btn-sm" href="#learn&t=${id}">دليل الأداة</a>`; return; }
+    const system = "أنت مرشد يشرح نتائج أداة علمية بيئية لطالب أو باحث عراقي. اشرح بالعربية البسيطة جداً (والعامية العراقية الخفيفة مقبولة) ماذا تعني الأرقام الظاهرة: هل الوضع جيد أم سيئ مقارنة بالحدود المذكورة على الشاشة، وما أهم رقم، وماذا يفعل بعدها. استعمل الأرقام الموجودة في النص فقط ولا تخترع أي رقم أو حد أو مرجع. إذا كان شيء غير واضح من النص فقل ذلك. 5–8 نقاط قصيرة كحد أقصى.";
+    out.innerHTML = `<p class="typing"><i></i><i></i><i></i></p>`;
+    exCtrl = new AbortController();
+    ECO.gemini.generate({ system, temperature: 0.2, signal: exCtrl.signal, contents: [{ role: "user", parts: [{ text: `الأداة: ${label(id)}\n\nما يظهر على الشاشة:\n${txt}` }] }], onText: t => { out.innerHTML = U.md(t); } })
+      .catch(e => { if (e.name !== "AbortError") out.innerHTML = `<div class="notice warn">${esc(e.message)}</div>`; })
+      .finally(() => { exCtrl = null; });
+  }
+  ECO.explain = explain;
+  document.addEventListener("click", e => { const b = e.target.closest("[data-explain]"); if (b) { e.preventDefault(); explain(b.dataset.explain); } });
+  window.addEventListener("hashchange", () => { if (ex) { if (exCtrl) exCtrl.abort(); ex.remove(); ex = null; } });
+
   document.addEventListener("click", e => { const b = e.target.closest("[data-coach]"); if (b) { e.preventDefault(); start(b.dataset.coach); } });
   document.addEventListener("keydown", e => { if (e.key === "Escape" && C) stop(); });
   /* الانتقال إلى أداة أخرى ينهي الإرشاد */
