@@ -11,6 +11,10 @@
       Computer (بحث الصور، قيم البكسل، مساحة الماء، البلاطات) إذا رفض المتصفح
       طلبها مباشرة، وصور احتياطية للمجسم ثلاثي الأبعاد، ومسار نهر دجلة من
       OpenStreetMap محفوظاً لكل الزوار.
+   5) ينشر قاعدة بيانات أقضية دجلة اليومية للموقع والتطبيق والباحثين من
+      Workers KV (المسار /v1/db/)، فتبقى متاحة وإن كان مستودع الكود خاصاً.
+      يرفعها GitHub Actions كل يوم بهوية موقّعة من GitHub (OIDC) لهذا
+      المستودع وحده، فلا تحتاج أي كلمة سر إضافية.
 
    المتغيرات (Worker → Settings → Variables and Secrets):
      GEMINI_KEY       نوعه Secret  — مفتاح Gemini من Google AI Studio (إلزامي)
@@ -25,7 +29,7 @@
      ADMIN_KEY        نوعه Secret  — كلمة سر لوحة مراجعة مواقع الباحثين
 
    الربط (Worker → Settings → Bindings → Add → KV namespace):
-     SITES            قاعدة بيانات KV لمواقع بحوث الأساتذة
+     SITES            قاعدة بيانات KV لمواقع بحوث الأساتذة، وتحفظ أيضاً قاعدة الأقضية
    ===================================================================== */
 
 const UPSTREAM = "https://generativelanguage.googleapis.com";
@@ -290,6 +294,161 @@ async function river(env, raw, fail) {
   return raw(200, text);
 }
 
+/* ---------------------------------------------------------------------
+   قاعدة بيانات أقضية دجلة (Workers KV، الربط SITES)
+   db:cur            {v, files, at}  الإصدار المعروض الآن
+   db:prev           الإصدار السابق (يبقى يوماً حتى لا ينقطع من يحمّل وقت التحديث)
+   db:f:<v>:<path>   محتوى كل ملف
+   القراءة مفتوحة للجميع (بيانات مفتوحة CC BY 4.0). الرفع لا يقبل إلا رمزاً
+   يصدره GitHub Actions لهذا المستودع بالذات وفرعه main، ويُتحقق من توقيعه
+   بمفاتيح GitHub العامة.
+--------------------------------------------------------------------- */
+const DB_ISS = "https://token.actions.githubusercontent.com";
+const DB_AUD = "ecobio-db";
+const DB_REPO_ID = "1424635562";   // ibnsamh97-ai/moamin-ecobio: رقم ثابت لا يتغير بتغيير اسم المستودع
+const DB_OWNER_ID = "240066469";   // حساب ibnsamh97-ai
+const DB_MAX = 25 * 1024 * 1024;   // أقصى حجم لقيمة واحدة في KV
+const DB_FILE = /^[A-Za-z0-9_-][A-Za-z0-9_.-]{0,80}(?:\/[A-Za-z0-9_-][A-Za-z0-9_.-]{0,80}){0,3}$/;
+const DB_VER = /^[A-Za-z0-9-]{1,48}$/;
+const DB_TYPES = { json: "application/json; charset=utf-8", csv: "text/csv; charset=utf-8", sql: "text/plain; charset=utf-8", log: "text/plain; charset=utf-8", txt: "text/plain; charset=utf-8" };
+let dbCur = null, dbCurAt = 0, ghJwks = null, ghJwksAt = 0;
+
+const b64u = s => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((s.length + 3) % 4)), c => c.charCodeAt(0));
+const b64json = s => JSON.parse(new TextDecoder().decode(b64u(s)));
+
+async function ghKeys(fresh) {
+  if (ghJwks && !fresh && Date.now() - ghJwksAt < 3600000) return ghJwks;
+  const r = await fetch(DB_ISS + "/.well-known/jwks", { headers: UA });
+  if (!r.ok) throw new Error("GitHub JWKS " + r.status);
+  const j = await r.json();
+  ghJwks = Array.isArray(j.keys) ? j.keys : []; ghJwksAt = Date.now();
+  return ghJwks;
+}
+
+// يعيد بيانات التشغيل إذا كان الطلب من GitHub Actions لهذا المستودع وفرعه main، وإلا null
+async function ghCaller(req, env) {
+  const m = /^Bearer\s+([\w-]+)\.([\w-]+)\.([\w-]+)$/i.exec(req.headers.get("Authorization") || "");
+  if (!m) return null;
+  let head, claims;
+  try { head = b64json(m[1]); claims = b64json(m[2]); } catch (e) { return null; }
+  if (!head || head.alg !== "RS256" || !claims) return null;
+  let jwk;
+  try {
+    jwk = (await ghKeys(false)).find(k => k.kid === head.kid);
+    if (!jwk) jwk = (await ghKeys(true)).find(k => k.kid === head.kid);
+  } catch (e) { return null; }
+  if (!jwk || jwk.kty !== "RSA") return null;
+  try {
+    const key = await crypto.subtle.importKey("jwk", { kty: "RSA", n: jwk.n, e: jwk.e, ext: true }, { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["verify"]);
+    if (!await crypto.subtle.verify("RSASSA-PKCS1-v1_5", key, b64u(m[3]), new TextEncoder().encode(m[1] + "." + m[2]))) return null;
+  } catch (e) { return null; }
+  const now = Date.now() / 1000, aud = [].concat(claims.aud);
+  if (claims.iss !== DB_ISS || !aud.includes(DB_AUD)) return null;
+  if (!(claims.exp > now - 30) || (claims.nbf && claims.nbf > now + 60)) return null;
+  if (String(claims.repository_id) !== String(env.DB_REPO_ID || DB_REPO_ID)) return null;
+  if (String(claims.repository_owner_id) !== String(env.DB_OWNER_ID || DB_OWNER_ID)) return null;
+  if (claims.ref !== "refs/heads/main") return null;
+  return claims;
+}
+
+async function dbCurrent(env, fresh) {
+  if (!fresh && dbCur && Date.now() - dbCurAt < 30000) return dbCur;
+  const v = await env.SITES.get("db:cur", fresh ? "json" : { type: "json", cacheTtl: 30 });
+  dbCur = v && v.v && Array.isArray(v.files) ? v : null; dbCurAt = Date.now();
+  return dbCur;
+}
+
+async function db(req, env, path, reply, fail) {
+  if (!env.SITES) return fail(503, "DB_NOT_CONFIGURED", "The SITES KV namespace is not bound to this Worker.");
+  const rest = path === "/v1/db" ? "" : path.slice("/v1/db/".length);
+
+  /* القراءة: /v1/db (فهرس الإصدار) أو /v1/db/<ملف> */
+  if (req.method === "GET" || req.method === "HEAD") {
+    const cur = await dbCurrent(env, false);
+    if (!rest) return reply(cur ? 200 : 404, cur ? { version: cur.v, updated_at: cur.at, files: cur.files } : { version: null, error: { status: "NOT_PUBLISHED", message: "No database has been published yet." } });
+    let file; try { file = decodeURIComponent(rest); } catch (e) { file = ""; }
+    if (!DB_FILE.test(file) || file.split("/").includes("..")) return fail(404, "NOT_FOUND", "No such file.");
+    if (!cur) return fail(404, "NOT_PUBLISHED", "No database has been published yet.");
+    if (!cur.files.includes(file)) return fail(404, "NOT_FOUND", "No such file in the current database.");
+    const tag = `"${cur.v}"`;
+    const h = new Headers({
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Expose-Headers": "ETag, Content-Length, X-EcoBio-DB",
+      "Content-Type": DB_TYPES[file.split(".").pop().toLowerCase()] || "application/octet-stream",
+      "Cache-Control": "public, no-cache",
+      "ETag": tag,
+      "X-EcoBio-DB": cur.v,
+      "X-Content-Type-Options": "nosniff",
+      "Vary": "Origin"
+    });
+    if ((req.headers.get("If-None-Match") || "").split(/\s*,\s*/).includes(tag)) return new Response(null, { status: 304, headers: h });
+    // الملفات بإصدار ثابت لا يتغير، فتحفظها حافات Cloudflare يوماً كاملاً
+    const got = await env.SITES.getWithMetadata(`db:f:${cur.v}:${file}`, { type: "stream", cacheTtl: 86400 });
+    if (!got || !got.value) return fail(404, "NOT_FOUND", "File not found in this version.");
+    const size = got.metadata && Number(got.metadata.size);
+    if (req.method === "HEAD") {
+      await got.value.cancel();
+      if (size >= 0) h.set("Content-Length", String(size));
+      return new Response(null, { status: 200, headers: h });
+    }
+    let body = got.value;
+    if (size >= 0 && typeof FixedLengthStream === "function") {
+      const fl = new FixedLengthStream(size);
+      got.value.pipeTo(fl.writable).catch(() => {});
+      body = fl.readable;
+    }
+    return new Response(body, { status: 200, headers: h });
+  }
+
+  /* الرفع والنشر: من GitHub Actions فقط */
+  const who = await ghCaller(req, env);
+  if (!who) return fail(401, "NOT_GITHUB_ACTIONS", "Uploads are accepted only from this repository's GitHub Actions (OIDC).");
+
+  // PUT /v1/db/_up/<إصدار>/<ملف>
+  if (req.method === "PUT" && rest.startsWith("_up/")) {
+    const i = rest.indexOf("/", 4), v = rest.slice(4, i), file = i > 0 ? rest.slice(i + 1) : "";
+    if (!DB_VER.test(v) || !DB_FILE.test(file)) return fail(400, "BAD_NAME", "Bad version or file name.");
+    const len = Number(req.headers.get("Content-Length"));
+    if (!Number.isFinite(len) || len < 0) return fail(411, "LENGTH_REQUIRED", "Content-Length is required.");
+    if (len > DB_MAX) return fail(413, "TOO_LARGE", "A file may not exceed 25 MiB.");
+    const cur = await dbCurrent(env, true);
+    if (cur && cur.v === v) return fail(409, "VERSION_LIVE", "This version is already published.");
+    await env.SITES.put(`db:f:${v}:${file}`, req.body, { metadata: { size: len } });
+    return reply(200, { ok: true, version: v, file, size: len });
+  }
+
+  // POST /v1/db/_commit/<إصدار>  {"files": [...]}
+  if (req.method === "POST" && rest.startsWith("_commit/")) {
+    const v = rest.slice(8);
+    if (!DB_VER.test(v)) return fail(400, "BAD_NAME", "Bad version name.");
+    const o = await req.json().catch(() => null);
+    const files = o && Array.isArray(o.files) ? [...new Set(o.files)] : [];
+    if (!files.length || files.length > 400 || !files.every(f => typeof f === "string" && DB_FILE.test(f))) return fail(400, "BAD_MANIFEST", "Send {\"files\": [...]} with the uploaded file names.");
+    if (!files.includes("ecobio-meta.json")) return fail(400, "BAD_MANIFEST", "ecobio-meta.json is required.");
+    const old = await dbCurrent(env, true);
+    const next = { v, files: files.sort(), at: new Date().toISOString(), run: String(who.run_id || "") };
+    await env.SITES.put("db:cur", JSON.stringify(next));
+    if (old && old.v !== v) await env.SITES.put("db:prev", JSON.stringify(old));
+    dbCur = next; dbCurAt = Date.now();
+    // نحذف كل إصدار غير الحالي والسابق (ومنها رفعات لم تكتمل)
+    const keep = new Set([v, old && old.v].filter(Boolean));
+    let removed = 0, cursor;
+    try {
+      do {
+        const l = await env.SITES.list({ prefix: "db:f:", cursor });
+        for (const k of l.keys) {
+          const kv = k.name.slice(5, k.name.indexOf(":", 5));
+          if (!keep.has(kv) && removed < 600) { await env.SITES.delete(k.name); removed++; }
+        }
+        cursor = l.list_complete ? null : l.cursor;
+      } while (cursor && removed < 600);
+    } catch (e) { /* التنظيف يكتمل في النشر القادم */ }
+    return reply(200, { ok: true, version: v, files: files.length, previous: old ? old.v : null, removed });
+  }
+
+  return fail(404, "NOT_ALLOWED", "Unknown database operation.");
+}
+
 export default {
   async fetch(req, env) {
     const origin = req.headers.get("Origin") || "";
@@ -324,6 +483,8 @@ export default {
 
     // فحص سريع من المتصفح: افتح رابط الخادم مباشرة لترى حالته (لا يكشف المفتاح)
     if (req.method === "GET" && (path === "/" || path === "/health")) {
+      let dbVersion = null;
+      if (env.SITES) { try { const c = await dbCurrent(env, false); dbVersion = c ? c.v : null; } catch (e) { /* */ } }
       return reply(200, {
         service: "EcoBio AI – Gemini shared server",
         key_configured: Boolean(env.GEMINI_KEY),
@@ -332,10 +493,15 @@ export default {
         metar: true,
         satellite: true,
         twin: true,
+        db: Boolean(env.SITES),
+        db_version: dbVersion,
         allowed_origins: allowed,
         ok: Boolean(env.GEMINI_KEY) && allowed.length > 0
       });
     }
+
+    /* قاعدة بيانات الأقضية: القراءة مفتوحة لأي موقع أو برنامج، والرفع محمي بهوية GitHub */
+    if (path === "/v1/db" || path.startsWith("/v1/db/")) return db(req, env, path, reply, fail);
 
     if (!okOrigin) return fail(403, "ORIGIN_NOT_ALLOWED", "This server only answers requests from the EcoBio AI site. Add the site origin to ALLOWED_ORIGINS.");
     const ip = req.headers.get("CF-Connecting-IP") || "local";
