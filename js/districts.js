@@ -1331,8 +1331,14 @@ ${cat}
       </div>
       <div class="panel"><div class="panel-h"><h3>المتوسط الشهري لكل الأقضية</h3><div class="field db-inline"><label for="db-cmp-p" class="sr-only">المعيار</label><select id="db-cmp-p" class="input">${paramOptions(S.cmpP, ["pm2_5", "pm10", "dust", "no2", "so2", "o3", "co", "t_max", "precip", "discharge", "ndti", "ndci"])}</select></div></div>
         <div class="chart-box lg"><canvas id="db-cmp-c"></canvas></div><p class="db-cap" id="db-cmp-cap"></p></div>
+      <div class="panel db-bul"><div class="panel-h"><h3>${ico("i-file")}النشرة البيئية الشهرية لصلاح الدين</h3><span class="sub">الأقضية الستة في ملف واحد</span></div>
+        <p class="db-cap">جدول مقارنة للأقضية، وأبرز أحداث الشهر، ومقارنة كل قضاء بنفس الشهر في السنوات السابقة. كل رقم محسوب من القاعدة، ومصدر كل قيمة مكتوب داخل النشرة.</p>
+        <div class="row"><label for="db-bul-m" class="sr-only">الشهر</label><select id="db-bul-m" class="input">${q("SELECT DISTINCT substr(date,1,7) m FROM air_daily ORDER BY m DESC LIMIT 24").map(r => `<option value="${r.m}">${fM(r.m)}</option>`).join("")}</select>
+          <button type="button" class="btn btn-primary btn-sm" id="db-bul-go">${ico("i-file")}النشرة PDF</button><button type="button" class="btn btn-ghost btn-sm" id="db-bul-x">${ico("i-table")}Excel</button></div></div>
       <div class="panel" id="db-api"><div class="panel-h"><h3>البيانات المفتوحة للباحثين</h3><span class="sub">CSV وJSON تتحدّث يومياً</span></div><p class="muted">جارٍ تحميل الفهرس…</p></div>`;
     U.$("#db-cmp-p").onchange = e => { S.cmpP = e.target.value; drawCompare(); };
+    U.$("#db-bul-go").onclick = () => bulletin(U.$("#db-bul-m").value, "pdf");
+    U.$("#db-bul-x").onclick = () => bulletin(U.$("#db-bul-m").value, "xlsx");
     drawCompare();
     renderApi();
   }
@@ -1355,6 +1361,72 @@ df = pd.read_csv("${base}tikrit/air.csv", parse_dates=["date"])
 df &lt;- read.csv("${base}tikrit/air.csv")
 
 # Excel: Data → From Web → الصق الرابط</pre></details>`;
+  }
+
+  /* النشرة الشهرية للمحافظة: كل الأرقام من القاعدة، والجمل مبنية من الأرقام نفسها */
+  function bulletinData(ym) {
+    const mm = ym.slice(5), has = t => hasT(t);
+    const rows = S.D.map(d => {
+      const A = q1("SELECT COUNT(pm2_5) n, AVG(pm2_5) m, MAX(pm2_5) mx, SUM(pm2_5 > 15) o, AVG(dust) du, MAX(dust) dmx FROM air_daily WHERE district_id = ? AND substr(date,1,7) = ?", [d.id, ym]) || {};
+      const Ac = q1("SELECT AVG(pm2_5) m, COUNT(DISTINCT substr(date,1,4)) y FROM air_daily WHERE district_id = ? AND substr(date,6,2) = ? AND substr(date,1,7) < ?", [d.id, mm, ym]) || {};
+      const W = q1("SELECT AVG(t_max) tx, MAX(t_max) txm, SUM(precip) pr FROM weather_daily WHERE district_id = ? AND substr(date,1,7) = ? AND date <= ?", [d.id, ym, today()]) || {};
+      const Wc = q1("SELECT AVG(t_max) tx, COUNT(DISTINCT substr(date,1,4)) y FROM weather_daily WHERE district_id = ? AND substr(date,6,2) = ? AND substr(date,1,7) < ? AND src = 'era5'", [d.id, mm, ym]) || {};
+      const R = q1("SELECT AVG(discharge) q FROM river_daily WHERE district_id = ? AND substr(date,1,7) = ?", [d.id, ym]) || {};
+      const Rc = q1("SELECT AVG(discharge) q, COUNT(DISTINCT substr(date,1,4)) y FROM river_daily WHERE district_id = ? AND substr(date,6,2) = ? AND substr(date,1,7) < ?", [d.id, mm, ym]) || {};
+      const Ws = q1("SELECT ndti, ndci FROM water_rs_monthly WHERE district_id = ? AND month = ?", [d.id, ym]) || {};
+      const fi = has("fire_pixels") ? q1("SELECT COUNT(*) n FROM fire_pixels WHERE district_id = ? AND substr(date,1,7) = ?", [d.id, ym]) : null;
+      const hot = q1("SELECT date, t_max FROM weather_daily WHERE district_id = ? AND substr(date,1,7) = ? AND date <= ? ORDER BY t_max DESC LIMIT 1", [d.id, ym, today()]);
+      const bad = q1("SELECT date, pm2_5 FROM air_daily WHERE district_id = ? AND substr(date,1,7) = ? ORDER BY pm2_5 DESC LIMIT 1", [d.id, ym]);
+      return { d, A, Ac, W, Wc, R, Rc, Ws, fi, hot, bad };
+    });
+    return rows;
+  }
+  function bulletin(ym, mode) {
+    if (!ym) return;
+    const B = bulletinData(ym), f = (v, k = 1) => U.isNum(v) ? U.fmt(v, k) : "—";
+    const pc = (a, b) => U.isNum(a) && U.isNum(b) && b ? 100 * (a - b) / b : NaN;
+    const sg = v => !U.isNum(v) ? "" : `${v >= 0 ? "+" : "−"}${U.fmt(Math.abs(v), 0)}%`;
+    const head = ["القضاء", "متوسط PM2.5 µg/m³", "أيام فوق 15", "عن معدل الشهر", "متوسط الغبار µg/m³", "متوسط العظمى °م", "الأمطار مم", "التصريف m³/s", "التصريف عن معدله", "NDTI", "رصد حرائق"];
+    const rows = B.map(r => [r.d.name_ar, f(r.A.m), r.A.n ? `${r.A.o}/${r.A.n}` : "—", sg(pc(r.A.m, r.Ac.m)), f(r.A.du, 0), f(r.W.tx), f(r.W.pr), f(r.R.q, 0), sg(pc(r.R.q, r.Rc.q)), U.isNum(r.Ws.ndti) ? f(r.Ws.ndti, 3) : "—", r.fi ? String(r.fi.n) : "—"]);
+    if (mode === "xlsx") {
+      save(ECO.xlsx.write([{ name: "النشرة " + ym, rows: [head].concat(B.map(r => [r.d.name_ar, r.A.m, r.A.o, r.A.n, pc(r.A.m, r.Ac.m), r.A.du, r.W.tx, r.W.pr, r.R.q, pc(r.R.q, r.Rc.q), r.Ws.ndti, r.fi ? r.fi.n : null].map(v => U.isNum(v) ? +(+v).toFixed(3) : v))) }].map(sh => { sh.rows[0] = ["القضاء", "PM2.5 mean", "days>15", "days", "PM2.5 vs month normal %", "dust mean", "Tmax mean", "precip mm", "discharge m3/s", "discharge vs normal %", "NDTI", "fire detections"]; return sh; })), `نشرة-صلاح-الدين-${ym}.xlsx`);
+      return;
+    }
+    if (!ECO.report) return;
+    const ok = B.filter(r => U.isNum(r.A.m));
+    const hi = [];
+    if (ok.length) {
+      const mx = Math.max(...ok.map(r => r.A.m)), mn = Math.min(...ok.map(r => r.A.m));
+      const nm = v => ok.filter(r => Math.abs(r.A.m - v) < 0.05).map(r => r.d.name_ar).join(" و");
+      hi.push(`أعلى متوسط PM2.5 في ${nm(mx)} (${f(mx)} µg/m³) وأدناه في ${nm(mn)} (${f(mn)}). حد منظمة الصحة العالمية اليومي 15 µg/m³ (WHO 2021). الأقضية المتجاورة قد تتساوى لأنها في خلية CAMS نفسها.`);
+      const tot = ok.reduce((s, r) => s + (r.A.o || 0), 0), tn = ok.reduce((s, r) => s + (r.A.n || 0), 0);
+      hi.push(`تجاوز PM2.5 حد 15 في ${tot} من ${tn} يوم-قضاء (${f(100 * tot / tn, 0)}%).`);
+      const wb = ok.filter(r => r.bad).sort((a, b) => b.bad.pm2_5 - a.bad.pm2_5)[0]; if (wb) hi.push(`أسوأ يوم هواء: ${fD(wb.bad.date)} في ${wb.d.name_ar} بمتوسط ${f(wb.bad.pm2_5, 0)} µg/m³.`);
+      const an = ok.filter(r => U.isNum(r.Ac.m) && r.Ac.y >= 2).map(r => ({ r, p: pc(r.A.m, r.Ac.m) }));
+      if (an.length) { const m = U.mean(an.map(x => x.p)); hi.push(`مقارنة بنفس الشهر في السنوات السابقة (${an[0].r.Ac.y} سنوات): PM2.5 ${m >= 0 ? "أعلى" : "أقل"} بمتوسط ${f(Math.abs(m), 0)}% عبر الأقضية.`); }
+    }
+    const ht = B.filter(r => r.hot).sort((a, b) => b.hot.t_max - a.hot.t_max)[0]; if (ht) hi.push(`أعلى حرارة عظمى: ${f(ht.hot.t_max)}°م في ${ht.d.name_ar} يوم ${fD(ht.hot.date)} (ERA5).`);
+    const rq = B.filter(r => U.isNum(r.R.q) && U.isNum(r.Rc.q) && r.Rc.y >= 3); if (rq.length) { const m = U.mean(rq.map(r => pc(r.R.q, r.Rc.q))); hi.push(`تصريف دجلة ${m >= 0 ? "أعلى" : "أقل"} من معدل هذا الشهر بنحو ${f(Math.abs(m), 0)}% (GloFAS، معدل ${rq[0].Rc.y} سنة).`); }
+    const nf = B.reduce((s, r) => s + (r.fi ? r.fi.n : 0), 0); if (B.some(r => r.fi)) hi.push(`رصدت أقمار MODIS ${nf} بكسل حريق أو شعلة ضمن 40 كم من مراكز الأقضية.`);
+    const daily = q("SELECT district_id id, date, pm2_5 FROM air_daily WHERE substr(date,1,7) = ? ORDER BY date", [ym]);
+    const days = Array.from(new Set(daily.map(r => r.date))).sort(), by = {}; daily.forEach(r => { (by[r.id] = by[r.id] || {})[r.date] = r.pm2_5; });
+    const pal = S.D.map(d => (DCOL[d.id] || "#127d8f").replace("#4fc8dc", "#127d8f").replace("#93dd8a", "#3f9a35").replace("#e6ae4f", "#b77b13"));
+    const ch1 = ECO.report.chartImage({ type: "line", data: { labels: days.map(x => x.slice(8)), datasets: S.D.map((d, i) => ({ label: d.name_ar, data: days.map(x => (by[d.id] || {})[x] ?? null), borderColor: pal[i], borderWidth: 1.6, pointRadius: 0 })).concat([{ label: "حد WHO 15", data: days.map(() => 15), borderColor: "#c0392b", borderDash: [6, 4], pointRadius: 0 }]) }, options: { scales: { y: { beginAtZero: true } } } }, 680, 260);
+    const ch2 = ECO.report.chartImage({ type: "bar", data: { labels: B.map(r => r.d.name_ar), datasets: [{ label: "هذا الشهر", data: B.map(r => r.A.m), backgroundColor: "#127d8f" }, { label: "معدل نفس الشهر سابقاً", data: B.map(r => r.Ac.m), backgroundColor: "#9fb3b6" }] }, options: { scales: { y: { beginAtZero: true } } } }, 680, 230);
+    ECO.report.run({
+      title: "النشرة البيئية الشهرية لمحافظة صلاح الدين", subtitle: `${fM(ym)} · أقضية دجلة الستة`, file: `نشرة-صلاح-الدين-${ym}`,
+      blocks: [
+        { type: "text", html: `نشرة مولّدة آلياً من قاعدة بيانات EcoBio AI لأقضية دجلة في صلاح الدين (${B.map(r => U.esc(r.d.name_ar)).join("، ")}). قيم الهواء تقديرات نموذج CAMS (دقة ≈45 كم)، والطقس من ERA5، والتصريف من GloFAS، والعكورة من Sentinel-2؛ وهي تقديرات نماذج وأقمار وليست قياسات محطات أرضية.` },
+        { type: "h", text: "أبرز ما في الشهر" },
+        { type: "text", html: hi.length ? "<ul>" + hi.map(x => `<li>${U.esc(x)}</li>`).join("") + "</ul>" : "لا توجد بيانات كافية لهذا الشهر." },
+        { type: "table", caption: "مقارنة الأقضية", head, rows },
+        ch1 ? { type: "chart", src: ch1, caption: "PM2.5 اليومي في الأقضية" } : null,
+        ch2 ? { type: "chart", src: ch2, caption: "متوسط PM2.5 مقابل معدل نفس الشهر في السنوات السابقة" } : null,
+        { type: "text", html: "«عن معدل الشهر» = الفرق بين قيمة هذا الشهر ومتوسط الشهر نفسه في السنوات السابقة المتوفرة في القاعدة. «رصد حرائق» = بكسلات MODIS الحرارية ضمن 40 كم من مركز القضاء، وتشمل شعلات الغاز الدائمة." },
+        { type: "refs", items: ["Copernicus CAMS, ERA5, GloFAS عبر Open-Meteo.", "ESA Sentinel-2 وNASA MODIS عبر Microsoft Planetary Computer.", "WHO (2021) Global Air Quality Guidelines."] },
+        { type: "sign" }
+      ].filter(Boolean)
+    }, "pdf");
   }
 
   function drawCompare() {
