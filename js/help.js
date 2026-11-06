@@ -176,10 +176,67 @@
             ${block("حدود الدقة", "i-warn", l.limits, "ln-limits")}
             ${own.length || faqs.length ? `<section class="ln-block"><h3>${ico("i-qa")}أسئلة عن هذه الأداة</h3>${own.concat(faqs).map(faqItem).join("")}</section>` : ""}
             <button type="button" class="btn ln-ask" data-ask="${esc(t.label)}">${ico("i-qa")}اسأل عن «${esc(t.label)}»</button>
+            <section class="ln-block ln-teach"><h3>${ico("i-learn")}للأستاذ: درّس الأداة</h3>
+              <p>ورقة تطبيق عملي جاهزة للطباعة مبنية من هذا الدرس نفسه (الهدف، والمطلوب، والخطوات مع فراغات للتسجيل، وأسئلة مناقشة من حدود الدقة)، وأسئلة اختيار من متعدد من نص الدرس لتراجعها قبل الاستعمال.</p>
+              <div class="row"><button type="button" class="btn btn-sm" data-ws="${id}">${ico("i-file")}ورقة التطبيق العملي PDF</button><button type="button" class="btn btn-sm" data-quiz="${id}">${ico("i-qa")}أسئلة اختبار من الدرس</button></div>
+              <div id="ln-quiz"></div>
+            </section>
           </div>
         </div>
       </article>`;
     root.querySelector("[data-ask]").onclick = e => { ECO._askPrefill = `عن أداة «${e.currentTarget.dataset.ask}»: `; location.hash = "faq"; };
+    root.querySelector("[data-ws]").onclick = () => worksheet(G, id);
+    root.querySelector("[data-quiz]").onclick = () => quiz(G, id);
+  }
+
+  /* ---------- حقيبة الأستاذ ---------- */
+  const flat = s => String(s || "").replace(/\[\[([a-z0-9]+)(?:\|([^\]]+))?\]\]/g, (m, id, txt) => txt || label(id)).replace(/\*\*(.+?)\*\*/g, "$1");
+  const arr = x => !x ? [] : Array.isArray(x) ? x : [x];
+  function worksheet(G, id) {
+    const t = T()[id], l = G.lessons[id]; if (!ECO.report) return;
+    const ul = items => "<ol>" + items.map(x => `<li>${esc(flat(x))}</li>`).join("") + "</ol>";
+    const lines = n => `<div class="rp-text">${Array.from({ length: n }, () => "<div style=\"border-bottom:1px dotted #9db;height:22px\"></div>").join("")}</div>`;
+    const disc = arr(l.limits).slice(0, 3).map(x => `اشرح بكلماتك العبارة الآتية، وبيّن أثرها على نتيجتك: «${flat(x)}»`)
+      .concat(arr(l.read).slice(0, 2).map(x => `طبّق القاعدة الآتية على نتيجتك واكتب ما تستنتجه: «${flat(x)}»`));
+    ECO.report.run({
+      title: `تطبيق عملي: ${t.label}`, subtitle: "ورقة الطالب", file: `تطبيق-عملي-${id}`,
+      blocks: [
+        { type: "kv", items: [["اسم الطالب", " "], ["المرحلة والشعبة", " "], ["التاريخ", " "]] },
+        { type: "h", text: "الهدف" },
+        { type: "text", html: esc(flat(t.desc)) + (l.when ? `<br>${esc(flat(arr(l.when).join(" ")))}` : "") },
+        arr(l.need).length ? { type: "h", text: "ما تحتاجه" } : null,
+        arr(l.need).length ? { type: "text", html: ul(arr(l.need)) } : null,
+        { type: "h", text: "خطوات العمل" },
+        { type: "text", html: ul(arr(l.steps)) + `<p>رابط الأداة: ${esc((location.origin.startsWith("http") && !/localhost|127\./.test(location.host) ? location.origin + "/" : "https://moamin-ecobio.vercel.app/") + "#" + id)}</p>` },
+        { type: "h", text: "النتائج التي حصلت عليها" },
+        { type: "text", html: lines(6) },
+        disc.length ? { type: "h", text: "أسئلة المناقشة" } : null,
+        disc.length ? { type: "text", html: "<ol>" + disc.map(x => `<li>${esc(x)}${lines(2)}</li>`).join("") + "</ol>" } : null,
+        arr(l.method).length ? { type: "refs", items: arr(l.method).map(flat) } : null,
+        { type: "sign" }
+      ].filter(Boolean)
+    }, "pdf");
+  }
+  async function quiz(G, id) {
+    const box = U.$("#ln-quiz"), t = T()[id], l = G.lessons[id];
+    if (!ECO.gemini || !ECO.gemini.ready()) { box.innerHTML = `<div class="notice warn">${ico("i-info")}<span>توليد الأسئلة يحتاج المساعد الذكي، وهو غير مفعّل الآن. ورقة التطبيق العملي تعمل بدونه.</span></div>`; return; }
+    const src = [["لمن", l.who], ["متى", l.when], ["المطلوب", l.need], ["الخطوات", l.steps], ["قراءة النتيجة", l.read], ["المنهجية", l.method], ["حدود الدقة", l.limits]]
+      .map(([k, v]) => arr(v).map((x, i) => `[${k} ${i + 1}] ${flat(x)}`).join("\n")).filter(Boolean).join("\n");
+    box.innerHTML = `<p class="typing"><i></i><i></i><i></i></p>`;
+    try {
+      const txt = await ECO.gemini.generate({ json: true, temperature: 0.2, system: "أنت أستاذ جامعي يكتب أسئلة اختبار دقيقة من نص مرجعي فقط. لا تضف أي معلومة أو رقم غير موجود في النص.",
+        contents: [{ role: "user", parts: [{ text: `اكتب 6 أسئلة اختيار من متعدد بالعربية الفصحى عن أداة «${t.label}» من هذا النص فقط:\n${src}\n\nأعد JSON فقط: {"questions":[{"q":"السؤال","options":["أ","ب","ج","د"],"answer":0,"from":"رمز السطر مثل [الخطوات 2]"}]}\nالقواعد: كل سؤال يُجاب من سطر واحد مذكور في from، والخيارات الخاطئة معقولة لكنها خاطئة بوضوح حسب النص، وanswer رقم الخيار الصحيح من 0، ونوّع بين الفهم والتطبيق وقراءة النتيجة وحدود الدقة.` }] }] });
+      const j = JSON.parse(String(txt).replace(/^```json|```$/g, "").trim());
+      const lines2 = src.split("\n"), Q = (j.questions || []).filter(x => x && x.q && Array.isArray(x.options) && x.options.length >= 2 && Number.isInteger(x.answer) && x.answer >= 0 && x.answer < x.options.length);
+      if (!Q.length) throw new Error("JSON");
+      const L = "أبجد";
+      box.innerHTML = `<div class="notice warn">${ico("i-warn")}<span>أسئلة مولّدة من نص الدرس. راجع كل سؤال مع سطره المرجعي قبل استعماله في اختبار.</span></div>
+        <ol class="ln-q">${Q.map(x => { const ref = lines2.find(s2 => s2.startsWith(String(x.from || "").trim())); return `<li><b>${esc(x.q)}</b><ol class="ln-opts">${x.options.map((o, i) => `<li class="${i === x.answer ? "ok" : ""}"><span>${L[i] || i + 1})</span> ${esc(o)}</li>`).join("")}</ol>${ref ? `<small class="muted">المرجع من الدرس: ${esc(ref)}</small>` : `<small class="muted">لم يُحدَّد سطره المرجعي: راجعه بعناية.</small>`}</li>`; }).join("")}</ol>
+        <div class="row"><button type="button" class="btn btn-sm" id="ln-q-copy">${ico("i-copy")}نسخ الأسئلة مع الإجابات</button></div>`;
+      U.$("#ln-q-copy").onclick = () => copy(Q.map((x, k) => `${k + 1}. ${x.q}\n${x.options.map((o, i) => `   ${L[i] || i + 1}) ${o}`).join("\n")}\n   الإجابة: ${L[x.answer] || x.answer + 1}`).join("\n\n"));
+    } catch (e) {
+      box.innerHTML = `<div class="notice warn">${ico("i-info")}<span>${esc(e && e.message && !/JSON|Unexpected/.test(e.message) ? e.message : "لم تُولَّد الأسئلة بشكل منظم؛ أعد المحاولة.")}</span></div>`;
+    }
   }
 
   async function showLearn() {

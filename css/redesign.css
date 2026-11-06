@@ -765,3 +765,12 @@ body.ocr-open { overflow: hidden; }
   .ocr-main { grid-template-columns: minmax(0, 1fr); }
   .ocr-src img { max-height: 30vh; }
 }
+/* حقيبة الأستاذ */
+.ln-teach { border: 1px dashed var(--line-2); border-radius: 14px; padding: 14px; }
+.ln-teach .row { gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.ln-q { margin: 12px 0 0; padding-inline-start: 20px; display: grid; gap: 14px; }
+.ln-q > li > b { display: block; margin-bottom: 6px; line-height: 1.8; }
+.ln-opts { list-style: none; padding: 0; margin: 0 0 4px; display: grid; gap: 4px; }
+.ln-opts li { padding: 4px 10px; border-radius: 8px; border: 1px solid var(--line); }
+.ln-opts li.ok { border-color: color-mix(in srgb, #93dd8a 60%, transparent); background: color-mix(in srgb, #93dd8a 12%, transparent); }
+.ln-q small { display: block; line-height: 1.7; }
