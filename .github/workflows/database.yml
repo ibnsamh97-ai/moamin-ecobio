@@ -1,12 +1,14 @@
 name: database
 # يبني قاعدة بيانات أقضية دجلة في صلاح الدين ويحدّثها يومياً، ويعيد تدريب نماذج الذكاء الاصطناعي.
-# الناتج يُنشر في فرع db (ملف واحد يُستبدل كل يوم حتى لا يكبر سجل المستودع)، والسجل في فرع db-log.
+# الناتج يُحفظ في فرع db (ملف واحد يُستبدل كل يوم حتى لا يكبر سجل المستودع)، والسجل في فرع db-log،
+# ثم يُنشر على الخادم المشترك في Cloudflare (/v1/db/) ومنه يقرؤه الموقع والتطبيق والباحثون،
+# فيبقى متاحاً وإن كان المستودع خاصاً.
 on:
   schedule:
     - cron: '17 2 * * *'   # 05:17 بتوقيت بغداد
   push:
     branches: [main]
-    paths: ['etl/**', '.github/workflows/database.yml', 'js/data-research.js']
+    paths: ['etl/**', '!etl/publish_worker.sh', '.github/workflows/database.yml', 'js/data-research.js']
   workflow_dispatch:
     inputs:
       full:
@@ -15,6 +17,7 @@ on:
         default: false
 permissions:
   contents: write
+  id-token: write   # هوية GitHub الموقّعة التي يقبلها الخادم لرفع القاعدة، بلا كلمة سر
 concurrency:
   group: database
   cancel-in-progress: false
@@ -74,3 +77,6 @@ jobs:
           cd pub && git init -q && git checkout -q --orphan db && git add -A
           git -c user.name=ecobio-bot -c user.email=ecobio-bot@users.noreply.github.com commit -qm "database $(date -u +%F)"
           git push -qf "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" db
+      - name: Publish database (Cloudflare server)
+        if: always() && hashFiles('out/ecobio.db.gz') != ''
+        run: bash etl/publish_worker.sh pub

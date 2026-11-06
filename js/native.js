@@ -20,7 +20,7 @@
 
   const P = Cap.Plugins;
   document.documentElement.classList.add("is-app");
-  const LATEST = "https://raw.githubusercontent.com/ibnsamh97-ai/moamin-ecobio/db/latest.json";
+  const LATEST = (ECO.DB_BASE || "https://ecobioai.moaminbio.workers.dev/v1/db/") + "latest.json";
 
   const blobToB64 = blob => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(",")[1]); r.onerror = rej; r.readAsDataURL(blob); });
   const safeName = n => String(n || "ecobio").replace(/[\\/:*?"<>|]/g, "-");

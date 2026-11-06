@@ -9,8 +9,11 @@
   const ECO = window.ECO, U = ECO.util;
   if (!document.getElementById("view-districts")) return;
 
-  const RAW = "https://raw.githubusercontent.com/ibnsamh97-ai/moamin-ecobio/db/";
-  const CACHE = "ecobio-db-v1";
+  // ملفات القاعدة على الخادم المشترك (js/server.js)
+  const RAW = ECO.DB_BASE || "https://ecobioai.moaminbio.workers.dev/v1/db/";
+  const CACHE = "ecobio-db-v2";
+  // نسخة القاعدة المحفوظة من الرابط القديم على GitHub لم تعد تُستعمل
+  try { if ("caches" in window) caches.delete("ecobio-db-v1"); } catch (e) { /* */ }
   const esc = s => U.esc(s == null ? "" : String(s));
   const ico = id => `<svg aria-hidden="true"><use href="#${id}"/></svg>`;
   const N = (v, d = "auto") => `<bdi class="db-n">${U.fmt(v, d)}</bdi>`;
@@ -1142,7 +1145,7 @@
     let I = null;
     try { const r = await fetch(RAW + "api/index.json?t=" + Math.floor(Date.now() / 3600000), { cache: "no-store" }); if (r.ok) I = await r.json(); } catch (e) { /* دون اتصال */ }
     if (!I) { box.querySelector("p").textContent = "الفهرس غير متاح الآن (يُنشر مع تحديث القاعدة القادم، أو أنك دون اتصال)."; return; }
-    const base = I.base, ds = Object.entries(I.datasets), L = (p, t) => `<a href="${base}${p}" target="_blank" rel="noopener" download>${t}</a>`;
+    const base = RAW + "api/", ds = Object.entries(I.datasets), L = (p, t) => `<a href="${base}${p}" target="_blank" rel="noopener" download>${t}</a>`;
     box.innerHTML = `<div class="panel-h"><h3>البيانات المفتوحة للباحثين</h3><span class="sub">آخر تحديث ${fD(I.updated_at)}</span></div>
       <p class="db-cap">كل جداول القاعدة متاحة كروابط ثابتة تتحدّث يومياً، يسحبها Excel وPython وR مباشرة. اذكر المنصة والمصدر الأصلي لكل جدول عند الاستعمال في بحثك.</p>
       <div class="tbl-wrap"><table class="tbl"><thead><tr><th>القضاء</th>${ds.map(([k, v]) => `<th>${esc(k)}</th>`).join("")}</tr></thead><tbody>

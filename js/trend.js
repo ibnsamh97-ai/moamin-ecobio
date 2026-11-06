@@ -12,7 +12,7 @@
   if (!document.getElementById("view-trend")) return;
   const esc = s => U.esc(s == null ? "" : String(s));
   const ico = id => `<svg aria-hidden="true"><use href="#${id}"/></svg>`;
-  const RAW = "https://raw.githubusercontent.com/ibnsamh97-ai/moamin-ecobio/db/api/";
+  const RAW = (ECO.DB_BASE || "https://ecobioai.moaminbio.workers.dev/v1/db/") + "api/";
   const DIST = [["shirqat", "الشرقاط"], ["baiji", "بيجي"], ["tikrit", "تكريت"], ["dour", "الدور"], ["samarra", "سامراء"], ["balad", "بلد"]];
   /* متغيرات المنصة: [الملف، العمود، الاسم، الوحدة، دقة السلسلة: d يومي / m شهري] */
   const VARS = [

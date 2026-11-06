@@ -10,8 +10,15 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-UA = "EcoBio-AI/1.0 (+https://github.com/ibnsamh97-ai/moamin-ecobio; academic, Tikrit University)"
+UA = "EcoBio-AI/1.0 (+https://moamin-ecobio.vercel.app; academic, Tikrit University)"
 ROOT = Path(__file__).resolve().parent.parent
+
+
+def db_base() -> str:
+    """رابط القاعدة المنشورة على الخادم المشترك، من الإعداد نفسه الذي يقرؤه الموقع (js/server.js)."""
+    import re
+    m = re.search(r'^ECO\.GEMINI_PROXY\s*=\s*"([^"]+)"', (ROOT / "js" / "server.js").read_text(encoding="utf-8"), re.M)
+    return (m.group(1).rstrip("/") if m else "https://ecobioai.moaminbio.workers.dev") + "/v1/db/"
 
 
 def utcnow() -> str:

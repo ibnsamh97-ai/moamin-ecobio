@@ -16,7 +16,7 @@
   const F = (v, d = 2) => (isFinite(v) ? U.fmt(v, d) : "—");
   const F2 = v => (isFinite(v) ? v.toFixed(2) : "—");
   const PAL = ["#4fc8dc", "#e6ae4f", "#93dd8a", "#b493ff", "#ee7a4f", "#f08fb8", "#e8d35a", "#ef5a64", "#a5b6ff", "#c98b5a"];
-  const RAW = "https://raw.githubusercontent.com/ibnsamh97-ai/moamin-ecobio/db/api/";
+  const RAW = (ECO.DB_BASE || "https://ecobioai.moaminbio.workers.dev/v1/db/") + "api/";
   const QMAX = 400;           // أقصى عدد عيّنات للتجميع الهرمي للعيّنات
   const pfmt = p => (!isFinite(p) ? "—" : p < 0.001 ? "< 0.001" : "= " + p.toFixed(3));
   const pH = p => esc(pfmt(p));

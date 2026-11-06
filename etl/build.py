@@ -26,7 +26,7 @@ import airports  # noqa: E402
 import geo  # noqa: E402
 import openmeteo as om  # noqa: E402
 import research  # noqa: E402
-from common import Log, max_date, today, upsert, utcnow  # noqa: E402
+from common import Log, db_base, max_date, today, upsert, utcnow  # noqa: E402
 from seed import DISTRICTS, PARAMETERS, SOURCES  # noqa: E402
 
 AIR_FIRST = dt.date(2022, 8, 1)      # بداية بيانات CAMS العالمية الساعية المتاحة عبر Open-Meteo
@@ -80,7 +80,7 @@ def export_api(path: Path, run_at: str):
         "dust": ("dust_prob", "date", "احتمال الغبار الفعلي من نموذجنا المتعلَّم من أرصاد المطارات", "iem"),
     }
     idx = {"name": "EcoBio AI open data – Tigris districts of Salah Al-Din", "updated_at": run_at, "license": "CC BY 4.0 (اذكر المصدر الأصلي لكل جدول)",
-           "base": "https://raw.githubusercontent.com/ibnsamh97-ai/moamin-ecobio/db/api/", "districts": [], "datasets": {}, "stations": []}
+           "base": db_base() + "api/", "districts": [], "datasets": {}, "stations": []}
     for t, (table, key, desc, src) in TABLES.items():
         if not con.execute("SELECT 1 FROM sqlite_master WHERE name = ?", (table,)).fetchone():
             continue

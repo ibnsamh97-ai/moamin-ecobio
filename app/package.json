@@ -1,6 +1,6 @@
 {
   "name": "ecobio-ai-app",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "private": true,
   "description": "EcoBio AI — تطبيق أندرويد وiOS لمنصة رصد التلوث في صلاح الدين (قسم علوم الحياة، جامعة تكريت)",
   "scripts": {
