@@ -139,6 +139,7 @@
           <svg aria-hidden="true"><use href="#i-search"/></svg><span>ابحث عن أداة، ملوث، أو مؤشر…</span><kbd>/</kbd>
         </button>
         <div class="hx-quick" id="hx-quick" aria-label="أدوات يكثر استعمالها"></div>
+        <a class="hx-guide" href="#assistant"><svg aria-hidden="true"><use href="#i-chat"/></svg><span><b>ما تعرف من وين تبدي؟</b> احكِ للمساعد شنو تريد، يوديك للأداة ويعلّمك خطوة بخطوة</span></a>
       </div>
       <div class="hero-data hx-data">
         <div class="hero-live" id="hero-live" aria-live="polite"></div>
@@ -305,6 +306,17 @@
       <button type="button" role="tab" data-tab="cur" aria-selected="false">منحنيات التحلل والنمو</button>
     </div>
     <div id="ex-doe" data-mo-skip></div><div id="ex-jar" data-mo-skip hidden></div><div id="ex-ads" data-mo-skip hidden></div><div id="ex-cur" data-mo-skip hidden></div>
+  </div>
+</section>
+
+<!-- ======================= مقيّم المواد المازّة ======================= -->
+<section class="view" id="view-sorb" data-title="مقيّم المواد المازّة">
+  <div class="wrap">
+    <div class="view-head"><div>
+      <h2>مقيّم المواد المازّة</h2>
+      <p>قيّم كفاءة مادة مازّة رخيصة، مثل ليف المبردة الجديد والمستهلك، في إزالة الفوسفات أو أي ملوث آخر: خطّط تجاربك واطبع ورقة المختبر، وحوّل الامتصاصية إلى تركيز بمنحنى المعايرة، وأدخل نتائج تأثير pH والجرعة والزمن والتركيز والحرارة، لتحصل على الظروف المثلى والنماذج الحركية والأيزوثيرمات والديناميكا الحرارية ومقارنة المواد إحصائياً، مع فقرتي الطرائق والنتائج. تُحفظ دراستك في جهازك.</p>
+    </div></div>
+    <div id="sorb-root" data-mo-skip></div>
   </div>
 </section>
 
@@ -725,7 +737,7 @@
           <div class="chat-welcome" id="chat-welcome">
             <svg aria-hidden="true" style="color:var(--chloro)"><use href="#i-chat"/></svg>
             <h3 class="u-ctext">مرحباً، أنا مساعد EcoBio AI</h3>
-            <p>اسألني عن المعالجة الحيوية، تلوث المياه والهواء والتربة، تصميم تجربة مختبرية، أو اطلب تحليل القراءات الحالية لمحطات دجلة. ويمكنك إرفاق بحث أو تقرير PDF أو صورة لأقرأه وألخّصه وأستخرج نتائجه.</p>
+            <p><b>ما تعرف من وين تبدي؟</b> احكِ لي بكلامك شنو تريد تسوي، وأنا آخذك للأداة المناسبة وأعلّمك تشتغل بيها خطوة بخطوة. وتگدر تسألني عن التلوث والمعالجة، أو ترفق بحثاً PDF أو صورة لأقرأه وألخّصه.</p>
           </div>
         </div>
         <div class="chat-att" id="chat-att" hidden></div>
@@ -1470,6 +1482,7 @@
 <script src="js/molecules3d.js"></script>
 <script src="js/campus3d.js"></script>
 <script src="js/chat.js"></script>
+<script src="js/coach.js"></script>
 <script src="js/report.js"></script>
 <script src="js/samples.js"></script>
 <script src="js/contrib.js"></script>
@@ -1493,6 +1506,7 @@
 <script src="js/help.js"></script>
 <script src="js/qc.js"></script>
 <script src="js/exp.js"></script>
+<script src="js/sorb.js"></script>
 <script src="js/data-lab.js"></script>
 <script src="js/lab3d.js"></script>
 <script src="js/labexp.js"></script>

@@ -22,7 +22,7 @@
     { id: "treat", n: 3, label: "المعالجة", icon: "i-leaf", hue: "#93dd8a",
       q: "كيف تُزال هذه الملوثات؟",
       lead: "صمّم سلسلة معالجة لمياهك وتنبّأ بكفاءتها قبل أي تجربة، وتعرّف على آليات المعالجة الحيوية والنباتية بنماذج ثلاثية الأبعاد.",
-      tools: ["exp", "plant", "river", "micro", "molecules"] },
+      tools: ["exp", "sorb", "plant", "river", "micro", "molecules"] },
     { id: "labs", n: 0, label: "المختبر", icon: "i-lab", hue: "#b493ff",
       q: "جرّب التجربة العملية قبل أن تدخل المختبر",
       lead: "مختبر افتراضي ثلاثي الأبعاد لتجارب المعالجة والتلوث: اختبار الجرة، والامتزاز، وBOD₅، والعسرة، والعناصر الثقيلة في القصب. تختار الأداة بنفسك وتشاهد التفاعل، والنتائج من بحوث منشورة.",
@@ -102,6 +102,10 @@
       desc: "صمّم تجارب المعالجة بـ Box–Behnken أو CCD وحلّلها بـ ANOVA لتجد الظروف المثلى، واحسب جرعة اختبار الجرة، وقارن نماذج الامتزاز بـ AICc، وثوابت التحلل ونصف العمر ومعاملات النمو.",
       need: "عواملك ومستوياتها، أو نتائج تجاربك", get: "جدول التجارب، الظروف المثلى، أفضل نموذج، ثوابت السرعة",
       kw: "تصميم تجارب RSM سطح الاستجابة Box Behnken CCD مركب مركزي ANOVA عدم الملاءمة ظروف مثلى تحسين optimization اختبار الجرة جرعة مخثر شب امتزاز ايزوثيرم لانكماير فرندلش تمكين سيبس ريدليتش بيترسون دوبينين حركية رتبة اولى ثانية كاذبة ايلوفيتش انتشار AICc تحلل نصف عمر ثابت السرعة نمو بكتيري Gompertz طور التأخر" },
+    sorb: { label: "مقيّم المواد المازّة", icon: "i-layers", isNew: true,
+      desc: "قيّم مادة مازّة رخيصة، مثل ليف المبردة الجديد والمستهلك، في إزالة الفوسفات أو غيره: المعايرة، وتأثير pH والجرعة والزمن والتركيز والحرارة، والنماذج والديناميكا الحرارية، ومقارنة المواد إحصائياً.",
+      need: "قراءات تجاربك الدفعية (التركيز المتبقي أو الامتصاصية)", get: "الظروف المثلى، qmax، أفضل نموذج، ΔH° وΔG°، فقرتا الطرائق والنتائج",
+      kw: "امتزاز مادة مازة ليف مبردة تبريد تبخيري خشب ألياف نفايات فوسفات نترات رصاص كادميوم صبغة مثيلين ازرق دفعات batch جرعة زمن تماس تركيز ابتدائي حرارة pH نقطة الشحنة الصفرية pzc pHpzc معايرة امتصاصية LOD LOQ لانكماير فرندلش حركية رتبة ثانية كاذبة ثرموداينمك ديناميكا حرارية فانت هوف انثالبي انتروبي طاقة جبس qmax سعة قصوى مقارنة t-test دنكن بحث تخرج adsorption biosorbent cooling pad phosphate isotherm kinetics thermodynamics" },
     calc: { label: "الحاسبات العلمية", icon: "i-calc",
       desc: "أكثر من 20 حاسبة بمعادلاتها ومراجعها: SAR وIgeo وRI وHQ وBOD والامتزاز وغيرها.",
       need: "قيم مقيسة لمعادلة واحدة", get: "النتيجة وتصنيفها ومرجع المعادلة",
@@ -184,6 +188,7 @@
     water: [["plant", "صمّم معالجة لهذه المياه"], ["reports", "اطبع تقرير العيّنة PDF"]],
     qc: [["analyzer", "حلّل البيانات بعد تصحيحها إحصائياً"], ["water", "احسب WQI وHPI لكل عيّنة"]],
     sources: [["calc", "احسب Igeo وEF للعناصر التي ظهرت في مصدر بشري"], ["analyzer", "قارن المحطات بـ ANOVA ودنكن"]],
+    sorb: [["exp", "حسّن الظروف المثلى بتصميم Box–Behnken"], ["scholar", "قارن سعتك بالأدبيات من بحوث حقيقية"]],
     exp: [["plant", "انقل الظروف المثلى إلى تصميم محطة"], ["lab", "جرّب اختبار الجرة والامتزاز في المختبر الافتراضي"]],
     analyzer: [["sources", "حدّد مصادر التلوث بـ PCA وAPCS-MLR"], ["trend", "اختبر اتجاه القيم عبر السنين"]],
     trend: [["districts", "صدّر سلسلة قضاء آخر من القاعدة"], ["analyzer", "قارن الفترتين قبل نقطة التغيّر وبعدها"]],
@@ -408,7 +413,7 @@
       const sibs = s.tools.length > 1 ? `<div class="sibs" role="list">${s.tools.map(t => `<a role="listitem" href="#${t}"${t === v ? ' aria-current="page"' : ""}>${ico(TOOLS[t].icon)}<span>${esc(TOOLS[t].label)}</span></a>`).join("")}</div>` : "";
       const cr = document.createElement("nav");
       cr.className = "crumbs"; cr.setAttribute("aria-label", "أنت هنا");
-      const lesson = !NO_LESSON.has(v) ? `<a class="c-learn" href="#learn&t=${v}">${ico("i-learn")}<span>دليل الأداة</span></a>` : "";
+      const lesson = !NO_LESSON.has(v) ? `<span class="c-acts"><button type="button" class="c-learn c-coach" data-coach="${v}">${ico("i-spark")}<span>علّمني خطوة بخطوة</span></button><a class="c-learn" href="#learn&t=${v}">${ico("i-learn")}<span>دليل الأداة</span></a></span>` : "";
       cr.innerHTML = `<div class="crumbs-in"><ol class="crumb-trail"><li><a href="#home">الرئيسية</a></li><li><a class="c-sec" href="#${s.id}">${ico(s.icon)}${s.label}</a></li><li aria-current="page">${esc(TOOLS[v].label)}</li></ol>${lesson}${sibs}</div>`;
       view.insertBefore(cr, view.firstChild);
     }
@@ -442,7 +447,7 @@
     const sec = secById(v) ? v : (SEC_OF[v] ? SEC_OF[v].id : null);
     U.$$("[data-v]").forEach(a => a.classList.toggle("active", a.dataset.v === v));
     const tab = tabOf(v);
-    U.$$("[data-tab]").forEach(a => { const on = a.dataset.tab === tab; a.classList.toggle("active", on); if (on) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); });
+    U.$$(".bottombar [data-tab]").forEach(a => { const on = a.dataset.tab === tab; a.classList.toggle("active", on); if (on) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); });
     rememberTool(v);
     if (v === "tools") { const m = raw.match(/[&?]s=([a-z]+)/); setToolsSec(m && secById(m[1]) ? m[1] : ""); }
     U.$$("[data-sec-link]").forEach(a => a.classList.toggle("active", a.dataset.secLink === sec));
@@ -566,6 +571,15 @@
     el.hidden = true; if (palReturn && palReturn.focus) palReturn.focus();
   }
   ECO.openSearch = openPalette;
+  /* اقتراح أدوات من جملة حرة (للمساعد حين لا يتوفر Gemini): أي كلمة تطابق تكفي */
+  const STOP = new Set(["اريد", "أريد", "عندي", "شلون", "كيف", "ماذا", "شنو", "اكدر", "أكدر", "ممكن", "على", "في", "من", "الى", "إلى", "عن", "هل", "هذا", "هذه", "ابي", "اسوي", "أسوي", "يعني", "بس", "مال", "حتى"]);
+  ECO.suggestTools = q => {
+    if (!INDEX.length) buildIndex();
+    const toks = tokens(q).filter(t => t.length > 1 && !STOP.has(t));
+    if (!toks.length) return [];
+    return INDEX.filter(e => e.kind === "tool").map(e => ({ id: e.id, sc: toks.reduce((s, t) => s + (e.L.includes(t) ? 20 : e.K.includes(t) ? 8 : e.D.includes(t) ? 4 : 0), 0) }))
+      .filter(x => x.sc > 0).sort((x, y) => y.sc - x.sc).slice(0, 3).map(x => x.id);
+  };
 
   /* ------------------------------------------------------------------
      التفاعلات العامة

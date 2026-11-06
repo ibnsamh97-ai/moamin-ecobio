@@ -33,13 +33,38 @@
     return parts.length ? `\n\n---\n[بيانات المنصة الحية للاستخدام عند الحاجة فقط]\n${parts.join("\n\n")}` : "";
   }
 
+  /* دليل الأدوات الذي يوجّه به المساعد الزائر إلى القسم المناسب */
+  const hasView = t => !!document.getElementById("view-" + t);
+  function catalog() {
+    const T = ECO.TOOLS || {}, secOf = t => (ECO.SECTIONS || []).find(s => s.tools.includes(t));
+    const rows = Object.keys(T).filter(t => !T[t].hidden && hasView(t) && t !== "assistant").map(t => { const s = secOf(t), x = T[t]; return `- ${t} | ${x.label} | القسم: ${s ? s.label : "عام"} | ${x.desc}${x.need ? " | تحتاج: " + x.need : ""}${x.get ? " | تحصل: " + x.get : ""}`; });
+    return `\n\n[أدوات منصة EcoBio AI: المعرّف | الاسم | القسم | ماذا تفعل]\n${rows.join("\n")}\n
+[دورك كمرشد للمنصة]
+- كثير من الزوار لا يعرفون المنصة. إذا وصف المستخدم هدفاً أو مشكلة أو بيانات عنده، حدّد الأداة الأنسب من القائمة أعلاه، وقل في جملتين لماذا تناسبه، ثم اذكر أول ثلاث خطوات سيقوم بها فيها.
+- اختم ردك بسطر لكل أداة مقترحة (من 1 إلى 3، الأنسب أولاً) بالصيغة الحرفية [[أداة:المعرّف]] مثل [[أداة:sorb]]. استعمل المعرّف الإنكليزي من القائمة كما هو، ولا تخترع معرّفاً ولا أداة غير موجودة.
+- إذا كان طلبه غامضاً فاسأله سؤالاً واحداً قصيراً قبل الاقتراح، ولا تضع سطر الأداة.
+- إذا كان سؤالاً علمياً عاماً لا يحتاج أداة فأجب عنه ولا تضع سطر الأداة.
+- إذا كتب المستخدم بالعامية العراقية فأجبه بعربية بسيطة جداً قريبة من كلامه، وبجمل قصيرة.`;
+  }
+  const TOOL_RE = /\[\[\s*(?:أداة|tool)\s*:\s*([a-z0-9]+)\s*\]\]/g;
+  const toolsIn = t => [...new Set([...String(t || "").matchAll(TOOL_RE)].map(m => m[1]))].filter(id => (ECO.TOOLS || {})[id] && hasView(id)).slice(0, 3);
+  const stripTools = t => String(t || "").replace(TOOL_RE, "").replace(/\[\[[^\]]*$/, "").trim();
+  function goCards(ids, note) {
+    if (!ids.length) return "";
+    const T = ECO.TOOLS, secOf = t => (ECO.SECTIONS || []).find(s => s.tools.includes(t));
+    return `<div class="chat-go">${note ? `<p class="faint">${note}</p>` : ""}${ids.map((id, i) => { const s = secOf(id); return `<div class="cg" style="--hue:${s ? s.hue : "var(--river)"}">
+      <span class="cg-ic"><svg aria-hidden="true"><use href="#${T[id].icon}"/></svg></span>
+      <span class="cg-t"><b>${U.esc(T[id].label)}</b><small>${U.esc(s ? "قسم " + s.label : "")}</small></span>
+      <span class="cg-a"><button type="button" class="btn btn-sm ${i === 0 ? "btn-primary" : ""}" data-coach="${id}"><svg aria-hidden="true"><use href="#i-spark"/></svg>خذني وعلّمني</button><a class="btn btn-sm btn-ghost" href="#${id}">افتحها فقط</a></span></div>`; }).join("")}</div>`;
+  }
+
   function bubble(role, html) {
     const w = U.$("#chat-welcome"); if (w) w.remove();
     const b = U.el("div", { class: `msg ${role}` }, html);
     U.$("#chat-log").appendChild(b); scrollDown(); return b;
   }
   const scrollDown = () => { const l = U.$("#chat-log"); l.scrollTop = l.scrollHeight; };
-  const botHTML = t => `<div class="who">EcoBio AI · Gemini</div>${U.md(t)}`;
+  const botHTML = t => `<div class="who">EcoBio AI · Gemini</div>${U.md(stripTools(t))}${goCards(toolsIn(t))}`;
 
   const fileIcon = mime => mime === "application/pdf" ? "i-file" : "i-camera";
   const userHTML = m => (m.file ? `<div class="att-in"><svg><use href="#${fileIcon(m.file.mime)}"/></svg><span>${U.esc(m.file.name)}</span></div>` : "") + U.esc(m.text).replace(/\n/g, "<br>");
@@ -95,6 +120,8 @@
     if (ctrl) { ctrl.abort(); return; }
     if (!text && !att) return;
     if (!G.ready()) {
+      const sug = text && ECO.suggestTools ? ECO.suggestTools(text) : [];
+      if (sug.length) { bubble("user", U.esc(text)); bubble("bot", `<div class="who">EcoBio AI</div><p>المساعد الذكي غير مفعّل الآن، لكن هذه أقرب الأدوات لطلبك:</p>${goCards(sug)}`); U.$("#chat-text").value = ""; return; }
       const n = bubble("err", `المساعد غير مفعّل بعد على هذا الموقع. يمكنك إضافة مفتاح Gemini المجاني الخاص بك ليعمل عندك. <button class="btn btn-sm" type="button" style="margin-inline-start:8px">الإعدادات</button>`);
       n.querySelector("button").onclick = ECO.openSettings; return;
     }
@@ -119,12 +146,14 @@
     });
     ctrl = new AbortController(); setBusy(true);
     try {
-      const full = await G.generate({ contents, signal: ctrl.signal, onText: t => { out.innerHTML = botHTML(t); scrollDown(); } });
+      const full = await G.generate({ contents, system: ECO.SYSTEM_PROMPT + catalog(), signal: ctrl.signal, onText: t => { out.innerHTML = botHTML(t); scrollDown(); } });
       history.push({ role: "model", text: full });
     } catch (e) {
       if (e.name === "AbortError") { history.push({ role: "model", text: (out.textContent || "").replace("EcoBio AI · Gemini", "").trim() + "\n\n_(أُوقف الرد)_" }); }
       else {
         out.remove(); history.pop(); bubble("err", U.esc(e.message === "NO_KEY" ? "المساعد غير مفعّل بعد." : e.message));
+        const sug = ECO.suggestTools ? ECO.suggestTools(text) : [];
+        if (sug.length) bubble("bot", `<div class="who">EcoBio AI</div>${goCards(sug, "إلى أن يعود المساعد، هذه أقرب الأدوات لطلبك:")}`);
         if (entry.file && fileData.has(entry)) { const d = fileData.get(entry); setAtt({ ...entry.file, data: d, size: Math.round(d.length * 0.75) }); }
       }
     }

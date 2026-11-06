@@ -418,6 +418,41 @@
     { id: "ipd", n: "الانتشار داخل الجسيمات (Weber–Morris)", p: ["kid (mg/g·دقيقة^0.5)", "C (mg/g)"], f: (t, p) => p[0] * Math.sqrt(t) + p[1], p0: (T, q) => [1, 0], lo: [-Infinity, -Infinity] }
   ];
   const A = store("ads") || { mode: "iso", T: 25, M: "", rows: [["", ""], ["", ""], ["", ""], ["", ""], ["", ""], ["", ""], ["", ""]] };
+  /* ملاءمة نماذج الامتزاز (يستعملها «مقيّم المواد المازّة» أيضاً): pts مرتبة [[x, y]] */
+  function fitAds(pts, iso, Tc, M) {
+    const x = pts.map(p => p[0]), y = pts.map(p => p[1]), Tk = (isFinite(Tc) ? Tc : 25) + 273.15;
+    const list = (iso ? ISO : KIN).map(m => {
+      if ((m.k || 2) > pts.length - 2) return { m, skip: `يحتاج ${(m.k || 2) + 2} نقاط على الأقل` };
+      let f = m.f, p0 = m.p0 ? m.p0(x, y) : null;
+      if (m.dr) {
+        if (!(M > 0)) return { m, skip: "أدخل الكتلة المولية للملوث" };
+        const eps = c => RG / 1000 * Tk * Math.log(1 + 1 / (c / 1000 / M));   // kJ/mol، Ce بالمول/لتر
+        f = (c, p) => p[0] * Math.exp(-p[1] * eps(c) ** 2); p0 = [Math.max(...y) * 1.2, 1e-3];
+      }
+      const r = m.id === "ipd" ? (() => { const o = FL.ols(x.map(t => [Math.sqrt(t), 1]), y); if (!o) return null; return { p: o.beta, se: o.se, sse: o.sse, n: o.n, m: 2, r2: o.r2, adj: o.adj, rmse: Math.sqrt(o.sse / o.n), fit: o.fit, chi2: y.reduce((s, v, i) => s + (o.fit[i] ? (v - o.fit[i]) ** 2 / Math.abs(o.fit[i]) : 0), 0), aicc: (() => { const aic = o.n * Math.log(o.sse / o.n) + 4; return o.n - 3 > 0 ? aic + 12 / (o.n - 3) : Infinity; })() }; })()
+        : FL.lm(f, p0, x, y, { lower: m.lo, upper: m.up });
+      return r ? { m, r, f: m.id === "ipd" ? ((t, p) => p[0] * Math.sqrt(t) + p[1]) : f } : { m, skip: "لم تتقارب الملاءمة" };
+    });
+    const ok = list.filter(z => z.r && isFinite(z.r.aicc));
+    FL.akaike(ok.map(z => z.r));
+    ok.sort((a, b) => a.r.aicc - b.r.aicc);
+    const best = ok[0];
+    const extra = z => {
+      if (!z.r) return "";
+      const p = z.r.p;
+      if (z.m.id === "lang") { const c0 = Math.max(...x); const RL = 1 / (1 + p[1] * c0); return `RL عند أعلى Ce = ${F(RL, 3)} (${RL > 0 && RL < 1 ? "ملائم" : RL === 1 ? "خطي" : "غير ملائم"})`; }
+      if (z.m.id === "freu") return `1/n = ${F(1 / p[1], 3)} (${1 / p[1] < 1 ? "امتزاز ملائم" : "غير ملائم"})`;
+      if (z.m.id === "temk") return `bT = ${F(RG * Tk / p[0], 1)} J/mol`;
+      if (z.m.id === "dr") { const E = 1 / Math.sqrt(2 * p[1]); return `E = ${F(E, 2)} kJ/mol (${E < 8 ? "امتزاز فيزيائي" : E <= 16 ? "تبادل أيوني" : "امتزاز كيميائي"})`; }
+      if (z.m.id === "pso" || z.m.id === "pfo") return `qe المحسوبة ${F(p[0], 3)} مقابل أعلى قيمة مقاسة ${F(Math.max(...y), 3)}`;
+      if (z.m.id === "ipd") return p[1] > 0.05 * Math.max(...y) ? "C > 0: الانتشار داخل الجسيمات ليس الخطوة المحددة الوحيدة" : "الخط يمر قرب الأصل";
+      return "";
+    };
+    return { x, y, Tk, list, ok, best, extra };
+  }
+  ECO.adsFit = fitAds;
+  ECO.adsModels = { ISO, KIN, RG };
+
   function renderAds() {
     const host = U.$("#ex-ads"); if (!host) return;
     const iso = A.mode === "iso";
@@ -453,34 +488,7 @@
     const out = U.$("#ad-out"), iso = A.mode === "iso";
     const pts = A.rows.map(r => [TB.num(r[0]), TB.num(r[1])]).filter(p => isFinite(p[0]) && isFinite(p[1]) && p[0] > 0 && p[1] >= 0).sort((a, b) => a[0] - b[0]);
     if (pts.length < 4) { out.innerHTML = `<div class="notice info">${ico("i-info")}<span>أدخل 4 نقاط على الأقل (والأفضل 6 فأكثر للنماذج ثلاثية المعاملات).</span></div>`; return; }
-    const x = pts.map(p => p[0]), y = pts.map(p => p[1]), Tk = (TB.num(A.T) || 25) + 273.15, M = TB.num(A.M);
-    const list = (iso ? ISO : KIN).map(m => {
-      if ((m.k || 2) > pts.length - 2) return { m, skip: `يحتاج ${(m.k || 2) + 2} نقاط على الأقل` };
-      let f = m.f, p0 = m.p0 ? m.p0(x, y) : null;
-      if (m.dr) {
-        if (!(M > 0)) return { m, skip: "أدخل الكتلة المولية للملوث" };
-        const eps = c => RG / 1000 * Tk * Math.log(1 + 1 / (c / 1000 / M));   // kJ/mol، Ce بالمول/لتر
-        f = (c, p) => p[0] * Math.exp(-p[1] * eps(c) ** 2); p0 = [Math.max(...y) * 1.2, 1e-3];
-      }
-      const r = m.id === "ipd" ? (() => { const o = FL.ols(x.map(t => [Math.sqrt(t), 1]), y); if (!o) return null; return { p: o.beta, se: o.se, sse: o.sse, n: o.n, m: 2, r2: o.r2, adj: o.adj, rmse: Math.sqrt(o.sse / o.n), fit: o.fit, chi2: y.reduce((s, v, i) => s + (o.fit[i] ? (v - o.fit[i]) ** 2 / Math.abs(o.fit[i]) : 0), 0), aicc: (() => { const aic = o.n * Math.log(o.sse / o.n) + 4; return o.n - 3 > 0 ? aic + 12 / (o.n - 3) : Infinity; })() }; })()
-        : FL.lm(f, p0, x, y, { lower: m.lo, upper: m.up });
-      return r ? { m, r, f: m.id === "ipd" ? ((t, p) => p[0] * Math.sqrt(t) + p[1]) : f } : { m, skip: "لم تتقارب الملاءمة" };
-    });
-    const ok = list.filter(z => z.r && isFinite(z.r.aicc));
-    FL.akaike(ok.map(z => z.r));
-    ok.sort((a, b) => a.r.aicc - b.r.aicc);
-    const best = ok[0];
-    const extra = z => {
-      if (!z.r) return "";
-      const p = z.r.p;
-      if (z.m.id === "lang") { const c0 = Math.max(...x); const RL = 1 / (1 + p[1] * c0); return `RL عند أعلى Ce = ${F(RL, 3)} (${RL > 0 && RL < 1 ? "ملائم" : RL === 1 ? "خطي" : "غير ملائم"})`; }
-      if (z.m.id === "freu") return `1/n = ${F(1 / p[1], 3)} (${1 / p[1] < 1 ? "امتزاز ملائم" : "غير ملائم"})`;
-      if (z.m.id === "temk") return `bT = ${F(RG * Tk / p[0], 1)} J/mol`;
-      if (z.m.id === "dr") { const E = 1 / Math.sqrt(2 * p[1]); return `E = ${F(E, 2)} kJ/mol (${E < 8 ? "امتزاز فيزيائي" : E <= 16 ? "تبادل أيوني" : "امتزاز كيميائي"})`; }
-      if (z.m.id === "pso" || z.m.id === "pfo") return `qe المحسوبة ${F(p[0], 3)} مقابل أعلى قيمة مقاسة ${F(Math.max(...y), 3)}`;
-      if (z.m.id === "ipd") return p[1] > 0.05 * Math.max(...y) ? "C > 0: الانتشار داخل الجسيمات ليس الخطوة المحددة الوحيدة" : "الخط يمر قرب الأصل";
-      return "";
-    };
+    const { x, y, list, ok, best, extra } = fitAds(pts, iso, TB.num(A.T), TB.num(A.M));
     out.innerHTML = `
       <section class="panel">
         <div class="panel-h"><h3>${ico("i-check")}مقارنة النماذج (ملاءمة غير خطية)</h3><span class="sub">مرتبة حسب AICc: الأقل أفضل</span></div>
