@@ -938,3 +938,19 @@
 @media (max-width: 900px) { .ch-grid { grid-template-columns: 1fr; } .ch-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } .ch-side { order: 0; } }
 .ch-m { unicode-bidi: isolate; white-space: nowrap; }
 @media (max-width: 640px) { .ch-m { white-space: normal; } }
+/* ملصق علمي */
+.ps-src { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-top: 10px; }
+.ps-src .ps-wide, .ps-form .ps-wide { grid-column: 1 / -1; }
+.ps-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; margin-top: 16px; align-items: start; }
+.ps-form { display: grid; grid-template-columns: 1fr; gap: 10px; }
+.ps-form textarea { resize: vertical; line-height: 1.7; }
+.ps-form .input.flag { border-color: #e6ae4f; box-shadow: 0 0 0 2px color-mix(in srgb, #e6ae4f 30%, transparent); }
+.ps-flag { color: #e6ae4f; font-size: .76rem; }
+.ps-prev { position: relative; overflow: hidden; border-radius: 10px; border: 1px solid var(--line); background: #fff; }
+.ps-scale { transform-origin: top right; }
+[dir="ltr"] .ps-scale { transform-origin: top left; }
+.ps-imgs { display: grid; gap: 8px; margin-top: 8px; }
+.ps-img { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.ps-img img { width: 64px; height: 48px; object-fit: cover; border-radius: 6px; }
+@media (max-width: 900px) { .ps-grid { grid-template-columns: minmax(0, 1fr); } }
+.ps-grid > div { min-width: 0; }

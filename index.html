@@ -1097,6 +1097,7 @@
       <button type="button" role="tab" data-tab="treat" aria-selected="false" aria-controls="sch-p-treat">مرشّح طريقة المعالجة</button>
       <button type="button" role="tab" data-tab="watch" aria-selected="false" aria-controls="sch-p-watch">الجديد بموضوعك</button>
       <button type="button" role="tab" data-tab="viva" aria-selected="false" aria-controls="sch-p-viva">محاكي المناقشة</button>
+      <button type="button" role="tab" data-tab="poster" aria-selected="false" aria-controls="sch-p-poster">ملصق علمي من بحثك</button>
     </div>
     <div class="sch-panel panel" id="sch-p-lit" role="tabpanel">
       <div class="field"><label for="sch-q">سؤالك البحثي (بالعربية أو الإنكليزية)</label>
@@ -1131,6 +1132,30 @@
       <div class="field"><label for="sch-vf">رسالتك أو بحثك (PDF حتى 9 ميغابايت)</label><input id="sch-vf" class="input" type="file" accept="application/pdf"></div>
       <p class="muted">تدرّب قبل المناقشة: لجنة افتراضية تقرأ رسالتك وتسألك سؤالاً بعد سؤال من محتواها، وتقيّم جوابك وتنبّهك إلى نقاط الضعف. تدريب فقط وليس تقييماً رسمياً، والملف لا يُحفظ.</p>
       <div id="sch-v-out"></div>
+    </div>
+    <div class="sch-panel panel" id="sch-p-poster" role="tabpanel" hidden>
+      <p class="muted">ارفع رسالتك أو الصق ملخصها ونتائجها، فتُستخرج أقسام الملصق (المقدمة، الأهداف، الطرائق، النتائج، الاستنتاجات، المراجع) من بحثك فقط. تراجع كل حقل وتعدّله وتضيف أشكالك، ثم تطبع الملصق بحجم A0 أو A1. حين تلصق النص تُفحص الأرقام تلقائياً: كل رقم غير موجود في نصك يُعلَّم بالأصفر.</p>
+      <div class="ps-src">
+        <div class="field"><label for="ps-file">رسالتك PDF (حتى 9 ميغابايت)</label><input id="ps-file" class="input" type="file" accept="application/pdf"><small class="faint" id="ps-fname"></small></div>
+        <div class="field ps-wide"><label for="ps-text">أو الصق الملخص والنتائج والاستنتاجات</label><textarea id="ps-text" class="input" rows="4" dir="auto"></textarea></div>
+        <div class="field"><label for="ps-lang">لغة الملصق</label><select id="ps-lang" class="input"><option value="ar">العربية</option><option value="en">English</option></select></div>
+        <div class="field"><label for="ps-size">الحجم</label><select id="ps-size" class="input"><option value="a0">A0 (84 × 119 سم)</option><option value="a1">A1 (59 × 84 سم)</option></select></div>
+      </div>
+      <button type="button" class="btn btn-primary u-mt10" id="ps-go"><svg aria-hidden="true"><use href="#i-spark"/></svg>استخرج أقسام الملصق</button>
+      <div id="ps-msg" class="u-mt10"></div>
+      <div class="ps-grid">
+        <div>
+          <div id="ps-form" class="ps-form"></div>
+          <div class="field u-mt10"><label class="btn btn-sm" for="ps-img"><svg aria-hidden="true"><use href="#i-upload"/></svg>أضف شكلاً أو رسماً من بحثك</label><input id="ps-img" type="file" accept="image/*" hidden></div>
+          <div id="ps-imgs" class="ps-imgs"></div>
+        </div>
+        <div>
+          <div class="ps-prev" id="ps-prev" aria-label="معاينة الملصق"></div>
+          <div id="ps-over"></div>
+          <button type="button" class="btn btn-primary u-mt10" id="ps-print"><svg aria-hidden="true"><use href="#i-file"/></svg>اطبع الملصق أو احفظه PDF</button>
+          <p class="faint u-mt10">في نافذة الطباعة اختر «حفظ كـ PDF» ثم اطبعه في مكتب الطباعة بالحجم نفسه.</p>
+        </div>
+      </div>
     </div>
   </div>
 </section>
@@ -1570,6 +1595,7 @@
 <script src="js/s2cal.js"></script>
 <script src="js/gaps.js"></script>
 <script src="js/scholar.js"></script>
+<script src="js/poster.js"></script>
 <script src="js/palmer.js"></script>
 <script src="js/data-twin.js"></script>
 <script src="js/twin.js"></script>
