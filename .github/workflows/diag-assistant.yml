@@ -1,0 +1,30 @@
+name: diag-assistant
+on:
+  push:
+    branches: [diag-assistant]
+permissions:
+  contents: read
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: probe shared assistant server
+        run: |
+          W=https://ecobioai.moaminbio.workers.dev
+          O=https://moamin-ecobio.vercel.app
+          echo "== health"; curl -sS -m 30 -w '\nHTTP %{http_code} in %{time_total}s\n' $W/health | python3 -c "import sys,json;t=sys.stdin.read();print(t)" || true
+          echo "== models"; curl -sS -m 60 -H "Origin: $O" -w '\nHTTP %{http_code} in %{time_total}s\n' $W/v1beta/models | python3 -c "import sys,re;t=sys.stdin.read();print(re.findall(r'models/[a-z0-9.\-]+',t));print(t[-60:])" || true
+          for M in gemini-flash-latest gemini-flash-lite-latest; do
+            for Q in "قل مرحبا بكلمة واحدة" "اشرح لي الفرق بين التحفيز الحيوي والإضافة الحيوية مع أمثلة"; do
+              echo "== $M :: $Q"
+              python3 - "$M" "$Q" > body.json <<'PY'
+          import json,sys
+          print(json.dumps({"contents":[{"role":"user","parts":[{"text":sys.argv[2]}]}],"generationConfig":{"temperature":0.6,"maxOutputTokens":4096}}))
+          PY
+              curl -sS -m 150 -N -o out.txt -H "Origin: $O" -H 'Content-Type: application/json' --data @body.json \
+                -w 'HTTP %{http_code} first-byte %{time_starttransfer}s total %{time_total}s\n' \
+                "$W/v1beta/models/$M:streamGenerateContent?alt=sse" || echo "curl failed: $?"
+              head -c 300 out.txt; echo; echo "bytes: $(wc -c < out.txt)"; grep -o 'X-EcoBio-Model' out.txt || true
+            done
+          done
