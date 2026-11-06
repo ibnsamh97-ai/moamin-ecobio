@@ -1,0 +1,27 @@
+name: db-mirror
+# يعيد نشر آخر قاعدة بيانات محفوظة (فرع db) على الخادم المشترك في Cloudflare دون إعادة بنائها.
+# يعمل تلقائياً عند تعديل سكربت النشر، ويدوياً من صفحة Actions عند الحاجة.
+on:
+  push:
+    branches: [main]
+    paths: ['etl/publish_worker.sh', '.github/workflows/db-mirror.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  id-token: write
+concurrency:
+  group: database
+  cancel-in-progress: false
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch the saved database
+        run: |
+          git fetch --depth 1 origin db
+          mkdir -p pub && git archive origin/db | tar -x -C pub
+          ls -la pub
+      - name: Publish database (Cloudflare server)
+        run: bash etl/publish_worker.sh pub
