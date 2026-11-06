@@ -821,3 +821,31 @@
   .sb-tbl th, .sb-tbl td { padding: 3px 3px; }
   .sb-g { padding: 8px 6px; }
 }
+
+/* ===================== قارئ الأطياف ===================== */
+.sp-list { display: grid; gap: 8px; margin-top: 12px; }
+.sp-item { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 12px; background: rgba(0,0,0,.16); box-shadow: inset 0 0 0 1px var(--line); }
+.sp-item i { width: 10px; height: 10px; border-radius: 3px; background: var(--c); flex: none; }
+.sp-item .input { width: 200px; height: 36px; }
+.sp-n { font-size: .78rem; }
+.sp-chk { display: inline-flex; align-items: center; gap: 8px; margin-top: 26px; cursor: pointer; }
+.sp-paste { display: grid; gap: 8px; }
+.sp-paste .row { gap: 8px; }
+.sp-paste select { width: auto; height: 36px; }
+.sp-chart { height: 380px; }
+.sp-asg { white-space: normal !important; min-width: 220px; line-height: 1.6; font-size: .84rem; }
+@media (max-width: 640px) { .sp-item .input { width: 100%; } .sp-chart { height: 300px; } }
+
+/* ===================== الجديد بموضوعك ومحاكي المناقشة ===================== */
+.sch-wide { flex: 1 1 320px; }
+.sch-watch { display: grid; gap: 12px; padding-inline-start: 20px; margin-top: 8px; }
+.sch-watch li { line-height: 1.7; }
+.sw-h { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; font-weight: 600; }
+.sw-h .tag-new { font-size: .62rem; padding: 2px 6px; }
+.sw-s { margin: 4px 0 0; color: var(--text); opacity: .9; }
+.sw-s:empty { display: none; }
+.viva-log { display: grid; gap: 10px; margin-top: 12px; max-height: 60vh; overflow-y: auto; }
+.viva-log .msg { padding: 12px 14px; border-radius: 14px; line-height: 1.85; }
+.viva-log .msg.user { background: rgba(79,200,220,.1); box-shadow: inset 0 0 0 1px rgba(79,200,220,.3); }
+.viva-log .msg.bot { background: rgba(0,0,0,.2); box-shadow: inset 0 0 0 1px var(--line); }
+.viva-log .who { font-size: .75rem; color: var(--chloro); margin-bottom: 4px; }

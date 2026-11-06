@@ -125,6 +125,60 @@ ${ctx(P)}` }] }],
     } catch (e) { out.innerHTML = `<div class="notice warn">${esc(e.message)}</div>`; }
   }
 
+  /* ---------- 4) الجديد بموضوعك ---------- */
+  async function runWatch() {
+    const q = U.$("#sch-wq").value.trim(), days = +U.$("#sch-wd").value || 30, out = U.$("#sch-w-out"); if (!q) return;
+    const prev = U.store.get("sch_watch", null), last = prev && prev.q === q ? prev.at : null;
+    out.innerHTML = `<p class="muted">جارٍ البحث في OpenAlex…</p>`;
+    try {
+      const eq = ECO.gemini.ready && ECO.gemini.ready() ? await toQuery(q) : q;
+      const from = new Date(Date.now() - days * 864e5).toISOString().slice(0, 10);
+      const u = `${OA}?search=${encodeURIComponent(eq)}&per_page=15&sort=publication_date:desc&filter=has_abstract:true,from_publication_date:${from}&select=id,title,publication_year,publication_date,doi,authorships,primary_location,cited_by_count,abstract_inverted_index`;
+      const r = await fetch(u); if (!r.ok) throw new Error("تعذّر الوصول إلى OpenAlex (" + r.status + ")");
+      const P = ((await r.json()).results || []).map((w, i) => ({ n: i + 1, title: w.title || "", date: w.publication_date || "", url: /^https:\/\//.test(w.doi || w.id || "") ? (w.doi || w.id) : "", journal: (w.primary_location && w.primary_location.source && w.primary_location.source.display_name) || "", authors: (w.authorships || []).slice(0, 3).map(a => a.author && a.author.display_name).filter(Boolean).join("، ") + ((w.authorships || []).length > 3 ? " وآخرون" : ""), abstract: abstractOf(w.abstract_inverted_index).slice(0, 1400) })).filter(p => p.abstract.length > 80);
+      U.store.set("sch_watch", { q, at: new Date().toISOString().slice(0, 10) });
+      if (!P.length) { out.innerHTML = `<p class="empty">لم يُنشر بحث له ملخص عن «${esc(eq)}» في هذه الفترة. جرّب فترة أطول أو كلمات أعم.</p>`; return; }
+      out.innerHTML = `<p class="db-cap">بحثت عن: <bdi dir="ltr">${esc(eq)}</bdi> · ${P.length} بحثاً منذ ${from}${last ? ` · آخر زيارة ${last}` : ""}</p>
+        <ol class="sch-watch">${P.map(p => `<li><div class="sw-h">${last && p.date > last ? `<span class="tag-new">جديد</span>` : ""}<a href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.title)}</a></div><div class="faint">${esc(p.authors)} · <i>${esc(p.journal)}</i> · ${esc(p.date)}</div><p class="sw-s" data-sw="${p.n}"></p></li>`).join("")}</ol>`;
+      if (!(ECO.gemini.ready && ECO.gemini.ready())) return;
+      let txt = "";
+      await ECO.gemini.generate({ json: true, temperature: 0.1, system: "لخّص كل بحث في جملة عربية واحدة بسيطة من ملخصه فقط: ماذا درس وما أهم نتيجة. لا تضف أي معلومة غير موجودة في الملخص. أعد JSON {\"رقم\": \"الجملة\"} فقط.", contents: [{ role: "user", parts: [{ text: ctx(P.map(p => ({ ...p, year: p.date }))) }] }], onText: t => { txt = t; } });
+      try { const j = JSON.parse(String(txt).replace(/^```json|```$/g, "").trim()); Object.entries(j).forEach(([k, v]) => { const el = out.querySelector(`[data-sw="${parseInt(k, 10)}"]`); if (el) el.textContent = v; }); } catch (e) { /* الملخصات اختيارية */ }
+    } catch (e) { out.innerHTML = `<div class="notice warn">${esc(e.message)}</div>`; }
+  }
+
+  /* ---------- 5) محاكي المناقشة ---------- */
+  const V = { b64: null, name: "", turns: [], max: 8, busy: false, done: false };
+  const VIVA_SYS = "أنت لجنة مناقشة رسالة ماجستير أو بحث تخرج في علوم البيئة في جامعة عراقية. اعتمد فقط على محتوى الملف المرفق. اسأل سؤالاً واحداً في كل مرة، متدرجاً: الهدف والمشكلة، ثم الطرائق ولماذا اختيرت، ثم النتائج والأرقام، ثم التفسير والمقارنة بالدراسات، ثم حدود البحث والتوصيات. بعد جواب الطالب: قيّمه بجملتين (ما الصحيح وما الناقص، مستنداً إلى الملف) مع درجة من 10 بالصيغة «الدرجة: X/10»، ثم اطرح السؤال التالي. لا تخترع أرقاماً أو معلومات غير موجودة في الملف. اكتب بالعربية الفصحى البسيطة.";
+  function vivaRender() {
+    const out = U.$("#sch-v-out"); if (!out) return;
+    out.innerHTML = `<div class="viva-log">${V.turns.map(t => `<div class="msg ${t.role === "user" ? "user" : "bot"}">${t.role === "user" ? esc(t.text).replace(/\n/g, "<br>") : `<div class="who">اللجنة</div>${U.md(t.text)}`}</div>`).join("")}${V.busy ? `<div class="msg bot"><p class="typing"><i></i><i></i><i></i></p></div>` : ""}</div>
+      ${V.b64 && V.turns.length && !V.busy && !V.done && V.turns.filter(t => t.role === "user").length < V.max ? `<div class="field u-mt10"><label for="sch-va">جوابك على السؤال ${V.turns.filter(t => t.role === "user").length + 1} من ${V.max}</label><textarea id="sch-va" class="input" rows="3" placeholder="اكتب جوابك كما ستقوله أمام اللجنة…"></textarea></div><div class="row"><button type="button" class="btn btn-primary" id="sch-v-send">أرسل الجواب</button><button type="button" class="btn btn-ghost" id="sch-v-end">أنهِ وأعطني التقييم</button></div>` : ""}`;
+    const sb = U.$("#sch-v-send"); if (sb) sb.onclick = () => { const t = U.$("#sch-va").value.trim(); if (t) vivaTurn(t); };
+    const eb = U.$("#sch-v-end"); if (eb) eb.onclick = () => vivaTurn("انتهت المناقشة. أعطني تقييماً نهائياً: نقاط القوة، ونقاط الضعف التي تحتاج تحضيراً، وأكثر 5 أسئلة متوقعة لم نتطرق لها، ومتوسط درجاتي.", true);
+  }
+  async function vivaTurn(text, final) {
+    if (V.busy || !V.b64) return;
+    if (text) V.turns.push({ role: "user", text });
+    V.busy = true; vivaRender();
+    const contents = [{ role: "user", parts: [{ inline_data: { mime_type: "application/pdf", data: V.b64 } }, { text: "هذه رسالتي. ابدأ المناقشة بالسؤال الأول." }] }]
+      .concat(V.turns.map(t => ({ role: t.role === "user" ? "user" : "model", parts: [{ text: t.text }] })));
+    let reply = "";
+    try {
+      await ECO.gemini.generate({ system: VIVA_SYS, temperature: 0.4, contents, onText: t => { reply = t; const log = U.$("#sch-v-out .viva-log"); if (log && log.lastElementChild) log.lastElementChild.innerHTML = `<div class="who">اللجنة</div>${U.md(t)}`; } });
+      V.turns.push({ role: "model", text: reply }); if (final) V.done = true;
+    } catch (e) { if (text) V.turns.pop(); U.toast(e.message); }
+    V.busy = false; vivaRender();
+  }
+  async function vivaStart(f) {
+    if (!f) return;
+    if (f.size > 9 * 1024 * 1024) { U.toast("حجم الملف أكبر من 9 ميغابايت"); return; }
+    const out = U.$("#sch-v-out");
+    if (needAI(out)) return;
+    V.b64 = await readFile(f); V.name = f.name; V.turns = []; V.done = false;
+    vivaTurn(null);
+  }
+
   function setTab(t) {
     S.tab = t;
     U.$$("#sch-tabs button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.tab === t)));
@@ -139,6 +193,10 @@ ${ctx(P)}` }] }],
     U.$("#sch-file").onchange = e => runPdf(e.target.files[0]);
     U.$("#sch-tp").innerHTML = Object.entries(POLL_AR).map(([k, v]) => `<option value="${k}">${v}</option>`).join("");
     U.$("#sch-tr-go").onclick = runTreat;
+    U.$("#sch-w-go").onclick = runWatch;
+    const w = U.store.get("sch_watch", null); if (w && w.q) U.$("#sch-wq").value = w.q;
+    U.$("#sch-wq").onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); runWatch(); } };
+    U.$("#sch-vf").onchange = e => { const f = e.target.files[0]; e.target.value = ""; vivaStart(f); };
     root.addEventListener("click", e => { const a = e.target.closest(".sch-cite"); if (!a) return; e.preventDefault(); const li = a.closest(".sch-panel").querySelector(`[data-r="${a.dataset.ref}"]`); if (li) { li.scrollIntoView({ behavior: "smooth", block: "center" }); li.classList.add("hl"); setTimeout(() => li.classList.remove("hl"), 1600); } });
   }
   ECO.views.scholar = { init, show() {} };

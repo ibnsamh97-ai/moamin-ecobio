@@ -1045,6 +1045,8 @@
       <button type="button" role="tab" data-tab="lit" aria-selected="true" aria-controls="sch-p-lit">اسأل الأدبيات العلمية</button>
       <button type="button" role="tab" data-tab="pdf" aria-selected="false" aria-controls="sch-p-pdf">قارئ البحوث PDF</button>
       <button type="button" role="tab" data-tab="treat" aria-selected="false" aria-controls="sch-p-treat">مرشّح طريقة المعالجة</button>
+      <button type="button" role="tab" data-tab="watch" aria-selected="false" aria-controls="sch-p-watch">الجديد بموضوعك</button>
+      <button type="button" role="tab" data-tab="viva" aria-selected="false" aria-controls="sch-p-viva">محاكي المناقشة</button>
     </div>
     <div class="sch-panel panel" id="sch-p-lit" role="tabpanel">
       <div class="field"><label for="sch-q">سؤالك البحثي (بالعربية أو الإنكليزية)</label>
@@ -1065,6 +1067,20 @@
         <div class="field"><span class="xlbl">&nbsp;</span><button type="button" class="btn" id="sch-tr-go">قارن الطرق</button></div>
       </div>
       <div id="sch-tr-out"></div>
+    </div>
+    <div class="sch-panel panel" id="sch-p-watch" role="tabpanel" hidden>
+      <div class="db-ctrl">
+        <div class="field sch-wide"><label for="sch-wq">موضوع بحثك</label><input id="sch-wq" class="input" placeholder="مثال: إزالة الفوسفات بالمواد المازّة الرخيصة"></div>
+        <div class="field"><label for="sch-wd">الفترة</label><select id="sch-wd" class="input"><option value="30">آخر شهر</option><option value="90">آخر 3 أشهر</option><option value="365">آخر سنة</option></select></div>
+        <div class="field"><span class="xlbl">&nbsp;</span><button type="button" class="btn btn-primary" id="sch-w-go">اعرض الجديد</button></div>
+      </div>
+      <p class="muted">بحوث حقيقية نُشرت حديثاً من OpenAlex مرتبة بالأحدث، مع سطر يلخّص كل بحث من ملخصه. يُحفظ موضوعك، وما نُشر بعد آخر زيارة يُعلَّم «جديد».</p>
+      <div id="sch-w-out"></div>
+    </div>
+    <div class="sch-panel panel" id="sch-p-viva" role="tabpanel" hidden>
+      <div class="field"><label for="sch-vf">رسالتك أو بحثك (PDF حتى 9 ميغابايت)</label><input id="sch-vf" class="input" type="file" accept="application/pdf"></div>
+      <p class="muted">تدرّب قبل المناقشة: لجنة افتراضية تقرأ رسالتك وتسألك سؤالاً بعد سؤال من محتواها، وتقيّم جوابك وتنبّهك إلى نقاط الضعف. تدريب فقط وليس تقييماً رسمياً، والملف لا يُحفظ.</p>
+      <div id="sch-v-out"></div>
     </div>
   </div>
 </section>
@@ -1285,6 +1301,17 @@
   <button type="button" class="pl-sticky" id="pl-sticky" data-scroll="#pl-res-h" hidden></button>
 </section>
 
+<!-- ======================= قارئ الأطياف ======================= -->
+<section class="view" id="view-spectra" data-title="قارئ الأطياف">
+  <div class="wrap">
+    <div class="view-head"><div>
+      <h2>قارئ الأطياف</h2>
+      <p>ارفع ملف FTIR أو XRD أو UV-Vis كما يخرج من الجهاز، فتُحدَّد القمم بالحساب وتُعيَّن من جداول مرجعية منشورة، وتُقارن المادة قبل الامتزاز وبعده: أي قمة انزاحت أو ظهرت أو اختفت، وماذا يعني ذلك لآلية الارتباط.</p>
+    </div></div>
+    <div id="spec-root" data-mo-skip></div>
+  </div>
+</section>
+
 <!-- ======================= محلّل بيانات البيئة ======================= -->
 <section class="view" id="view-analyzer" data-title="محلّل بيانات البيئة">
   <div class="wrap">
@@ -1484,6 +1511,7 @@
 <script src="js/campus3d.js"></script>
 <script src="js/chat.js"></script>
 <script src="js/coach.js"></script>
+<script src="js/ocrtable.js"></script>
 <script src="js/report.js"></script>
 <script src="js/samples.js"></script>
 <script src="js/contrib.js"></script>
@@ -1508,6 +1536,7 @@
 <script src="js/qc.js"></script>
 <script src="js/exp.js"></script>
 <script src="js/sorb.js"></script>
+<script src="js/spectra.js"></script>
 <script src="js/data-lab.js"></script>
 <script src="js/lab3d.js"></script>
 <script src="js/labexp.js"></script>

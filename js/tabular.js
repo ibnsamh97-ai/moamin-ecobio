@@ -60,6 +60,7 @@
         <label class="btn btn-primary" for="${id}-file">${ico("i-upload")}اختر ملف Excel أو CSV</label>
         <input id="${id}-file" type="file" accept=".xlsx,.csv,.txt,text/csv" hidden>
         ${o.template ? `<button type="button" class="btn" id="${id}-tpl">${ico("i-table")}قالب Excel فارغ</button>` : ""}
+        ${ECO.ocrTable && o.ocr !== false ? `<button type="button" class="btn" id="${id}-ocr">${ico("i-camera")}صوّر جدولك من الدفتر</button>` : ""}
         ${(o.demos || []).map((d, i) => `<button type="button" class="btn btn-ghost btn-sm" data-demo="${i}">${ico("i-book")}${esc(d.label)}</button>`).join("")}
       </div>
       <div class="field"><label for="${id}-paste">أو انسخ الخلايا من Excel (مع صف العناوين) والصقها هنا</label>
@@ -75,6 +76,8 @@
       try { const r = await TB.readFile(f); done(r.rows, r.label, { file: f.name }); } catch (x) { U.toast("تعذّرت قراءة الملف: " + x.message); }
     };
     U.$(`#${id}-go`).onclick = () => done(TB.parseText(U.$(`#${id}-paste`).value), "بيانات ملصوقة");
+    const ob = U.$(`#${id}-ocr`);
+    if (ob) ob.onclick = () => ECO.ocrTable({ title: "صوّر جدول بياناتك", hint: "يُقرأ الجدول وتراجعه قبل التحليل", expect: o.placeholder ? "مثل: " + String(o.placeholder).split("\n")[0] : "", onDone: rows => { U.$(`#${id}-paste`).value = rows.map(r => r.join("\t")).join("\n"); done(TB.parseText(U.$(`#${id}-paste`).value), "جدول مصوّر"); } });
     if (o.template) U.$(`#${id}-tpl`).onclick = () => ECO.xlsx.download(ECO.xlsx.write([{ name: o.templateSheet || "بياناتي", rows: o.template }]), o.templateName || "قالب-EcoBio.xlsx");
     /* البيانات التجريبية قد تُجلب من الشبكة (دالة غير متزامنة) */
     host.querySelectorAll("[data-demo]").forEach(b => b.onclick = async () => {

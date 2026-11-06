@@ -737,3 +737,31 @@ footer.foot { position: relative; overflow: hidden; background: #040e12; border-
 .explain .ex-body { padding-bottom: 6px; }
 .explain .ex-body ul { padding-inline-start: 18px; }
 .ex-note2 { font-size: .74rem; }
+
+/* ---------- تصوير جدول المختبر ---------- */
+body.ocr-open { overflow: hidden; }
+.ocr-dlg { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: 16px; background: rgba(2, 8, 10, .7); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.ocr-box { width: min(1100px, 100%); max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); display: flex; flex-direction: column; border-radius: 22px; background: rgba(8, 24, 30, .99); border: 1px solid var(--line-2); box-shadow: 0 50px 100px -40px rgba(0, 0, 0, .95); animation: palIn .3s var(--e-out); }
+.ocr-h { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+.ocr-h > div { flex: 1; display: grid; min-width: 0; }
+.ocr-h small { color: var(--muted); font-size: .8rem; }
+.ocr-main { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: 16px; padding: 16px; overflow: auto; }
+.ocr-src { display: grid; gap: 10px; align-content: start; }
+.ocr-src img { width: 100%; max-height: 62vh; object-fit: contain; border-radius: 14px; background: #000; }
+.ocr-pick, .ocr-pdf { display: grid; justify-items: center; gap: 8px; padding: 36px 16px; border-radius: 14px; border: 1.5px dashed var(--line-2); color: var(--muted); text-align: center; }
+.ocr-pick svg, .ocr-pdf svg { width: 36px; height: 36px; color: var(--river); }
+.ocr-btns { gap: 8px; flex-wrap: wrap; }
+.ocr-out { min-width: 0; display: grid; gap: 10px; align-content: start; }
+.ocr-tbl th, .ocr-tbl td { padding: 3px; }
+.ocr-tbl .input { min-width: 70px; height: 34px; padding: 4px 6px; font-size: .86rem; }
+.ocr-tbl th .input { font-weight: 600; }
+.ocr-tbl .input.flag { background: rgba(230, 174, 79, .22); border-color: #e6ae4f; box-shadow: 0 0 0 2px rgba(230, 174, 79, .25); }
+.ocr-notes { font-size: .8rem; }
+.sb-g h4 .sb-ocr { margin-inline-start: auto; }
+.sb-g h4 .sb-ocr svg { width: 15px; height: 15px; }
+@media (max-width: 800px) {
+  .ocr-dlg { padding: 0; place-items: stretch; }
+  .ocr-box { max-height: 100dvh; height: 100dvh; border-radius: 0; }
+  .ocr-main { grid-template-columns: minmax(0, 1fr); }
+  .ocr-src img { max-height: 30vh; }
+}

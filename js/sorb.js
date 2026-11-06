@@ -296,7 +296,7 @@
     const head = id === "pzc" ? "pH النهائي" : S.input === "abs" ? "الامتصاصية" : "Ce (mg/L)";
     return `<div class="sb-grids">${S.mats.map((m, mi) => `
       <div class="sb-g" style="--c:${COLS[mi % COLS.length]}">
-        <h4><i></i>${esc(m)}</h4>
+        <h4><i></i>${esc(m)}${ECO.ocrTable ? `<button type="button" class="btn btn-ghost btn-sm sb-ocr" data-act="ocr" data-m="${mi}">${ico("i-camera")}صوّر الجدول</button>` : ""}</h4>
         <div class="tbl-wrap"><table class="tbl sb-tbl"><thead><tr><th>${esc(e.fac)}${e.u ? ` (${esc(e.u)})` : ""}</th>${Array.from({ length: reps }, (_, r) => `<th>${esc(head)}${reps > 1 ? ` ${r + 1}` : ""}</th>`).join("")}</tr></thead><tbody>
           ${L.map((lv, i) => `<tr><th class="num">${G4(lv)}</th>${Array.from({ length: reps }, (_, r) => `<td><input class="input num" data-x="${id}" data-m="${mi}" data-i="${i}" data-r="${r}" value="${esc(cell(id, mi, i, r))}" inputmode="decimal" aria-label="${esc(m)} · ${esc(e.fac)} ${G4(lv)} · مكرر ${r + 1}"></td>`).join("")}</tr>`).join("")}
         </tbody></table></div>
@@ -600,6 +600,14 @@
     if (act === "json-save") saveJSON();
     if (act === "copy-methods") { const el = document.getElementById("sb-methods"); if (el) TB.copy(el.innerText).then(() => U.toast("نُسخت الفقرة")); }
     if (act === "ai") aiResults();
+    if (act === "ocr") {
+      const mi = +a.dataset.m, id = S.exp, L = levels(id), reps = repsN();
+      ECO.ocrTable({ title: `صوّر جدول «${S.mats[mi]}»`, hint: `${EX(id).n}: ${L.length} مستويات × ${reps} مكررات`, expect: `عمود ${EX(id).fac} ثم ${reps} أعمدة للقراءات`, onDone: rows => {
+        const body = rows.slice(1).map(r => r.map(c => String(c).trim()).filter(c => c !== "" && ok(num(c))));
+        body.slice(0, L.length).forEach((r, i) => { let v = r; if (v.length > reps && Math.abs(num(v[0]) - L[i]) < 1e-9) v = v.slice(1); v.slice(0, reps).forEach((x, k) => setCell(id, mi, i, k, x)); });
+        save(); renderExp(); U.toast("أُدخلت القراءات؛ راجعها في الجدول");
+      } });
+    }
     if (act === "reset") { if (a.dataset.sure) { S = DEF(); U.store.set(KEY, S); shell(); U.toast("بدأت دراسة جديدة"); } else { a.dataset.sure = "1"; a.innerHTML = `${ico("i-warn")}اضغط مرة أخرى لمسح كل البيانات`; setTimeout(() => { if (a.isConnected) { delete a.dataset.sure; a.innerHTML = `${ico("i-trash")}دراسة جديدة`; } }, 4000); } }
   }
   function onInput(e) {
