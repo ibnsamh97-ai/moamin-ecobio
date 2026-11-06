@@ -1,0 +1,7 @@
+version=1.0.2
+versionCode=36
+signed=true
+commit=169df2a8dd2f64fd7a6d8ee09923bcae52fb5f43
+built=2026-11-06T22:26:11Z
+aab_bytes=6811916
+apk_bytes=7045049
