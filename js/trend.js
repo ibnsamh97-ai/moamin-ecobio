@@ -254,6 +254,12 @@
         <div class="panel-h"><h3>${ico("i-chart")}<bdi>${esc(r.name)}</bdi></h3><span class="sub">${r.unit ? esc(r.unit) : ""}</span></div>
         <div class="chart-box"><canvas id="tr-chart" aria-label="السلسلة الزمنية وخط Sen"></canvas></div>
         <p class="tr-say">${esc(sentence(r))}</p>
+        <div class="tr-its">
+          <h4>${ico("i-refresh")}قبل حدث وبعده</h4>
+          <p class="faint">مثل إطلاقات سد الموصل، أو توقف المصفى، أو تشغيل محطة معالجة: هل تغيّر مستوى القيم أو اتجاهها بعد الحدث؟ (انحدار مقطّع لسلسلة زمنية متقطعة)</p>
+          <div class="row tr-its-in"><label class="sr-only" for="tr-ev">تاريخ الحدث</label><input type="date" id="tr-ev" class="input" value="${esc(S.ev || "")}"><label class="sr-only" for="tr-evn">اسم الحدث</label><input id="tr-evn" class="input" placeholder="اسم الحدث (اختياري)" value="${esc(S.evn || "")}"><button type="button" class="btn btn-sm btn-primary" id="tr-its-go">${ico("i-spark")}حلّل الأثر</button></div>
+          <div id="tr-its-out">${S.itsRes && S.itsRes.name === r.name ? itsHTML(S.itsRes) : ""}</div>
+        </div>
         ${r.warn.length || r.skipped.length ? `<div class="notice warn src-warn">${ico("i-warn")}<ul>${r.warn.map(w => `<li>${esc(w)}</li>`).join("")}${r.skipped.length ? `<li>استُبعدت فترات ناقصة: ${esc(r.skipped.slice(0, 12).join("، "))}${r.skipped.length > 12 ? ` و${r.skipped.length - 12} غيرها` : ""}.</li>` : ""}</ul></div>` : ""}
       </section>` : ""}
       <section class="panel">
@@ -281,9 +287,37 @@
       </details>`;
     out.querySelectorAll(".tr-row").forEach(tr => tr.onclick = () => { S.sel = +tr.dataset.i; render(); });
     U.$("#tr-xlsx").onclick = exportXlsx;
+    const ig = U.$("#tr-its-go"); if (ig) ig.onclick = () => { S.ev = U.$("#tr-ev").value; S.evn = U.$("#tr-evn").value.trim(); const rr = S.res[S.sel]; S.itsRes = its(rr); const o = U.$("#tr-its-out"); if (o) o.innerHTML = S.itsRes ? itsHTML(S.itsRes) : ""; drawChart(rr); };
     U.$("#tr-mar").onclick = () => TB.copy(methodAr());
     U.$("#tr-men").onclick = () => TB.copy(methodEn());
     if (r && !r.err) drawChart(r);
+  }
+
+  /* ---------- سلسلة زمنية متقطعة: y = b0 + b1(t−t0) + b2·D + b3(t−t0)·D (Wagner et al. 2002) ---------- */
+  function its(r) {
+    if (!S.ev || !r || r.err) return null;
+    const d = new Date(S.ev + "T00:00:00Z"); if (isNaN(d)) return null;
+    const y0 = d.getUTCFullYear(), doy = (d - Date.UTC(y0, 0, 1)) / 864e5, len = ((y0 % 4 === 0 && y0 % 100 !== 0) || y0 % 400 === 0) ? 366 : 365;
+    const t0 = y0 + (doy + 0.5) / len;
+    const ys = S.agg === "monthly" && r.anom ? r.anom : r.list.map(p => p.x), ts = r.list.map(p => p.t);
+    const pre = ts.filter(t => t < t0).length, post = ts.length - pre;
+    if (pre < 3 || post < 3) return { name: r.name, err: `تحتاج 3 قيم على الأقل قبل الحدث وبعده (عندك ${pre} قبل و${post} بعد).` };
+    const X = ts.map(t => { const D = t >= t0 ? 1 : 0; return [1, t - t0, D, (t - t0) * D]; });
+    const o = ECO.fit && ECO.fit.ols(X, ys); if (!o) return { name: r.name, err: "تعذّر الحساب (قيم غير كافية أو متطابقة)." };
+    const dw = o.res.slice(1).reduce((s2, e, i) => s2 + (e - o.res[i]) ** 2, 0) / o.res.reduce((s2, e) => s2 + e * e, 0);
+    return { name: r.name, unit: r.unit, t0, pre, post, b: o.beta, se: o.se, p: o.p, r2: o.r2, dw, anom: S.agg === "monthly" && !!r.anom, label: S.evn || S.ev, ts };
+  }
+  function itsHTML(x) {
+    if (x.err) return `<div class="notice info">${ico("i-info")}<span>${esc(x.err)}</span></div>`;
+    const u = x.unit ? " " + esc(x.unit) : "", sig = p => (p < 0.05 ? `<b class="ok">معنوي</b>` : `<span class="faint">غير معنوي</span>`);
+    return `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>الأثر</th><th>القيمة ± الخطأ المعياري</th><th>p</th><th></th></tr></thead><tbody>
+      <tr><td>تغيّر المستوى فور الحدث</td><td class="num">${F(x.b[2], 3)} ± ${F(x.se[2], 3)}${u}</td><td class="num">${pf(x.p[2])}</td><td>${sig(x.p[2])}</td></tr>
+      <tr><td>تغيّر الاتجاه بعد الحدث (لكل سنة)</td><td class="num">${F(x.b[3], 4)} ± ${F(x.se[3], 4)}${u}</td><td class="num">${pf(x.p[3])}</td><td>${sig(x.p[3])}</td></tr>
+      <tr><td>الاتجاه قبل الحدث ← بعده (لكل سنة)</td><td class="num" colspan="3">${F(x.b[1], 4)} ثم ${F(x.b[1] + x.b[3], 4)}${u}</td></tr>
+    </tbody></table></div>
+    <p class="tr-say">${esc(`بعد «${x.label}» ${x.p[2] < 0.05 ? (x.b[2] > 0 ? "ارتفع" : "انخفض") + ` المستوى فوراً بمقدار ${F(Math.abs(x.b[2]), 3)}${x.unit ? " " + x.unit : ""}` : "لم يتغير المستوى فوراً تغيراً معنوياً"}، و${x.p[3] < 0.05 ? (x.b[3] > 0 ? "صار الاتجاه أكثر صعوداً" : "صار الاتجاه أكثر هبوطاً") : "لم يتغير الاتجاه معنوياً"} (R² = ${F(x.r2, 2)}، ${x.pre} قيمة قبل و${x.post} بعد${x.anom ? "، على الانحراف عن المعدل الشهري" : ""}).`)}</p>
+    ${x.dw < 1.5 ? `<div class="notice warn">${ico("i-warn")}<span>إحصاءة Durbin–Watson = ${F(x.dw, 2)} (أقل من 1.5): البواقي مترابطة ذاتياً، فقيم p أصغر من الحقيقية؛ فسّر النتيجة بحذر أو استعمل متوسطات أطول.</span></div>` : `<p class="faint">Durbin–Watson = ${F(x.dw, 2)}: لا ارتباط ذاتي قوي في البواقي.</p>`}
+    <p class="faint">المرجع: Wagner, A.K., et al. (2002). Segmented regression analysis of interrupted time series studies. J. Clin. Pharm. Ther. 27: 299–309. الأثر ارتباط زمني وليس دليلاً على السببية؛ تحقق من عدم تزامن أحداث أخرى.</p>`;
   }
 
   function drawChart(r) {
@@ -296,6 +330,14 @@
     if (r.pt && r.pt.h) {
       const k = r.pt.loc, tc = (r.list[k - 1].t + r.list[k].t) / 2, ys = r.list.map(p => p.x), lo = Math.min(...ys), hi = Math.max(...ys);
       ds.push({ label: "نقطة التغيّر (Pettitt)", data: [{ x: tc, y: lo }, { x: tc, y: hi }], borderColor: ECO.COL.crimson || "#ef5a64", borderDash: [3, 3], pointRadius: 0, borderWidth: 1.5, showLine: true });
+    }
+    const xi = S.itsRes;
+    if (xi && !xi.err && xi.name === r.name && !xi.anom) {
+      const seg = (a2, b2) => [a2, b2].map(t => ({ x: t, y: xi.b[0] + xi.b[1] * (t - xi.t0) + (t >= xi.t0 ? xi.b[2] + xi.b[3] * (t - xi.t0) : 0) }));
+      const tl = xi.ts[0], tr = xi.ts[xi.ts.length - 1], eps = 1e-6;
+      ds.push({ label: "قبل الحدث", data: seg(tl, xi.t0 - eps), borderColor: ECO.COL.chloro, pointRadius: 0, borderWidth: 2.2, showLine: true });
+      ds.push({ label: "بعد الحدث", data: seg(xi.t0, tr), borderColor: ECO.COL.violet || "#b493ff", pointRadius: 0, borderWidth: 2.2, showLine: true });
+      const ys2 = r.list.map(p => p.x); ds.push({ label: xi.label, data: [{ x: xi.t0, y: Math.min(...ys2) }, { x: xi.t0, y: Math.max(...ys2) }], borderColor: "#e4f1ed", borderDash: [2, 4], pointRadius: 0, borderWidth: 1.2, showLine: true });
     }
     S.chart = new Chart(cv, { type: "scatter", data: { datasets: ds }, options: { responsive: true, maintainAspectRatio: false, animation: false,
       scales: { x: { type: "linear", ticks: { callback: v => (S.agg === "annual" ? String(Math.round(v)) : v.toFixed(1)) } }, y: { title: { display: !!r.unit, text: r.unit } } },

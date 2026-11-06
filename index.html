@@ -372,6 +372,16 @@
           <p class="faint u-tacenter-fs08r-mtn6" id="aqi-overall"></p>
         </div>
         <div class="panel" id="mon-ground"></div>
+        <div class="panel" id="mon-traj">
+          <div class="panel-h"><h3><svg aria-hidden="true"><use href="#i-map"/></svg>منين جا الهواء؟</h3><span class="sub">مسار الهواء الخلفي من بيانات الرياح</span></div>
+          <div class="sb-grid traj-in">
+            <div class="field"><label for="traj-st">المحطة</label><select id="traj-st" class="input"></select></div>
+            <div class="field"><label for="traj-h">قبل</label><select id="traj-h" class="input"><option value="24">24 ساعة</option><option value="48">48 ساعة</option><option value="72">72 ساعة</option></select></div>
+            <div class="field"><label for="traj-l">الارتفاع</label><select id="traj-l" class="input"><option value="10m">قرب الأرض (10 م)</option><option value="850hPa">نحو 1.5 كم (850 hPa، نقل الغبار)</option></select></div>
+          </div>
+          <button type="button" class="btn btn-primary btn-sm u-mt10" id="traj-go"><svg aria-hidden="true"><use href="#i-spark"/></svg>ارسم المسار على الخريطة</button>
+          <div id="traj-out"></div>
+        </div>
       </div>
       <div class="panel map-panel">
         <div class="map-tools">
