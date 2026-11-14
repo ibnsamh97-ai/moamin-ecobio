@@ -1,0 +1,118 @@
+[ok   ] air.shirqat                  rows=      5     0.6s  2026-11-09 → 2026-11-13
+[ok   ] air.cams_forecast.shirqat    rows=      9     0.6s  
+[ok   ] air.baiji                    rows=      5     0.6s  2026-11-09 → 2026-11-13
+[ok   ] air.cams_forecast.baiji      rows=      9     0.6s  
+[ok   ] air.tikrit                   rows=      5     0.6s  2026-11-09 → 2026-11-13
+[ok   ] air.cams_forecast.tikrit     rows=      9     0.6s  
+[ok   ] air.dour                     rows=      5     0.6s  2026-11-09 → 2026-11-13
+[ok   ] air.cams_forecast.dour       rows=      9     0.6s  
+[ok   ] air.samarra                  rows=      5     0.6s  2026-11-09 → 2026-11-13
+[ok   ] air.cams_forecast.samarra    rows=      9     0.6s  
+[ok   ] air.balad                    rows=      5     0.6s  2026-11-09 → 2026-11-13
+[ok   ] air.cams_forecast.balad      rows=      9     0.6s  
+[ok   ] weather.shirqat              rows=      8   191.2s  ERA5 حتى 2026-11-13، وتنبؤ لـ 3 يوماً
+[ok   ] weather.baiji                rows=      8     0.7s  ERA5 حتى 2026-11-13، وتنبؤ لـ 3 يوماً
+[ok   ] weather.tikrit               rows=      8     0.7s  ERA5 حتى 2026-11-13، وتنبؤ لـ 3 يوماً
+[ok   ] weather.dour                 rows=      8     0.7s  ERA5 حتى 2026-11-13، وتنبؤ لـ 3 يوماً
+[ok   ] weather.samarra              rows=      8    93.0s  ERA5 حتى 2026-11-13، وتنبؤ لـ 3 يوماً
+[ok   ] weather.balad                rows=      8     0.7s  ERA5 حتى 2026-11-13، وتنبؤ لـ 3 يوماً
+[ok   ] station.metar.kirkuk         rows=      5     1.5s  98 رصداً ساعياً حقيقياً منذ 2026-11-09
+[ok   ] station.era5.kirkuk          rows=      1     0.6s  2026-11-13 → 2026-11-13
+[ok   ] station.cams.kirkuk          rows=      4     0.6s  2026-11-10 →
+[ok   ] station.metar.baghdad        rows=      5     1.2s  126 رصداً ساعياً حقيقياً منذ 2026-11-09
+[ok   ] station.era5.baghdad         rows=      1     0.6s  2026-11-13 → 2026-11-13
+[ok   ] station.cams.baghdad         rows=      4     0.6s  2026-11-10 →
+[ok   ] station.metar.erbil          rows=      5     1.2s  125 رصداً ساعياً حقيقياً منذ 2026-11-09
+[ok   ] station.era5.erbil           rows=      1    92.8s  2026-11-13 → 2026-11-13
+[ok   ] station.cams.erbil           rows=      4     0.6s  2026-11-10 →
+[ok   ] station.metar.tikrit_ab      rows=      0     0.0s  أرشيف منتهٍ ومحفوظ سابقاً
+[ok   ] station.era5.tikrit_ab       rows=      0     0.0s  
+[ok   ] station.metar.baiji_ab       rows=      0     0.0s  أرشيف منتهٍ ومحفوظ سابقاً
+[ok   ] station.era5.baiji_ab        rows=      0     0.0s  
+[ok   ] station.metar.balad_ab       rows=      0     0.0s  أرشيف منتهٍ ومحفوظ سابقاً
+[ok   ] station.era5.balad_ab        rows=      0     0.0s  
+[ok   ] station.bias                 rows=    270     0.1s  
+[ok   ] station.districts            rows=     12     0.0s  
+[ok   ] river.shirqat                rows=      5     0.6s  2026-11-09 →
+[ok   ] river.baiji                  rows=      5     0.6s  2026-11-09 →
+[ok   ] river.tikrit                 rows=      5     0.6s  2026-11-09 →
+[ok   ] river.dour                   rows=      5     0.6s  2026-11-09 →
+[ok   ] river.samarra                rows=      5     0.6s  2026-11-09 →
+[ok   ] river.balad                  rows=      5     0.6s  2026-11-09 →
+[ok   ] water_rs.sentinel2           rows=     12    10.2s  12 مهمة (قضاء × شهر)، 12 شهراً بمشهد صافٍ
+[ok   ] sat.fires_modis              rows=      0     4.3s  عولج 0 من 0 مشهداً متبقياً
+[ok   ] sat.ndvi_modis               rows=      0     4.6s  عولج 0 من 0 مشهداً متبقياً
+[ok   ] sat.river_lst_landsat        rows=      0    33.2s  عولج 0 من 3 مشهداً متبقياً
+[ok   ] sat.gases_s5p                rows=    587   749.9s  عولج 230 من 180 مشهداً متبقياً
+[error] osm.pollution_sources        rows=      0   764.6s  RuntimeError: HTTP 504: <?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8" lang="en"/>
+  <title>OSM3S Response</title>
+</head>
+<body>
+
+<p>The data included in this document is fr
+[ok   ] research.studies             rows=    256     0.2s  7 بحثاً، 6 ربطاً بالأقضية
+[ok   ] ai.forecast.shirqat          rows=     10     5.1s  الأفضل لليوم التالي: gradient_boosting (RMSE 39.921، R² 0.2358، المهارة 0.1537)
+[ok   ] ai.forecast.baiji            rows=     10     8.4s  الأفضل لليوم التالي: random_forest (RMSE 45.577، R² 0.1767، المهارة 0.1046)
+[ok   ] ai.forecast.tikrit           rows=     10     8.5s  الأفضل لليوم التالي: random_forest (RMSE 44.029، R² 0.2317، المهارة 0.135)
+[ok   ] ai.forecast.dour             rows=     10     8.3s  الأفضل لليوم التالي: random_forest (RMSE 48.209، R² 0.1836، المهارة 0.0888)
+[ok   ] ai.forecast.samarra          rows=     10     8.4s  الأفضل لليوم التالي: random_forest (RMSE 35.171، R² 0.1688، المهارة 0.0417)
+[ok   ] ai.forecast.balad            rows=     10     8.4s  الأفضل لليوم التالي: random_forest (RMSE 34.933، R² 0.1801، المهارة 0.0482)
+[ok   ] ai.anomalies                 rows=    192     0.0s  Isolation Forest، نسبة التلوث المتوقعة 2%
+[ok   ] ai.anomalies_wrap            rows=      0     1.3s  
+[ok   ] ai.regimes                   rows=   9378     0.0s  K-Means، k = 3، Silhouette = 0.328
+[ok   ] ai.regimes_wrap              rows=      0     0.6s  
+[ok   ] ai.relationships             rows=     18     0.0s  سبيرمان شهري
+[ok   ] ai.relationships_wrap        rows=      0     0.8s  
+[ok   ] ai.dust_events               rows=   2412     1.9s  
+[ok   ] ai.river_quality             rows=    156     0.3s  
+{
+ "updated_at": "2026-11-14T08:58:16+00:00",
+ "seconds": 2015.5,
+ "counts": {
+  "districts": 6,
+  "air_daily": 9378,
+  "weather_daily": 26028,
+  "river_daily": 58884,
+  "water_rs_monthly": 714,
+  "studies": 7,
+  "study_values": 256,
+  "pollution_sources": 1195,
+  "model_runs": 2100,
+  "forecasts": 480,
+  "anomalies": 192,
+  "air_regime_daily": 9378,
+  "station_daily": 20663,
+  "station_bias": 270
+ },
+ "ranges": {
+  "air_daily": [
+   "2022-08-04",
+   "2026-11-13"
+  ],
+  "weather_daily": [
+   "2015-01-01",
+   "2026-11-16"
+  ],
+  "river_daily": [
+   "2000-01-01",
+   "2026-11-13"
+  ],
+  "station_daily": [
+   "2000-02-07",
+   "2026-11-13"
+  ],
+  "water_rs_monthly": [
+   "2017-01",
+   "2026-11"
+  ]
+ },
+ "errors": 1,
+ "schema_version": 1,
+ "bytes": 31813632,
+ "bytes_gz": 6945260
+}
