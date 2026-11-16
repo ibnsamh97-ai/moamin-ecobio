@@ -26,6 +26,8 @@ CLASSES = {1: "permanent", 2: "new_permanent", 3: "lost_permanent", 4: "seasonal
            10: "ephemeral_seasonal"}
 # بحيرة الثرثار: مستطيل يحيط بالبحيرة كلها (تقع بين صلاح الدين والأنبار)
 THARTHAR = (42.90, 33.60, 43.62, 34.36)  # غرب، جنوب، شرق، شمال
+# بحيرة سد العظيم (السد عند 34.565° ش، 44.516° ق، اكتمل 2000): مستطيل شمال السد
+ADHAIM = (44.40, 34.55, 44.75, 34.88)
 R = 6371.0088
 
 
@@ -97,9 +99,11 @@ def run():
             print(f"water: tif {src.width}x{src.height} res={src.res} crs={src.crs} tiled={src.profile.get('tiled')}")
             prov = stats(src, bounds_of(geom), geom)
             thar = stats(src, THARTHAR)
+            adh = stats(src, ADHAIM)
     regions = [
         {"id": "province", "name": "محافظة صلاح الدين", "classes": prov, **summary(prov)},
         {"id": "tharthar", "name": "بحيرة الثرثار (المستطيل المحيط بها)", "bbox": THARTHAR, "classes": thar, **summary(thar)},
+        {"id": "adhaim", "name": "بحيرة سد العظيم (المستطيل شمال السد)", "bbox": ADHAIM, "classes": adh, **summary(adh)},
     ]
     for r in regions:
         print(f"water: {r['id']}: 1984={r['water_1984_km2']} 2021={r['water_2021_km2']} lost={r['lost_km2']} new={r['new_km2']}")
@@ -109,6 +113,7 @@ def run():
             return [round(c[0], 4), round(c[1], 4)]
         return [simp(k) for k in c]
     return {
+        "v": 2,
         "source": "EC JRC / Google — Global Surface Water v1.4 (1984–2021), transitions layer, 30 m",
         "citation": "Pekel, J.-F., Cottam, A., Gorelick, N., Belward, A.S. (2016). High-resolution mapping of global surface water and its long-term changes. Nature 540, 418–422.",
         "tif": TIF, "boundary": {"name": name, "source": "geoBoundaries gbOpen IRQ ADM1 (CC BY 4.0)", "build": meta.get("buildDate"),

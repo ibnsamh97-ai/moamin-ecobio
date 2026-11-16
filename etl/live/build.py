@@ -126,7 +126,7 @@ def tle(force: bool = False) -> None:
 def water(force: bool = False) -> None:
     from water_jrc import run  # يحتاج rasterio؛ يُستورد هنا فقط
     old = load("water-change.json")
-    if old and not force:
+    if old and not force and old.get("v") == 2:
         print("water: exists (use --force to recompute)")
         return
     save("water-change.json", run())

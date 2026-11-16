@@ -128,3 +128,32 @@
 .st-when b { font-family: var(--f-mono); font-size: 1.25rem; color: #fff; direction: rtl; }
 .st-tool { display: inline-flex; align-items: center; gap: 4px; font-size: .78rem; color: var(--c); margin-top: auto; }
 .st-tool svg { width: 14px; height: 14px; }
+
+/* ---------- وين راح الماي ---------- */
+.wl-top { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; margin-bottom: 12px; }
+.wl-top .sw-places { margin: 0; }
+.wl-kind { display: flex; gap: 8px; }
+.wl-kind .chip[aria-pressed="true"], .wl-tabs .chip[aria-selected="true"] { background: color-mix(in srgb, #4fc8dc 22%, transparent); border-color: #4fc8dc; color: #fff; }
+.wl-map { height: clamp(380px, 62vh, 680px); background: #0b0d10; }
+.wl-leg { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 10px 0 14px; font-size: .76rem; color: var(--muted); }
+.wl-leg span { display: inline-flex; align-items: center; gap: 6px; }
+.wl-leg i { width: 14px; height: 14px; border-radius: 3px; border: 1px solid rgba(255,255,255,.2); }
+.wl-occ i { width: 140px !important; }
+.wl-occ em { font-style: normal; }
+.wl-tabs { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+.wl-kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.wl-k { display: flex; flex-direction: column; gap: 4px; padding: 14px; border-radius: var(--r-md); border: 1px solid var(--line); background: var(--ink-2); }
+.wl-k small { color: var(--muted); font-size: .76rem; }
+.wl-k b { font-family: var(--f-display); font-size: clamp(1.4rem, 3vw, 2rem); }
+.wl-k span { color: var(--faint); font-size: .74rem; }
+.wl-k.lost b { color: #ff6b7d; } .wl-k.warn b { color: #ffc90e; } .wl-k.new b { color: #5fd17a; }
+.wl-bar { display: flex; height: 14px; border-radius: 99px; overflow: hidden; margin: 16px 0 10px; }
+.wl-tbl { width: 100%; font-size: .82rem; border-collapse: collapse; }
+.wl-tbl td { padding: 5px 4px; border-top: 1px dashed var(--line); }
+.wl-tbl td:first-child { display: flex; align-items: center; gap: 8px; }
+.wl-tbl td i { width: 12px; height: 12px; border-radius: 3px; flex: none; }
+.wl-tbl td:nth-child(n+2) { text-align: left; white-space: nowrap; color: var(--muted); }
+.wl-2025 { display: flex; gap: 10px; align-items: flex-start; margin: 14px 0; border-color: color-mix(in srgb, #ffc90e 35%, transparent); }
+.wl-2025 svg { width: 20px; height: 20px; color: #ffc90e; flex: none; margin-top: 3px; }
+.wl-2025 p { margin: 0; line-height: 1.9; }
+@media (max-width: 640px) { .wl-kpis { grid-template-columns: minmax(0, 1fr); } }
