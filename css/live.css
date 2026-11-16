@@ -81,3 +81,23 @@
 }
 /* سبع بوابات في الشريط العلوي: الأيقونات تختفي قبل أن يزدحم */
 @media (max-width: 1460px) { .nav .nav-btn > svg.nav-ic { display: none; } }
+
+/* ---------- قبل وبعد ---------- */
+.sw-places { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.sw-place[aria-pressed="true"] { background: color-mix(in srgb, #ff8f6b 22%, transparent); border-color: #ff8f6b; color: #fff; }
+.sw-stage { position: relative; border-radius: var(--r-lg); overflow: hidden; border: 1px solid var(--line); background: #0b0d10; }
+.sw-map { height: clamp(380px, 66vh, 720px); background: #0b0d10; }
+.sw-tag { position: absolute; z-index: 700; top: 12px; display: flex; flex-direction: column; gap: 2px; max-width: 44%; padding: 8px 12px; border-radius: 12px; background: rgba(8, 18, 22, .8); backdrop-filter: blur(6px); border: 1px solid var(--line); font-size: .74rem; color: var(--muted); pointer-events: none; }
+.sw-tag b { font-family: var(--f-display); font-size: 1.5rem; color: #fff; line-height: 1.1; }
+.sw-tag span { display: flex; align-items: center; gap: 6px; }
+.sw-tag-a { right: 12px; } .sw-tag-b { left: 12px; }
+.sw-tag-b { top: auto; bottom: 12px; }
+.sw-div { position: absolute; z-index: 750; top: 0; bottom: 0; left: 50%; width: 3px; margin-left: -1.5px; background: #fff; box-shadow: 0 0 12px rgba(0,0,0,.6); cursor: ew-resize; touch-action: none; }
+.sw-div::before { content: ""; position: absolute; inset: 0 -16px; }
+.sw-div i { position: absolute; top: 50%; left: 50%; width: 42px; height: 42px; margin: -21px 0 0 -21px; display: grid; place-items: center; border-radius: 50%; background: #fff; color: #0a1c22; box-shadow: 0 4px 18px rgba(0,0,0,.5); }
+.sw-div i svg { width: 22px; height: 22px; }
+.sw-div:focus-visible i { outline: 3px solid #ff8f6b; outline-offset: 2px; }
+.sw-ctl { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; margin-top: 12px; }
+.sw-ctl .field { margin: 0; min-width: 150px; }
+.sw-note { margin: 12px 0 14px; line-height: 1.9; color: var(--muted); }
+@media (max-width: 640px) { .sw-tag { max-width: 46%; padding: 6px 9px; } .sw-tag b { font-size: 1.2rem; } .sw-ctl .field { flex: 1 1 140px; } }
