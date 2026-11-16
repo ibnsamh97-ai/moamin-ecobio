@@ -8,11 +8,18 @@ UA = "EcoBio-AI/1.0 (+https://moamin-ecobio.vercel.app; academic, Tikrit Univers
 ORIGIN = "https://moamin-ecobio.vercel.app"
 
 
-def get(u, raw=False):
-    req = urllib.request.Request(u, headers={"User-Agent": UA, "Origin": ORIGIN})
-    with urllib.request.urlopen(req, timeout=90) as r:
-        body = r.read()
-        return r.status, r.headers.get("Access-Control-Allow-Origin"), r.headers.get("Content-Type"), (body if raw else json.loads(body))
+def get(u, raw=False, tries=3):
+    import time
+    for i in range(tries):
+        try:
+            req = urllib.request.Request(u, headers={"User-Agent": UA, "Origin": ORIGIN})
+            with urllib.request.urlopen(req, timeout=90) as r:
+                body = r.read()
+                return r.status, r.headers.get("Access-Control-Allow-Origin"), r.headers.get("Content-Type"), (body if raw else json.loads(body))
+        except Exception:
+            if i == tries - 1:
+                raise
+            time.sleep(10 * (i + 1))
 
 
 def show(name, fn):
