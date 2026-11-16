@@ -71,7 +71,8 @@ def from_db(db_gz: Path, geom):
     last = con.execute("SELECT MAX(date) FROM fire_pixels").fetchone()[0]
     months = [dict(r) for r in con.execute("""SELECT substr(date,1,7) m, COUNT(*) n, SUM(near_kind IS NOT NULL) nf, COUNT(DISTINCT date) d
                                               FROM fire_pixels WHERE date > date(?, '-365 day') GROUP BY m ORDER BY m""", (last,))]
-    src = [dict(r) for r in con.execute("SELECT kind, name, lat, lon, district_id FROM pollution_sources WHERE lat IS NOT NULL")]
+    src = [dict(r) for r in con.execute("""SELECT kind, name, lat, lon FROM pollution_sources WHERE lat IS NOT NULL
+                                             AND kind IN ('refinery','oil_facility','power_plant','oil_storage','landfill','wastewater')""")]
     for s in src:
         s["in_prov"] = inside(s["lon"], s["lat"], geom)
         s["lat"], s["lon"] = round(s["lat"], 4), round(s["lon"], 4)
@@ -98,12 +99,22 @@ def climate_trace(geom, bbox):
             if not (bbox[0] <= lon <= bbox[2] and bbox[1] <= lat <= bbox[3]) or not inside(lon, lat, geom):
                 continue
             em = next((e for e in (a.get("EmissionsSummary") or []) if e.get("Gas") == "co2e_100yr"), None)
+            conf = None
+            for blk in a.get("Confidence") or []:  # آخر سنة لها درجة ثقة
+                for yr, v in blk.items():
+                    if v and isinstance(v, list) and v[0].get("total_co2e_100yrgwp"):
+                        conf = (yr, v[0]["total_co2e_100yrgwp"])
             out.append({"id": a.get("Id"), "name": a.get("Name"), "sector": a.get("Sector"), "type": a.get("AssetType"), "lat": round(lat, 4), "lon": round(lon, 4),
-                        "co2e_t": round(em["EmissionsQuantity"]) if em and em.get("EmissionsQuantity") is not None else None})
+                        "co2e_t": round(em["EmissionsQuantity"]) if em and em.get("EmissionsQuantity") is not None else None,
+                        "conf": conf[1] if conf else None})
         if len(A) < 500:
             break
         offset += 500
     out.sort(key=lambda x: -(x["co2e_t"] or 0))
+    from collections import Counter
+    print("climatetrace: sectors:", Counter(x["sector"] for x in out).most_common())
+    print("climatetrace: confidence:", Counter(x["conf"] for x in out).most_common())
+    out = [x for x in out if x["co2e_t"]][:80]
     print(f"climatetrace: {len(out)} assets inside Salah al-Din; top: {[(x['name'], x['co2e_t']) for x in out[:5]]}")
     return out
 
