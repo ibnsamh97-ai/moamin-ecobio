@@ -3,14 +3,14 @@ name: live-data
 # ملفات JSON صغيرة تُحفظ في data/live/ على main فتُنشر مع الموقع والتطبيق نفسيهما.
 on:
   schedule:
-    - cron: '41 1 * * *'   # 04:41 بتوقيت بغداد — المدارات يومياً، والباقي حين يلزم
+    - cron: '41 3 * * *'   # 06:41 بتوقيت بغداد، بعد بناء قاعدة الأقضية — المدارات والحرائق يومياً، والباقي حين يلزم
   push:
     branches: [main]
     paths: ['etl/live/**', '.github/workflows/live-data.yml']
   workflow_dispatch:
     inputs:
       tasks:
-        description: 'المهام (climate tle water) — فارغ = الكل'
+        description: 'المهام (climate tle water flares) — فارغ = الكل'
         default: ''
       force:
         description: 'إعادة الحساب حتى لو كان الملف موجوداً'
@@ -30,6 +30,8 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: '3.12', cache: pip, cache-dependency-path: etl/requirements.txt }
       - run: pip install -r etl/requirements.txt
+      - name: District database (for flares)
+        run: git fetch -q --depth 1 origin db && git show origin/db:ecobio.db.gz > /tmp/ecobio.db.gz && ls -la /tmp/ecobio.db.gz || true
       - name: Probe sources
         if: github.event_name != 'schedule'
         run: python etl/live/probe.py || true

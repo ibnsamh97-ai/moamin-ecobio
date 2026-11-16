@@ -3,6 +3,7 @@
     climate  حرارة تكريت سنة بسنة منذ 1940 من إعادة التحليل ERA5 (Open-Meteo)؛ تُحسب مرة في السنة.
     tle      عناصر مدارات أقمار رصد الأرض من CelesTrak؛ تُحدَّث كل يوم.
     water    تغيّر الماء السطحي 1984–2021 من JRC Global Surface Water؛ يُحسب مرة واحدة.
+    flares   مصادر التلوث الحرارية الدائمة (MODIS) من قاعدة الأقضية + تقديرات Climate TRACE؛ يومياً.
 
     python etl/live/build.py [climate] [tle] [water] [--force]
 كل مهمة مستقلة: فشل واحدة لا يوقف الباقي، ويبقى ملفها السابق كما هو.
@@ -132,7 +133,17 @@ def water(force: bool = False) -> None:
     save("water-change.json", run())
 
 
-TASKS = {"climate": climate, "tle": tle, "water": water}
+# ---------------------------------------------------------------- مصادر التلوث
+def flares(force: bool = False) -> None:
+    import os
+    from flares import run as run_flares
+    db = Path(os.environ.get("ECOBIO_DB_GZ", "/tmp/ecobio.db.gz"))
+    if not db.exists():
+        raise RuntimeError(f"district database not found at {db}")
+    save("flares.json", run_flares(db))
+
+
+TASKS = {"climate": climate, "tle": tle, "water": water, "flares": flares}
 
 if __name__ == "__main__":
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
