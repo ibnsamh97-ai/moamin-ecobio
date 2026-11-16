@@ -21,6 +21,7 @@ from common import ROOT, UA, http_json, utcnow  # noqa: E402
 
 OUT = ROOT / "data" / "live"
 TIKRIT = {"name": "تكريت", "lat": 34.6071, "lon": 43.6782}
+CLIMATE_V = 2  # غيّر الرقم لإعادة الحساب عند تغيّر طريقة التجميع
 
 
 def save(name: str, obj) -> None:
@@ -41,7 +42,7 @@ def climate(force: bool = False) -> None:
     """ERA5 اليومي لخلية تكريت 1940 → آخر سنة كاملة، ملخصاً لكل سنة."""
     last = dt.date.today().year - 1
     old = load("climate-tikrit.json")
-    if old and not force and old.get("years") and old["years"][-1]["y"] >= last:
+    if old and not force and old.get("v") == CLIMATE_V and old.get("years") and old["years"][-1]["y"] >= last:
         print(f"climate: up to date ({old['years'][-1]['y']})")
         return
     days, meta = {}, {}
@@ -78,7 +79,7 @@ def climate(force: bool = False) -> None:
     if len(years) < 60:
         raise RuntimeError(f"too few complete years: {len(years)}")
     save("climate-tikrit.json", {
-        "place": TIKRIT["name"], "lat": TIKRIT["lat"], "lon": TIKRIT["lon"], "grid": meta,
+        "v": CLIMATE_V, "place": TIKRIT["name"], "lat": TIKRIT["lat"], "lon": TIKRIT["lon"], "grid": meta,
         "model": "ERA5 (ECMWF / Copernicus C3S) via Open-Meteo Historical Weather API, models=era5, daily, Asia/Baghdad",
         "license": "CC BY 4.0", "generated": utcnow(),
         "fields": {"tmean": "متوسط الحرارة السنوي °C", "tmax": "متوسط العظمى اليومية °C", "d45": "أيام العظمى ≥ 45 °C",
