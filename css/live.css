@@ -47,3 +47,37 @@
 @media (max-width: 900px) { .ws-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 520px) { .ws-vs { grid-template-columns: minmax(0, 1fr); } .ws-chart { height: 240px; } .ws-kpis { gap: 8px; } }
 @media (max-width: 520px) { .ws-kpi b { font-size: 1.6rem; } .ws-kpi b i:not(.ar) { display: block; margin: 2px 0 0; font-size: .45em; } }
+
+/* ---------- الريح والغبار ---------- */
+.wd-stage { position: relative; border-radius: var(--r-lg); overflow: hidden; border: 1px solid var(--line); background: #0b0d10; }
+.wd-map { height: clamp(420px, 68vh, 760px); background: #0b0d10; }
+.wd-map .leaflet-pane canvas.lv-dcv, .wd-map .leaflet-pane canvas.lv-wcv { position: absolute; top: 0; left: 0; }
+.wd-bar { position: absolute; z-index: 800; inset-inline: 12px; bottom: 12px; display: grid; grid-template-columns: auto minmax(130px, auto) minmax(0, 1fr) auto; gap: 10px 14px; align-items: center; padding: 10px 14px; border-radius: 14px; background: rgba(8, 18, 22, .82); backdrop-filter: blur(8px); border: 1px solid var(--line); }
+.wd-when { display: flex; flex-direction: column; line-height: 1.3; }
+.wd-when b { font-family: var(--f-display); font-size: 1.05rem; }
+.wd-when span { color: var(--muted); font-size: .74rem; }
+.wd-bar input[type=range] { width: 100%; accent-color: #ff8f6b; }
+.wd-tg { display: flex; gap: 12px; }
+.wd-tik { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 14px 0; }
+.wd-k { display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; border-radius: var(--r-md); background: var(--ink-1); border: 1px solid var(--line); }
+.wd-k small { color: var(--muted); font-size: .76rem; }
+.wd-k b { font-family: var(--f-display); font-size: clamp(1.4rem, 3vw, 1.9rem); }
+.wd-k span { color: var(--faint); font-size: .76rem; }
+.wd-k .btn { align-self: flex-start; margin-top: 6px; }
+.wd-legs { display: grid; gap: 10px; }
+.wd-leg { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; font-size: .78rem; color: var(--muted); }
+.wd-sw { display: flex; flex-wrap: wrap; align-items: center; gap: 3px; max-width: 100%; }
+.wd-sw i { width: 26px; height: 9px; border-radius: 3px; }
+.wd-sw em { font-style: normal; font-family: var(--f-mono); font-size: .68rem; margin-inline: 1px 6px; }
+.wd-pop { display: flex; flex-direction: column; gap: 3px; font-size: .82rem; min-width: 160px; }
+.wd-pop small { color: #666; }
+.wd-next { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+@media (max-width: 760px) {
+  .wd-bar { grid-template-columns: auto minmax(0, 1fr); inset-inline: 8px; bottom: 8px; padding: 8px 10px; }
+  .wd-bar input[type=range] { grid-column: 1 / -1; }
+  .wd-tg { grid-column: 1 / -1; }
+  .wd-tik { grid-template-columns: minmax(0, 1fr); }
+  .wd-map { height: 72vh; }
+}
+/* سبع بوابات في الشريط العلوي: الأيقونات تختفي قبل أن يزدحم */
+@media (max-width: 1460px) { .nav .nav-btn > svg.nav-ic { display: none; } }
