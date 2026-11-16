@@ -1,0 +1,44 @@
+name: live-data
+# بيانات «صلاح الدين الحية» (حرارة تكريت منذ 1940، مدارات الأقمار، تغيّر الماء منذ 1984).
+# ملفات JSON صغيرة تُحفظ في data/live/ على main فتُنشر مع الموقع والتطبيق نفسيهما.
+on:
+  schedule:
+    - cron: '41 1 * * *'   # 04:41 بتوقيت بغداد — المدارات يومياً، والباقي حين يلزم
+  push:
+    branches: [main]
+    paths: ['etl/live/**', '.github/workflows/live-data.yml']
+  workflow_dispatch:
+    inputs:
+      tasks:
+        description: 'المهام (climate tle water) — فارغ = الكل'
+        default: ''
+      force:
+        description: 'إعادة الحساب حتى لو كان الملف موجوداً'
+        type: boolean
+        default: false
+permissions:
+  contents: write
+concurrency:
+  group: live-data
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12', cache: pip, cache-dependency-path: etl/requirements.txt }
+      - run: pip install -r etl/requirements.txt
+      - name: Probe sources
+        if: github.event_name != 'schedule'
+        run: python etl/live/probe.py || true
+      - name: Build
+        run: python etl/live/build.py ${{ github.event.inputs.tasks }} ${{ github.event.inputs.force == 'true' && '--force' || '' }}
+      - name: Commit changes
+        run: |
+          git add data/live
+          if git diff --cached --quiet; then echo "no changes"; exit 0; fi
+          git -c user.name=ecobio-bot -c user.email=ecobio-bot@users.noreply.github.com commit -qm "بيانات حية: $(ls data/live | tr '\n' ' ')"
+          for i in 1 2 3; do git pull -q --rebase origin main && git push -q origin HEAD:main && exit 0; sleep 5; done
+          exit 1

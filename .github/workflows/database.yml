@@ -8,7 +8,7 @@ on:
     - cron: '17 2 * * *'   # 05:17 بتوقيت بغداد
   push:
     branches: [main]
-    paths: ['etl/**', '!etl/publish_worker.sh', '.github/workflows/database.yml', 'js/data-research.js']
+    paths: ['etl/**', '!etl/publish_worker.sh', '!etl/live/**', '.github/workflows/database.yml', 'js/data-research.js']
   workflow_dispatch:
     inputs:
       full:
