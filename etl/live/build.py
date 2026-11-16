@@ -60,12 +60,14 @@ def climate(force: bool = False) -> None:
     for y in range(1940, last + 1):
         rows = [(t, v) for t, v in days.items() if t.startswith(f"{y}-") and None not in v]
         size = 366 if (y % 4 == 0 and (y % 100 != 0 or y % 400 == 0)) else 365
-        if len(rows) < size:  # سنة ناقصة: لا تدخل الحساب
+        # سنة ناقصة لا تدخل الحساب. يُسمح بغياب يوم واحد فقط: أول يوم في الأرشيف
+        # (1940/1/1 بتوقيت بغداد يبدأ قبل أول ساعة في ERA5 بثلاث ساعات)
+        if len(rows) < size - 1:
             print(f"climate: {y} incomplete ({len(rows)}/{size}) — skipped")
             continue
         hot = max(rows, key=lambda r: r[1][0])
         years.append({
-            "y": y,
+            "y": y, "days": len(rows),
             "tmean": round(sum(v[2] for _, v in rows) / len(rows), 3),
             "tmax": round(sum(v[0] for _, v in rows) / len(rows), 3),
             "d45": sum(1 for _, v in rows if v[0] >= 45),
@@ -90,7 +92,7 @@ SATS = [
     ("SENTINEL-2A", 290), ("SENTINEL-2B", 290), ("SENTINEL-2C", 290),
     ("LANDSAT 8", 185), ("LANDSAT 9", 185),
     ("SENTINEL-5P", 2600),
-    ("AQUA", 2330), ("TERRA", 2330), ("SUOMI NPP", 3000), ("NOAA 20", 3000), ("NOAA 21", 3000),
+    ("AQUA", 2330), ("TERRA", 2330),
     ("SENTINEL-3A", 1270), ("SENTINEL-3B", 1270),
 ]
 

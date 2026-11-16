@@ -2,8 +2,8 @@
    الصفحة وملفات الكود (js وcss وjson): الشبكة أولاً ثم النسخة المحفوظة، حتى لا تجتمع صفحة جديدة مع كود قديم بعد أي تحديث.
    الصور والخطوط والنماذج الكبيرة: المحفوظ أولاً مع تحديثه في الخلفية.
    لا يتدخل في طلبات البيانات الحية (Open-Meteo وغيرها)؛ قاعدة الأقضية لها ذاكرتها الخاصة. */
-const V = "ecobio-shell-v22";
-const CORE = ["./", "index.html", "css/style.css", "css/shell.css", "css/tools.css", "css/motion.css", "css/redesign.css", "manifest.webmanifest", "assets/icons/pwa-192.png"];
+const V = "ecobio-shell-v23";
+const CORE = ["./", "index.html", "css/style.css", "css/shell.css", "css/tools.css", "css/motion.css", "css/redesign.css", "css/live.css", "manifest.webmanifest", "assets/icons/pwa-192.png"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(V).then(c => c.addAll(CORE)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", e => {
   e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k.startsWith("ecobio-shell-") && k !== V).map(k => caches.delete(k)))).then(() => self.clients.claim()));

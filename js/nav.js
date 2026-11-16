@@ -11,6 +11,10 @@
      الأقسام (n = رقم المرحلة في المسار، 0 = خارج المسار)
   ------------------------------------------------------------------ */
   const SECTIONS = [
+    { id: "live", n: 0, label: "صلاح الدين الحية", icon: "i-orbit", hue: "#ff8f6b",
+      q: "شنو صاير بصلاح الدين هسه، وشلون تغيّرت؟",
+      lead: "رحلة في أربع محطات ببيانات حقيقية: الريح والغبار والأقمار الصناعية الآن، وحرارة تكريت منذ 1940 وماء المحافظة منذ 1984، ومصادر التلوث التي تراها الأقمار، وطيران ثلاثي الأبعاد فوق دجلة يجمعها.",
+      tools: ["flyover", "wind", "sats", "stripes", "swipe", "waterloss", "flares"] },
     { id: "observe", n: 1, label: "الرصد", icon: "i-sat", hue: "#4fc8dc",
       q: "ما حالة الهواء والنهر الآن؟",
       lead: "قاعدة بيانات يومية لكل قضاء على دجلة مع توقّعات الذكاء الاصطناعي، وقراءات حية من الأقمار الصناعية لهواء صلاح الدين ونهر دجلة، وصور فضائية للنهر منذ عام 1984.",
@@ -44,6 +48,7 @@
   /* مجموعات القائمة العلوية: ست بوابات واضحة. «المختبر» رابط مباشر،
      و«المنصة» تجمع الدليل والقسم (روابط الأقسام نفسها لم تتغير) */
   const NAV_GROUPS = [
+    { secs: ["live"], badge: "جديد" },
     { secs: ["observe"] }, { secs: ["analyze"] }, { secs: ["treat"] },
     { secs: ["labs"], direct: "lab", badge: "3D" },
     { secs: ["studies"] },
@@ -54,6 +59,10 @@
      الأدوات
   ------------------------------------------------------------------ */
   const TOOLS = {
+    stripes: { label: "حرارة تكريت منذ 1940", icon: "i-thermo", isNew: true,
+      desc: "كل خط سنة من 1940 حتى السنة الماضية، أزرق للأبرد وأحمر للأحرّ من معدل 1961–1990، مع اتجاه الاحترار وأيام الـ 45 درجة، وقارن سنة ميلادك بالسنة الماضية.",
+      need: "لا شيء، أو سنة ميلادك", get: "خطوط الحرارة وصورة للمشاركة والاتجاه وأيام الحر وجدول CSV",
+      kw: "خطوط الاحترار warming stripes Ed Hawkins تغير المناخ احتباس حراري حرارة تكريت 1940 ERA5 سنة ميلادي عمري ايام 45 درجة 50 درجة ليالي حارة اتجاه Sen Mann Kendall صيف لاهب" },
     districts: { label: "قاعدة بيانات أقضية دجلة", icon: "i-db", isNew: true,
       desc: "سجل يومي لكل قضاء من الأقضية الستة على دجلة: قياسات أرضية حقيقية من محطات الأرصاد، وتقديرات الهواء والطقس والتصريف وعكورة الماء، مع توقّعات الذكاء الاصطناعي وكشف الأيام الشاذة، وتسألها بالعربي فتحسب لك الجواب.",
       need: "لا شيء، تتحدّث يومياً", get: "لوحة لكل قضاء وتوقّع الغد ورسوم وجداول Excel",
@@ -187,6 +196,7 @@
 
   /* الخطوة التالية بعد كل أداة: [الأداة، لماذا] */
   const NEXT = {
+    stripes: [["trend", "اختبر اتجاه متغير آخر بـ Mann–Kendall"], ["districts", "اعرض حرارة كل قضاء يوماً بيوم منذ 2015"]],
     districts: [["trend", "اختبر اتجاه التصريف أو الحرارة عبر السنين"], ["analyzer", "حلّل جدولاً صدّرته من القاعدة إحصائياً"]],
     monitor: [["analysis", "توقّع تراكيز الهواء واكشف الأيام الشاذة"], ["twin", "شاهد النهر ثلاثي الأبعاد"]],
     space: [["samples", "ثبّت نقطة العيّنة التي لفتت نظرك"], ["twin", "قارن مساحة الماء عبر السنين"]],
@@ -244,7 +254,7 @@
       if (g.direct) return `<div class="nav-group is-direct" data-sec="${G.id}" style="--hue:${G.hue}"><a class="nav-btn" href="#${g.direct}" data-v="${g.direct}">${ico(G.icon, "nav-ic")}<span>${G.label}</span>${g.badge ? `<i class="nav-badge">${g.badge}</i>` : ""}</a></div>`;
       const links = G.ss.length > 1 ? G.ss.map(x => `<a href="#${x.id}">${esc(x.label)}${ico("i-chev")}</a>`).join("") : `<a href="#${G.ss[0].id}">كل أدوات ${G.label} (${G.tools.length})${ico("i-chev")}</a>`;
       return `<div class="nav-group" data-sec="${G.id}" style="--hue:${G.hue}">
-      <a class="nav-btn" href="${G.href}" aria-haspopup="true">${ico(G.icon, "nav-ic")}<span>${G.label}</span>${ico("i-chevd", "chev")}</a>
+      <a class="nav-btn" href="${G.href}" aria-haspopup="true">${ico(G.icon, "nav-ic")}<span>${G.label}</span>${g.badge ? `<i class="nav-badge">${g.badge}</i>` : ""}${ico("i-chevd", "chev")}</a>
       <div class="mega"><div class="mega-in">
         <div class="mega-intro">${G.n ? `<span class="mg-idx">0${G.n} — مرحلة البحث</span>` : `<span class="mg-idx">${ico(G.icon)}</span>`}<b class="mg-t">${G.label}</b><p>${esc(G.q)}</p><div class="mg-links">${links}<a href="#tools" class="mg-all">كل أدوات المنصة${ico("i-chev")}</a></div></div>
         <div class="mega-list${G.tools.length > 4 ? " two" : ""}">${G.tools.map(megaItem).join("")}</div>
