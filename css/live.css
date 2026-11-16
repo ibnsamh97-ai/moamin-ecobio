@@ -101,3 +101,30 @@
 .sw-ctl .field { margin: 0; min-width: 150px; }
 .sw-note { margin: 12px 0 14px; line-height: 1.9; color: var(--muted); }
 @media (max-width: 640px) { .sw-tag { max-width: 46%; padding: 6px 9px; } .sw-tag b { font-size: 1.2rem; } .sw-ctl .field { flex: 1 1 140px; } }
+
+/* ---------- الأقمار ---------- */
+.st-stage { position: relative; border-radius: var(--r-lg); overflow: hidden; border: 1px solid var(--line); }
+.st-map { height: clamp(360px, 58vh, 620px); background: #0b0d10; }
+.st-hud { position: absolute; z-index: 700; inset-inline: 12px; bottom: 12px; padding: 10px 14px; border-radius: 12px; background: rgba(8, 18, 22, .82); backdrop-filter: blur(6px); border: 1px solid var(--line); font-size: .82rem; line-height: 1.8; }
+.st-hud p { margin: 0; }
+.st-hud #st-now { color: var(--muted); }
+.leaflet-tooltip.st-lab { background: rgba(8, 18, 22, .78); color: #fff; border: 0; box-shadow: none; font-size: .72rem; padding: 1px 6px; border-radius: 6px; font-family: var(--f-body); }
+.leaflet-tooltip.st-lab::before { display: none; }
+.leaflet-tooltip.st-home { color: #ff8f6b; font-weight: 600; }
+.st-h { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 18px 0 10px; font-family: var(--f-display); }
+.st-h svg { width: 20px; height: 20px; color: #ff8f6b; }
+.st-h small { color: var(--faint); font-size: .76rem; font-weight: 400; }
+.st-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; margin-bottom: 14px; }
+.st-card { display: flex; flex-direction: column; gap: 8px; padding: 14px; border-radius: var(--r-md); background: var(--ink-1); border: 1px solid var(--line); cursor: pointer; transition: border-color .2s, background .2s; }
+.st-card:hover, .st-card.on { border-color: color-mix(in srgb, var(--c) 60%, transparent); background: color-mix(in srgb, var(--c) 7%, var(--ink-1)); }
+.st-card:focus-visible { outline: 2px solid var(--c); outline-offset: 2px; }
+.st-card header { display: flex; align-items: center; gap: 8px; }
+.st-card header i { width: 10px; height: 10px; border-radius: 50%; background: var(--c); box-shadow: 0 0 10px var(--c); flex: none; }
+.st-card header b { font-family: var(--f-display); }
+.st-card header small { margin-inline-start: auto; color: var(--faint); font-size: .7rem; }
+.st-card p { color: var(--muted); font-size: .8rem; line-height: 1.7; margin: 0; }
+.st-when { display: flex; flex-direction: column; gap: 2px; padding-top: 8px; border-top: 1px dashed var(--line); font-size: .76rem; color: var(--faint); }
+.st-when small { color: var(--muted); }
+.st-when b { font-family: var(--f-mono); font-size: 1.25rem; color: #fff; direction: rtl; }
+.st-tool { display: inline-flex; align-items: center; gap: 4px; font-size: .78rem; color: var(--c); margin-top: auto; }
+.st-tool svg { width: 14px; height: 14px; }
