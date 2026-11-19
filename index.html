@@ -668,6 +668,52 @@
   </div>
 </section>
 
+<section class="view" id="view-deanery" data-title="عمادة الكلية 3D">
+  <div class="wrap">
+    <div class="view-head">
+      <div>
+        <h2>عمادة كلية التربية للعلوم الصرفة ثلاثية الأبعاد</h2>
+        <p>نسخة مبنية لقطةً لقطة على فيديوهات العمادة وصورها: الحديقة والممر المسقّف، والمدخل والاستعلامات، وشُعب الطابق الأرضي، والدرج على يمين الداخل، ثم بهو الشؤون الإدارية والمالية ومكتب العميد وقاعة مجلس الكلية في الطابق الأول. اعرض أي طابق من الأعلى لترى تنظيم الغرف كله، واضغط على غرفة لتدخلها.</p>
+      </div>
+    </div>
+    <div class="tour-stage dn-stage" id="dn-stage">
+      <canvas id="dn-canvas" aria-label="جولة ثلاثية الأبعاد في عمادة كلية التربية للعلوم الصرفة"></canvas>
+      <div class="dn-labels" id="dn-labels"></div>
+      <div class="tour-where" id="dn-where">ساحة العمادة</div>
+      <div class="tour-btns">
+        <button class="btn icon-btn" type="button" id="dn-play" title="جولة تلقائية" aria-label="جولة تلقائية"><svg aria-hidden="true"><use href="#i-play"/></svg></button>
+        <button class="btn icon-btn" type="button" id="dn-ov" title="عرض الطابق من الأعلى" aria-label="عرض الطابق من الأعلى"><svg aria-hidden="true"><use href="#i-layers"/></svg></button>
+        <button class="btn icon-btn on" type="button" id="dn-map-t" title="الخريطة" aria-label="الخريطة"><svg aria-hidden="true"><use href="#i-map"/></svg></button>
+        <button class="btn icon-btn" type="button" id="dn-full" title="ملء الشاشة" aria-label="ملء الشاشة"><svg aria-hidden="true"><use href="#i-expand"/></svg></button>
+      </div>
+      <div class="tour-map dn-map" id="dn-map">
+        <div class="seg" id="dn-floors"><button type="button" data-f="0" class="on">الأرضي</button><button type="button" data-f="1">الأول</button></div>
+        <canvas id="dn-map-c" aria-label="خريطة الطابق: اضغط على غرفة للانتقال إليها"></canvas>
+      </div>
+      <div class="tour-joy" id="dn-joy" hidden><span></span></div>
+      <button class="btn btn-primary tour-stairs" type="button" id="dn-stairs" hidden></button>
+      <div class="tour-cap" id="dn-cap" hidden></div>
+      <div class="tour-tip" id="dn-tip" hidden></div>
+      <div class="tour-info" id="dn-info" hidden></div>
+      <div class="tour-fade" id="dn-fade"></div>
+      <div class="tour-intro" id="dn-intro">
+        <div class="tour-intro-box">
+          <svg aria-hidden="true" class="ti-ic"><use href="#i-building"/></svg>
+          <h3>أهلاً بك في عمادة الكلية</h3>
+          <ul>
+            <li>اسحب بالماوس أو بإصبعك لتلتفت حولك.</li>
+            <li>اضغط على الأرض لتمشي إليها، أو استخدم W A S D والأسهم، أو عصا التحكم على الهاتف.</li>
+            <li>الدرج على يمين الداخل، ومكتب العميد وقاعة المجلس في الطابق الأول.</li>
+            <li>زر الطبقات يعرض الطابق كله من الأعلى.</li>
+          </ul>
+          <div class="row u-jccenter"><button class="btn btn-primary" type="button" id="dn-start"><svg aria-hidden="true"><use href="#i-play"/></svg>ابدأ الجولة التلقائية</button><button class="btn" type="button" id="dn-ovb"><svg aria-hidden="true"><use href="#i-layers"/></svg>الطابق من الأعلى</button><button class="btn" type="button" id="dn-self">تجوّل بنفسي</button></div>
+        </div>
+      </div>
+    </div>
+    <div class="grid g-3 tour-rooms u-mt16" id="dn-rooms"></div>
+  </div>
+</section>
+
 <section class="view" id="view-river" data-title="محاكاة دجلة 3D">
   <div class="wrap">
     <div class="view-head">
@@ -1681,6 +1727,7 @@
 <script src="js/micro3d.js"></script>
 <script src="js/molecules3d.js"></script>
 <script src="js/campus3d.js"></script>
+<script src="js/deanery3d.js"></script>
 <script src="js/chat.js"></script>
 <script src="js/coach.js"></script>
 <script src="js/ocrtable.js"></script>

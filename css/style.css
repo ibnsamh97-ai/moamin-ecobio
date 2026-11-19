@@ -818,7 +818,7 @@ footer.foot .wrap { padding-block: 22px; display: flex; flex-wrap: wrap; gap: 10
 
 /* ---------- جولة القسم ثلاثية الأبعاد ---------- */
 .tour-stage { position: relative; height: min(76vh, 760px); min-height: 460px; border-radius: var(--r-lg); overflow: hidden; border: 1px solid var(--line); background: #bfd8e6; isolation: isolate; }
-.tour-stage canvas#tour-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+.tour-stage canvas#tour-canvas, .tour-stage canvas#dn-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
 .tour-stage.full { position: fixed; inset: 0; z-index: 300; height: auto; min-height: 0; border-radius: 0; border: 0; }
 body.tour-lock { overflow: hidden; }
 .tour-where { position: absolute; top: 12px; right: 12px; z-index: 3; padding: 7px 14px; border-radius: 999px; background: rgba(4, 16, 20, .78); color: #e8f3f1; font-size: .84rem; font-weight: 600; border: 1px solid rgba(255,255,255,.12); max-width: calc(100% - 190px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
@@ -855,12 +855,28 @@ body.tour-lock { overflow: hidden; }
 .tour-list i { width: 10px; height: 10px; border-radius: 3px; flex: none; background: #2c5d43; }
 .tour-list i.k-corridor { background: #4fc8dc; } .tour-list i.k-class { background: #3f6aa0; } .tour-list i.k-lab { background: #3f9a63; } .tour-list i.k-office { background: #9a5a6a; } .tour-list i.k-lobby { background: #e6ae4f; } .tour-list i.k-outside { background: #93dd8a; } .tour-list i.k-stair { background: #888; }
 .tour-how { padding-inline-start: 18px; display: grid; gap: 6px; font-size: .86rem; color: var(--muted); line-height: 1.8; }
+/* عمادة الكلية: خريطة عمودية، علامات الغرف في العرض العلوي */
+.tour-map.dn-map canvas { width: 112px; height: 216px; }
+.tour-list i.k-hall { background: #3f9a63; } .tour-list i.k-dean { background: #c9a54a; } .tour-list i.k-service { background: #7d858a; }
+.tour-list .dn-approx { margin-inline-start: auto; font-style: normal; font-size: .68rem; padding: 1px 7px; border-radius: 999px; border: 1px dashed var(--line-2); color: var(--muted); white-space: nowrap; }
+.dn-labels { position: absolute; inset: 0; z-index: 2; pointer-events: none; overflow: hidden; }
+.dn-lbl { position: absolute; left: 0; top: 0; pointer-events: auto; max-width: 128px; padding: 3px 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,.18); background: rgba(4, 16, 20, .8); color: #eef6f4; font-family: inherit; font-size: .7rem; font-weight: 600; line-height: 1.35; text-align: center; cursor: pointer; white-space: normal; }
+.dn-lbl:hover, .dn-lbl:focus-visible { background: var(--river); color: #032028; }
+.dn-lbl.k-dean { border-color: #c9a54a; } .dn-lbl.k-hall { border-color: #3f9a63; } .dn-lbl.k-corridor, .dn-lbl.k-lobby { background: rgba(4,16,20,.55); font-weight: 500; }
+.dn-lbl.approx { border-style: dashed; }
+.dn-stage.ov .tour-joy { display: none; }
+.dn-stage.ov canvas#dn-canvas { cursor: pointer; }
+.dn-stage .tour-where { max-width: calc(100% - 222px); }
 @media (max-width: 900px) {
   /* يملأ المسافة بين الشريط العلوي والسفلي حتى لا يغطي الشريط السفلي عصا التحكم */
   .tour-stage { height: calc(100svh - var(--header-h) - 92px); min-height: 380px; }
 }
 @media (max-width: 760px) {
   .tour-map canvas { width: 168px; height: 69px; }
+  .tour-map.dn-map canvas { width: 64px; height: 124px; }
+  .dn-stage .tour-where { max-width: calc(100% - 200px); }
+  .dn-stage.ov .dn-map canvas { display: none; }
+  .dn-lbl { max-width: 84px; font-size: .58rem; padding: 2px 5px; }
   .tour-where { font-size: .76rem; top: 10px; right: 10px; max-width: calc(100% - 170px); }
   .tour-info { top: auto; bottom: 10px; right: 10px; left: 10px; width: auto; max-height: 55%; }
   .tour-cap { bottom: 150px; font-size: .84rem; }

@@ -2,7 +2,7 @@
    الصفحة وملفات الكود (js وcss وjson): الشبكة أولاً ثم النسخة المحفوظة، حتى لا تجتمع صفحة جديدة مع كود قديم بعد أي تحديث.
    الصور والخطوط والنماذج الكبيرة: المحفوظ أولاً مع تحديثه في الخلفية.
    لا يتدخل في طلبات البيانات الحية (Open-Meteo وغيرها)؛ قاعدة الأقضية لها ذاكرتها الخاصة. */
-const V = "ecobio-shell-v24";
+const V = "ecobio-shell-v25";
 const CORE = ["./", "index.html", "css/style.css", "css/shell.css", "css/tools.css", "css/motion.css", "css/redesign.css", "css/live.css", "manifest.webmanifest", "assets/icons/pwa-192.png"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(V).then(c => c.addAll(CORE)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", e => {
