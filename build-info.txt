@@ -1,0 +1,7 @@
+version=1.0.2
+versionCode=47
+signed=true
+commit=67f517fff25c3a3048ac43b7d802202390908747
+built=2026-11-20T04:59:52Z
+aab_bytes=7046626
+apk_bytes=7278644
