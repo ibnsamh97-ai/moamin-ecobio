@@ -3,9 +3,10 @@
    مبنية لقطةً لقطة على فيديوهات العمادة وصورها (تشرين الثاني 2026):
    الواجهة والممر المسقّف والحديقة، والطابق الأرضي (المدخل ولوحة الرؤية
    والاستعلامات والممر والشُّعب وشعبة التسجيل)، والدرج خلف الباب الزجاجي
-   على يمين الداخل، والطابق الأول (بهو شعبة الشؤون الإدارية والمالية،
-   والشُّعب، وجناح مكتب العميد، وقاعة مجلس الكلية).
-   كل الأسماء واللوحات مكتوبة نصّاً كما تظهر في الصور، ولا يظهر أي شخص.
+   على يمين الداخل (يصعد شمالاً ثم يدور يميناً مرتين)، والطابق الأول (بهو
+   شعبة الشؤون الإدارية والمالية، والممر بشُعبه وملصقات مهامها بنصّها،
+   و«مكتب العميد» بجناحه، وقاعة مجلس الكلية تحت «امانة المجلس»).
+   كل الأسماء واللوحات والملصقات مكتوبة نصّاً كما تظهر في الفيديو، ولا يظهر أي شخص.
    الأبعاد تقديرية من الفيديو (لا يوجد مخطط هندسي)، والغرف التي صُوِّر
    بابها فقط مبنية على طراز الغرف المصوّرة ومعلَّمة «تقريبية».
    المحاور: x شرق (+) / غرب (−)، z جنوب (+، جهة المدخل والحديقة) / شمال (−).
@@ -20,7 +21,8 @@
   const BX0 = -6, BX1 = 10, BZ0 = -34, BZ1 = 0;      // جسم المبنى
   const CX0 = 1.2, CX1 = 5.6, CXM = 3.4;             // ممر الطابق الأرضي العريض
   const UX0 = 3.2, UXM = 4.4;                         // ممر الطابق الأول أضيق (من 3.2 إلى 5.6)
-  const ZE = -24;                                     // نهاية الممرّين
+  const ZE = -24;                                     // نهاية ممر الطابق الأرضي
+  const ZE1 = -25;                                    // نهاية ممر الطابق الأول (واجهة «امانة المجلس»)
   const WX = CXM, WZ1 = 12.0;                         // الممر المسقّف أمام الباب
   const DEAN_NAME = "علي عبدالمجيد شهاب";
 
@@ -34,54 +36,107 @@
     { id: "g-v001", short: "أضابير الدراسات العليا", lvl: 0, r: [BX0, CX0, -18.8, -14.2], name: "أضابير الدراسات العليا", code: "00V001", sub: "archive", doors: [{ s: "E", at: -15.1 }], ph: 0 },
     { id: "g-003", short: "الدراسات العليا", lvl: 0, r: [BX0, CX0, ZE, -18.8], name: "شعبة الدراسات العليا", code: "00G003", sub: "grad", doors: [{ s: "E", at: -21.5 }], wins: [{ s: "E", a: -20.75, b: -19.45 }, { s: "E", a: -23.55, b: -22.3 }], ph: 1 },
     // الجهة الشرقية (يمين الداخل): الدرج خلف الحاجز الزجاجي، ثم الشُّعب
-    { id: "g-stair", short: "الدرج", lvl: 0, r: [CX1, BX1, -6.5, 0], name: "الدرج", sub: "stair", doors: [{ s: "W", at: -0.95, w: 1.3, k: "glass2" }], ph: 1, noPlate: 1 },
-    { id: "g-009", short: "صندوق الحسابات", lvl: 0, r: [CX1, BX1, -15, -6.5], name: "صندوق الحسابات", code: "00G009", sub: "cash", doors: [{ s: "W", at: -13.4 }], ph: 0 },
+    { id: "g-stair", short: "الدرج", lvl: 0, r: [CX1, BX1, -6.6, 0], name: "الدرج", sub: "stair", doors: [{ s: "W", at: -1.1, w: 0.95, k: "glassF" }], ph: 1, noPlate: 1 },
+    { id: "g-009", short: "صندوق الحسابات", lvl: 0, r: [CX1, BX1, -15, -6.6], name: "صندوق الحسابات", code: "00G009", sub: "cash", doors: [{ s: "W", at: -13.4 }], ph: 0 },
     { id: "g-008", short: "الشؤون العلمية", lvl: 0, r: [CX1, BX1, ZE, -15], name: "شعبة الشؤون العلمية", code: "00G008", sub: "staff", doors: [{ s: "W", at: -21.4 }], ph: 0 },
     // نهاية الممر: شعبة التسجيل وغرفتاها
     { id: "g-reg", short: "التسجيل وشؤون الطلبة", lvl: 0, r: [-1, BX1, BZ0, ZE], name: "شعبة التسجيل وشؤون الطلبة", sub: "reg", doors: [{ s: "F", at: CXM, k: "carved" }], ph: 1, noPlate: 1 },
     { id: "g-010", short: "مدير التسجيل", lvl: 0, r: [BX0, -1, -29, ZE], name: "مدير شعبة التسجيل", code: "00G010", sub: "regmgr", doors: [{ s: "E", at: -27.7 }], ph: 1 },
     { id: "g-011", short: "وحدة الأضابير", lvl: 0, r: [BX0, -1, BZ0, -29], name: "وحدة الأضابير", code: "00G011", sub: "archive", doors: [{ s: "E", at: -30.2 }], ph: 0 },
-    // الطابق الأول: غرب البهو والممر
-    { id: "u-wc", short: "الصحيات", lvl: 1, r: [BX0, CX0, -2.4, 0], name: "الصحيات", sub: "wc", doors: [{ s: "E", at: -0.85, k: "carvedLight" }], ph: 0 },
-    { id: "u-legal", short: "الشؤون القانونية", lvl: 1, r: [BX0, CX0, -6.4, -2.4], name: "شعبة الشؤون القانونية", code: "01G025", sub: "legal", doors: [{ s: "E", at: -5.6, k: "glassF" }], ph: 1, glassFront: 1 },
-    { id: "u-x1", short: "غرفة", lvl: 1, r: [BX0, CX0, -8.0, -6.4], name: "غرفة إدارية", sub: "small", doors: [{ s: "E", at: -6.6 }], ph: 0, noPlate: 1 },
-    { id: "u-hrm", short: "الموارد البشرية", lvl: 1, r: [-2.4, UX0, -14.8, -8.0], name: "شعبة الموارد البشرية", code: "01G024", sub: "hrMgr", doors: [{ s: "E", at: -9.2, k: "white" }, { s: "E", at: -13.9, k: "white" }], ph: 1, poster: "مهام شعبة الموارد البشرية" },
-    { id: "u-hrs", short: "موظفو الموارد البشرية", lvl: 1, r: [BX0, -2.4, -14.8, -8.0], name: "موظفو شعبة الموارد البشرية", sub: "hrStaff", doors: [{ s: "E", at: -11.4, k: "blackT" }], ph: 1, noPlate: 1 },
-    { id: "u-qa", short: "ضمان الجودة", lvl: 1, r: [BX0, UX0, -18.8, -14.8], name: "شعبة ضمان الجودة", code: "01G022", sub: "qa", doors: [{ s: "E", at: -15.6 }], ph: 1 },
-    { id: "u-sec", short: "مكتب العميد", lvl: 1, r: [BX0, UX0, ZE, -18.8], name: "مكتب العميد – الاستقبال", sub: "deanSec", doors: [{ s: "E", at: -23.0, k: "diamond" }], ph: 1, noPlate: 1 },
-    { id: "u-dstaff", short: "مدير مكتب العميد", lvl: 1, r: [BX0, 1.6, -28.4, ZE], name: "مدير مكتب العميد", sub: "deanStaff", doors: [{ s: "F", at: -4.2, k: "diamond" }], ph: 1, noPlate: 1 },
-    { id: "u-dean", short: "عميد الكلية", lvl: 1, r: [BX0, 1.6, BZ0, -28.4], name: "مكتب عميد الكلية", sub: "dean", doors: [{ s: "F", at: -4.6, k: "wood" }, { s: "E", at: -33.2, k: "wood" }, { s: "E", at: -30.9, k: "shut" }], ph: 1, noPlate: 1 },
-    { id: "u-council", short: "مجلس الكلية", lvl: 1, r: [1.6, 7.2, -32, ZE], name: "قاعة مجلس الكلية", sub: "council", doors: [{ s: "F", at: UXM, w: 1.5, k: "council" }, { s: "B", at: 4.4, w: 1.4, k: "wood2" }], ph: 1, noPlate: 1 },
+    /* الطابق الأول (مستخرج من فيديو الصعود ثانيةً بثانية):
+       الدرج يصعد شمالاً من الباب الأسود ثم يدور يميناً مرتين، فيصل الصاعد متجهاً جنوباً وأمامه باب الصحيات وعلى يساره شبّاك.
+       يستدير يميناً (غرباً) في بهو تتقدّمه واجهة الشعبة القانونية الزجاجية يساراً وفتحة الدرج بدرابزينها الذهبي يميناً،
+       وفي آخره الجدار الذهبي «شعبة الشؤون الإدارية والمالية». على يمين الجدار الذهبي باب الموارد البشرية وملصق مهامها،
+       ثم يبدأ الممر الطويل شمالاً: يميناً (شرقاً) الترقيات فضمان الجودة فالتدقيق فالتخطيط، ويساراً (غرباً) الحسابات فالإعلام
+       فـ«مكتب العميد»، وفي آخره باب قاعة المجلس تحت «امانة المجلس» وعلى يمينه باب أمين المجلس. */
+    // جنوب البهو (جهة الواجهة الأمامية)
+    { id: "u-wcm", short: "الصحيات (رجال)", lvl: 1, r: [7.4, BX1, -2.2, 0], name: "الصحيات (Man)", sub: "wc", doors: [{ s: "B", at: 9.25, k: "carvedLight" }], ph: 0, noPlate: 1, oval: ["الصحيات", "(Man)"] },
+    { id: "u-wcw", short: "الصحيات (نساء)", lvl: 1, r: [5.0, 7.4, -2.2, 0], name: "الصحيات (Woman)", sub: "wc", doors: [{ s: "B", at: 6.55, k: "carvedLight" }], ph: 0, noPlate: 1, oval: ["الصحيات", "(Woman) 1-1-21"] },
+    { id: "u-legal", short: "الشؤون القانونية", lvl: 1, r: [-1.6, 5.0, -3.0, 0], name: "شعبة الشؤون القانونية", code: "01G025", sub: "legal", doors: [{ s: "B", at: 3.9, k: "none" }], ph: 1, noPlate: 1 },
+    { id: "u-sw", short: "غرفة", lvl: 1, r: [BX0, -1.6, -6.6, 0], name: "غرفة بباب يحمل شعار الكلية (لم تظهر لافتتها)", sub: "small", doors: [{ s: "E", at: -3.55, k: "dark", emblem: 1, ajar: 0.12 }], ph: 0, noPlate: 1 },
+    // شمال البهو وغرب الممر
+    { id: "u-hrm", short: "الموارد البشرية", lvl: 1, r: [-1.6, UX0, -11.2, -6.6], name: "شعبة الموارد البشرية", code: "01G024", sub: "hrMgr", doors: [{ s: "F", at: 0.2, k: "whiteB" }], ph: 1, noPlate: 1 },
+    { id: "u-hrs", short: "موظفو الموارد البشرية", lvl: 1, r: [BX0, -1.6, -14.6, -6.6], name: "موظفو شعبة الموارد البشرية", sub: "hrStaff", doors: [{ s: "E", at: -10.45, k: "whiteB" }], ph: 1, noPlate: 1, winsW: [-8.6, -12.6] },
+    { id: "u-hrb", short: "غرفة", lvl: 1, r: [-1.6, UX0, -14.6, -11.2], name: "غرفة خلف الباب الأسود (تقريبية)", sub: "small", doors: [{ s: "E", at: -12.6 }, { s: "F", at: -0.6, k: "blackT" }], ph: 0, noPlate: 1 },
+    { id: "u-acc", short: "الحسابات", lvl: 1, r: [BX0, UX0, -20.0, -14.6], name: "شعبة الحسابات", code: "01G021", sub: "acc", doors: [{ s: "E", at: -17.6, logo: 1 }], ph: 1, poster: "acc", winsW: [-16.0, -18.6] },
+    { id: "u-media", short: "الإعلام", lvl: 1, r: [BX0, UX0, -23.0, -20.0], name: "شعبة الإعلام", sub: "media1", doors: [{ s: "E", at: -22.2, logo: 1 }], ph: 1, poster: "media" },
+    { id: "u-sec", short: "مكتب العميد", lvl: 1, r: [-1.4, UX0, -27.6, -23.0], name: "مكتب العميد – الاستقبال", sub: "deanSec", doors: [{ s: "E", at: -23.7, k: "diamond" }], ph: 1, noPlate: 1 },
+    { id: "u-dstaff", short: "مدير مكتب العميد", lvl: 1, r: [-1.4, UX0, BZ0, -27.6], name: "مدير مكتب العميد", sub: "deanStaff", doors: [{ s: "F", at: 1.6, k: "diamond" }], ph: 1, noPlate: 1 },
+    { id: "u-dean", short: "عميد الكلية", lvl: 1, r: [BX0, -1.4, BZ0, -23.0], name: "مكتب عميد الكلية", sub: "dean", doors: [{ s: "E", at: -29.0, k: "wood" }, { s: "E", at: -31.2, k: "shut" }, { s: "E", at: -24.6, k: "black" }], ph: 1, noPlate: 1, winsW: [-25.0, -29.0] },
+    // آخر الممر: قاعة المجلس وأمين المجلس
+    { id: "u-council", short: "مجلس الكلية", lvl: 1, r: [UX0, 7.4, BZ0, ZE1], name: "قاعة مجلس الكلية", sub: "council", doors: [{ s: "F", at: UXM, w: 1.4, k: "council" }, { s: "B", at: 5.3, w: 1.4, k: "shut2" }, { s: "E", at: -27.2, k: "white" }], ph: 1, noPlate: 1, noWin: 1 },
+    { id: "u-amin", short: "أمين المجلس", lvl: 1, r: [CX1, BX1, ZE1, -23.0], name: "أمين المجلس", code: "01G017", sub: "aminE", doors: [{ s: "W", at: -24.1, k: "diamond" }], ph: 0, noPlate: 1 },
+    { id: "u-amin2", short: "", hidden: 1, lvl: 1, r: [7.4, BX1, BZ0, ZE1], name: "أمين المجلس", code: "01G017", sub: "aminB", doors: [{ s: "F", at: 8.7, w: 2.4, k: "open" }], ph: 0, noPlate: 1 },
     // شرق الممر
-    { id: "u-prom", short: "لجنة الترقيات", lvl: 1, r: [CX1, BX1, -9.6, -6.5], name: "لجنة الترقيات", code: "01G023", sub: "staff", doors: [{ s: "W", at: -9.0, logo: 1 }], ph: 0 },
-    { id: "u-aud", short: "التدقيق", lvl: 1, r: [CX1, BX1, -12.4, -9.6], name: "شعبة التدقيق", code: "01G020", sub: "aud", doors: [{ s: "W", at: -10.3 }], ph: 1 },
-    { id: "u-acc", short: "الحسابات", lvl: 1, r: [CX1, BX1, -16.2, -12.4], name: "شعبة الحسابات", code: "01G021", sub: "acc", doors: [{ s: "W", at: -13.1 }], ph: 1, poster: "مهام شعبة الحسابات" },
-    { id: "u-plan", short: "التخطيط والمتابعة", lvl: 1, r: [CX1, BX1, -19.4, -16.2], name: "شعبة التخطيط والمتابعة", code: "01G018", sub: "plan", doors: [{ s: "W", at: -16.9 }], ph: 1, poster: "مهام شعبة التخطيط والمتابعة" },
-    { id: "u-media", short: "الإعلام", lvl: 1, r: [CX1, BX1, -22.6, -19.4], name: "شعبة الإعلام", sub: "media1", doors: [{ s: "W", at: -20.1 }], ph: 1, poster: "مهام شعبة الإعلام" },
-    { id: "u-amin", short: "أمين المجلس", lvl: 1, r: [7.2, BX1, BZ0, -22.6], name: "أمين المجلس", code: "01G017", sub: "mgr", doors: [{ s: "W", at: -23.3, k: "diamond" }], ph: 0 }
+    { id: "u-prom", short: "لجنة الترقيات", lvl: 1, r: [CX1, BX1, -10.4, -6.6], name: "لجنة الترقيات", code: "01G023", sub: "staff", doors: [{ s: "W", at: -9.7, logo: 1 }], ph: 0 },
+    { id: "u-qa", short: "ضمان الجودة", lvl: 1, r: [CX1, BX1, -14.8, -10.4], name: "شعبة ضمان الجودة", code: "01G022", sub: "qa", doors: [{ s: "W", at: -11.2 }], ph: 1, noWin: 1 },
+    { id: "u-aud", short: "التدقيق", lvl: 1, r: [CX1, BX1, -18.6, -14.8], name: "شعبة التدقيق", code: "01G020", sub: "aud", doors: [{ s: "W", at: -17.8, logo: 1 }], ph: 1 },
+    { id: "u-plan", short: "التخطيط والمتابعة", lvl: 1, r: [CX1, BX1, -23.0, -18.6], name: "شعبة التخطيط والمتابعة", plate: "شعبة التخطيط", code: "01G018", sub: "plan", doors: [{ s: "W", at: -22.4, logo: 1 }], ph: 1, poster: "plan" }
   ];
   /* المناطق المفتوحة (بلا جدران خاصة بها) */
   const OPEN = [
     { id: "g-lobby", lvl: 0, r: [CX0, CX1, -4.6, 0], name: "المدخل والاستعلامات", short: "المدخل", kind: "lobby" },
     { id: "g-cor", lvl: 0, r: [CX0, CX1, ZE, -4.6], name: "الممر – الطابق الأرضي", short: "الممر", kind: "corridor" },
-    { id: "u-stair", lvl: 1, r: [CX1, BX1, -2.9, 0], name: "الدرج", short: "الدرج", kind: "stair" },
-    { id: "u-hall", lvl: 1, r: [CX0, BX1, -8.0, 0], name: "بهو شعبة الشؤون الإدارية والمالية", short: "البهو", kind: "lobby" },
-    { id: "u-cor", lvl: 1, r: [UX0, CX1, ZE, -8.0], name: "الممر – الطابق الأول", short: "الممر", kind: "corridor" },
-    { id: "u-end", lvl: 1, r: [CX1, 7.2, ZE, -22.6], name: "أمام قاعة المجلس", short: "", kind: "corridor" },
-    { id: "u-back", lvl: 1, r: [1.6, 7.2, BZ0, -32], name: "الممر خلف قاعة المجلس", short: "", kind: "corridor" }
+    { id: "u-stair", lvl: 1, r: [CX1, BX1, -3.4, -2.2], name: "رأس الدرج", short: "الدرج", kind: "stair" },
+    { id: "u-hall", lvl: 1, r: [-1.6, CX1, -6.6, -2.2], name: "بهو شعبة الشؤون الإدارية والمالية", short: "البهو", kind: "lobby" },
+    { id: "u-cor", lvl: 1, r: [UX0, CX1, ZE1, -6.6], name: "الممر – الطابق الأول", short: "الممر", kind: "corridor" }
   ];
 
   /* معلومات تظهر عند الضغط على بعض العناصر */
   const DEV = {
     board: { name: "لوحة رؤية الجامعة والكلية ورسالتهما وأهدافهما", what: "اللوحة المعلّقة على يسار الداخل في مدخل العمادة: رؤية جامعة تكريت ورسالتها وأهدافها، ورؤية كلية التربية للعلوم الصرفة ورسالتها وهدفها. النص مكتوب كما في اللوحة، وتحتها جهاز البصمة وصندوقا الشكاوى." },
     reception: { name: "الاستعلامات", what: "مكتب الاستعلامات على يمين الداخل، خلفه الحاجز الزجاجي الأسود الذي يُدخل منه إلى الدرج." },
-    goldwall: { name: "شعبة الشؤون الإدارية والمالية", what: "الجدار الرخامي الذهبي بحروف بارزة في بهو الطابق الأول، أمامه مقاعد انتظار جلدية صفراء، وعلى يمينه مدخل الممر." },
+    goldwall: { name: "شعبة الشؤون الإدارية والمالية", what: "الجدار الرخامي الذهبي في آخر بهو الطابق الأول، يقابل الصاعد من الدرج بعد أن يستدير يميناً. عليه «شعبة الشؤون الإدارية والمالية» بحروف ذهبية بارزة وشعار الكلية، وأمامه مقاعد انتظار جلدية صفراء، وعلى يساره باب خشبي بشعار الكلية وطفاية حريق، وعلى يمينه باب شعبة الموارد البشرية ثم مدخل الممر." },
     council: { name: "قاعة مجلس الكلية", what: "طاولة الاجتماعات الطويلة بإطار من خشب الماهوجني وسطوح جلدية زرقاء داكنة، وأمام المقاعد لوحات الأسماء، وكراسٍ جلدية بنية. في آخرها باب خشبي مزدوج فوقه «امانة مجلس كلية التربية للعلوم الصرفة» وعلم العراق وعلما الجامعة." },
-    deandesk: { name: "مكتب عميد الكلية", what: "مكتب الأستاذ الدكتور " + DEAN_NAME + " عميد الكلية، يُدخل إليه من الاستقبال ثم مكتب مدير مكتب العميد، ويتصل بقاعة مجلس الكلية من الخلف." },
+    deandesk: { name: "مكتب عميد الكلية", what: "مكتب الأستاذ الدكتور " + DEAN_NAME + " عميد الكلية. يُدخل إليه من باب «مكتب العميد» في آخر الممر على اليسار: الاستقبال، ثم الباب المعيّني إلى مكتب مدير مكتب العميد، ثم الباب الخشبي إلى مكتب العميد، ولمكتب العميد باب أسود آخر إلى الاستقبال." },
     counter: { name: "شبابيك المراجعين", what: "حاجز خشبي بشبابيك زجاجية يراجع منها الطلبة والموظفون الشعبة دون الدخول إلى المكتب." },
     shelves: { name: "رفوف الأضابير", what: "رفوف تملأ جدران الغرفة بالأضابير السوداء والزرقاء." },
     reghall: { name: "شعبة التسجيل وشؤون الطلبة", what: "القاعة ذات السقف المزخرف والثريا الذهبية في نهاية ممر الطابق الأرضي، وفيها مكتب مدير شعبة التسجيل ووحدة الأضابير." }
   };
+  /* ملصقات «مهام الشعبة» منقولة حرفياً من لقطات الفيديو القريبة (بإملائها كما طُبعت) */
+  const POSTERS = {
+    hr: { title: "مهام شعبة الموارد البشرية", room: "على جدار البهو بجانب باب شعبة الموارد البشرية", items: [
+      "متابعة كل ما يتعلق بمنتسبي الكلية من تدريسيين وموظفين في ما يخص الاوامر الادارية من ( التعيين ، الاستقالة ، التقاعد ، الاجازات ، الترفيعات ، العلاوات وغيرها.",
+      "تخطيط وتنظيم الشؤون الادارية للكلية ومتابعة سير العمل فيها واتخاذ ما يلزم لتحقيق افضل الصيغ الممكنة في ممارستها وتنفيذ قوانين الخدمة المدنية ، الخدمة الجامعية ، قانون رواتب موظفي الدولة والقطاع العام بقدر تعلق الامر بالعاملين في الكلية من تدريسيين وموظفين.",
+      "متابعة دوام التدريسيين والموظفين وتنفيذ التعليمات القانونية بحق من ينقطع عن الدوام.",
+      "متابعة البريد واجابة البريد الخاص بالشعبة والوحدات التابعة لها.",
+      "اصدار الاوامر الادارية الخاصة باللجان المختلفة بعد تسمية السيد العميد أو السيد المعاون الاداري اعضاؤها.",
+      "إعداد سجل الملاك يتضمن معلومات عن كافة المنتسبين من التدريسيين والموظفين.",
+      "أعداد سجل الموارد البشرية للتدريسيين والموظفين وتثبيت كافة المعلومات الخاصة بهم والتي تتضمن اسم المنتسب وشهادته ولقبه العلمي او عنوانه الوظيفي، وتاريخ المباشرة.",
+      "اعداد سجل العلاوات للتدريسيين والموظفين مبين فيه ام المنتسب وتاريخ حصوله على الدرجة والمرحلة وتاريخ استحقاقه للترفيع أو العلاوة السنوية حسب تاريخ استحقاقه.",
+      "إعداد سجل خاص بالموظفين على الملاك المؤقت والموظفين بصفة أجور يومية على ملاك الكلية وتثبيت المعلومات الخاصة بهم.",
+      "تسجيل وأرشفة كافة الكتب الواردة الى الكلية والصادرة منها وتوزيع البريد الصادر والوارد الى الشعب والوحدات التابعة للكلية بالإضافة الى طباعة البريد الخاص بالشعبة."], chart: "شعبة الشؤون الإدارية", frame: "woodDark" },
+    acc: { title: "مهام شعبة الحسابات", room: "على جدار الممر بجانب باب شعبة الحسابات", items: [
+      "تنظيم رواتب منتسبي الكلية مع إعداد قرص التقاعد الخاص بمنتسبي الكلية وتنظيم الاستقطاعات والاجابات للجهات",
+      "مسك مستندات الصرف الصباحية وتحديد الصكوك المستحقة وتنظيم مستندات الصرف وتبويبها وفق النظام المحاسبي الموحد.",
+      "تنظيم ومطابقة مستندات الصرف وتنظيم سجلات الصناديق.",
+      "مسك سجلات الرواتب الخاصة بالموظفين والتدريسيين وأعداد قوائم الرواتب الشهرية وترحيلها على الحاسبة.",
+      "إعداد كشوف الاستقطاع المختلفة والتي تقع ضمن ذمة الموظفين للدوائر الاخرى.",
+      "مسك سجل المصروفات وسجل اليومية العامة من خلال ترحيل مستندات الصرف عليه.",
+      "تنظيم الاستمارات الخاصة بمعاملات الصيانة والشراء.",
+      "إعداد ميزان المراجعة الشهري قائمة المصروفات ، قائمة الايرادات ، كشف البنك ، الصكوك المدفوعة.",
+      "تنظيم الحسابات الختامية نهاية كل سنة مالية وتقديمها الى ديوان الرقابة المالية في المحافظة.",
+      "أجراء التحليلات المالية المختلفة لغرض المطابقة واستخراج البيانات وخاصة تحليل السيولة.",
+      "اعداد الميزانية الخاصة بإيرادات الكلية وخاصة ايرادات الدراسة المسائية.",
+      "تنفيذ ايعاز الصرف على الابواب المختلفة.",
+      "تنظيم استمارات صرف أجور المحاضرات على الدراسة الصباحية والمسائية والدراسات العليا وأجور المناقشات."] },
+    plan: { title: "مهام شعبة التخطيط والمتابعة", room: "على جدار الممر بجانب باب شعبة التخطيط", items: [
+      "تقوم الشعبة بمتابعة رسم سياسة الكلية بما ينسجم والسياسة العامة للجامعة وتحقيق رسالتها.",
+      "اعداد خطط قبول الطلبة للدراسات الصباحية والمسائية بالتعاون مع شعبة التسجيل.",
+      "اعداد خطط المؤتمرات والندوات وورش العمل التي تقيمها الكلية خلال العام الدراسي والنظر في الخطط العلمية للأقسام العلمية بما يتعلق بالمؤتمرات والندوات العلمية ومتابعة كافة الانشطة العلمية والثقافية والفنية والرياضية في الكلية.",
+      "التخطيط لأعداد الملاكات التدريسية في ضوء اقتراحات الاقسام في الكلية ومتابعة النظر بعناوين الفنيين والاداريين ضمن الملاك.",
+      "متابعة تنفيذ الخطط بأنواعها والسياسات الموضوعة وتحديد معوقات تنفيذها."], chart: "شعبة التخطيط والمتابعة", frame: "white", foot: "جامعة تكريت" },
+    media: { title: "مهام شعبة الاعلام", room: "على جدار الممر بجانب باب شعبة الإعلام", items: [
+      "التعريف بدور الكلية ورسالتها. والسعي لبناء صورة ايجابية عن الكلية لدى الجمهور الداخلي والخارجي.",
+      "العمل على تغطية النشاطات والفعاليات على اختلاف انواعها كالمؤتمرات ، الندوات ، الحلقات النقاشية ، المهرجانات الرياضية ، الاحتفالات ، المناسبات والمناقشات ونشاطات أخرى في الكلية وتسليط الضوء عليها ورفعها الى موقع الجامعة الرسمي.",
+      "تنسيق وتسهيل مهام جميع القنوات الفضائية ووسائل الاعلام الاخرى لإنجاز تقاريرها الاعلامية عن الكلية وأنشطتها بعد استحصال موافقة الجامعة.",
+      "تنظيم المؤتمرات والاحتفالات المركزية للكلية ومساندة الاقسام الاكاديمية اعلاميا في تنفيذ الفعاليات والمؤتمرات وانجاز الجوانب الاعلامية لتلك الاحتفالات من خلال وسائل الاعلام المقروءة والمسموعة والمرئية.",
+      "تنظيم المقابلات التلفزيونية المطلوبة لعميد الكلية وأي مسؤول اخر في الكلية والحضور الدائم مع وسائل الاعلام في مثل تلك النشاطات.",
+      "متابعة الجوانب الانسانية والاجتماعية لجميع منتسبي الكلية من موظفين وأساتذة، وتوجيه التهاني والتعازي في المناسبات المفرحة.",
+      "القيام بالتغطية الصحفية للوفود الزائرة للكلية.",
+      "توثيق الاعلامي لجميع أنشطة الكلية."], chart: "شعبة الإعلام", frame: "woodDark" }
+  };
+  Object.keys(POSTERS).forEach(k => { const p = POSTERS[k]; DEV["poster_" + k] = { name: p.title, what: "الملصق المعلّق " + p.room + "، منقول نصّه كما هو:", list: p.items }; });
 
   let st = null, scene, cam, stageEl, canvas, built = false, active = false, focused = false;
   const MAT = {}, BATCH = {}, INST = {}, SOLID = [[], []], PICK = [], FLOORS = [], BLOCK = [], TEXJOBS = [], REG = [];
@@ -525,7 +580,6 @@
       const a = logoImg(); if (a.complete && a.naturalWidth) g.drawImage(a, w / 2 - 60, 160, 120, 120);
     }) });
   }
-  function chartMat() { return lam(0xffffff, { map: textTex(256, 180, (g, w, h) => { g.fillStyle = "#fafafa"; g.fillRect(0, 0, w, h); g.fillStyle = "#264e8a"; g.fillRect(w / 2 - 40, 16, 80, 22); g.fillStyle = "#7b8796"; for (let i = 0; i < 4; i++) g.fillRect(20 + i * 58, 70, 46, 18); g.fillRect(w / 2 - 1, 38, 2, 32); g.fillStyle = "#c8ccd2"; for (let i = 0; i < 6; i++) g.fillRect(20, 105 + i * 11, w - 40, 5); }) }); }
   function deanPlateMat() { // لوحة الاسم على مكتب العميد
     return lam(0xffffff, { emissive: 0x2a2008, map: textTex(640, 140, (g, w, h) => {
       g.fillStyle = "#5a3820"; g.fillRect(0, 0, w, h); const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, "#f0d27c"); gr.addColorStop(1, "#c79b38"); g.fillStyle = gr; g.fillRect(70, 10, w - 140, h - 20);
@@ -576,13 +630,104 @@
       if (sub) { fitFont(g, sub, 600, size * 0.45, W - 40); g.fillText(sub, W / 2, H * 0.78); }
     }) });
   }
-  /* ملصق «مهام الشعبة»: العنوان فقط، والأسطر رمادية لأنها غير مقروءة في الصور */
-  function posterMat(title) {
-    return lam(0xffffff, { map: textTex(256, 360, (g, w, h) => {
-      g.fillStyle = "#e9e2d2"; g.fillRect(0, 0, w, h); g.fillStyle = "#fbfaf6"; g.fillRect(14, 14, w - 28, h - 28);
-      g.strokeStyle = "#6b5530"; g.lineWidth = 6; g.strokeRect(6, 6, w - 12, h - 12);
-      g.fillStyle = "#a11c1c"; fitFont(g, title, 800, 26, w - 40); g.fillText(title, w / 2, 44);
-      g.fillStyle = "rgba(40,40,40,.55)"; for (let y = 76; y < h - 30; y += 15) g.fillRect(28 + ((y * 7) % 23), y, w - 56 - ((y * 13) % 40), 5);
+  /* ملصق «مهام الشعبة» بنصّه الكامل كما صُوِّر: إطار زخرفي كحلي، عنوان أحمر، بنود مرقّمة بخط عريض، وشعار الكلية باهتاً في الوسط */
+  const AR = n => String(n).replace(/\d/g, d => "٠١٢٣٤٥٦٧٨٩"[d]);
+  function posterLines(g, P, W, fs) {
+    g.font = `800 ${fs}px ${FONT}`;
+    const R = W - 66, L = 58, lh = Math.round(fs * 1.55), out = []; let y = 0;
+    P.items.forEach((it, i) => {
+      const num = AR(i + 1) + " : ", nw = g.measureText(num).width, maxW = R - L - nw;
+      let line = "", first = true;
+      const push = () => { out.push({ t: line, y, num: first ? num : null, nw }); first = false; y += lh; line = ""; };
+      it.split(" ").forEach(wd => { const t = line ? line + " " + wd : wd; if (g.measureText(t).width > maxW && line) { push(); line = wd; } else line = t; });
+      if (line) push();
+      y += Math.round(fs * 0.22);
+    });
+    return { lines: out, h: y };
+  }
+  function ornament(g, w, h) {
+    const m = 30, ink = "#17203b";
+    g.strokeStyle = ink; g.fillStyle = ink; g.lineCap = "round";
+    g.lineWidth = 7; g.beginPath();
+    g.moveTo(m + 120, m); g.lineTo(w / 2 - 170, m); g.moveTo(w / 2 + 170, m); g.lineTo(w - m - 120, m);
+    g.moveTo(m + 120, h - m); g.lineTo(w / 2 - 170, h - m); g.moveTo(w / 2 + 170, h - m); g.lineTo(w - m - 120, h - m);
+    g.moveTo(m, m + 120); g.lineTo(m, h - m - 120); g.moveTo(w - m, m + 120); g.lineTo(w - m, h - m - 120); g.stroke();
+    const scroll = (cx, cy, s) => {
+      g.lineWidth = 6;
+      [-1, 1].forEach(d => {
+        g.beginPath(); g.arc(cx + d * 44, cy + s * 4, 22, 0, Math.PI * 2 * 0.82); g.stroke();
+        g.beginPath(); g.arc(cx + d * 104, cy + s * 2, 15, 0, Math.PI * 1.6); g.stroke();
+        g.beginPath(); g.moveTo(cx + d * 20, cy - s * 14); g.quadraticCurveTo(cx + d * 80, cy - s * 30, cx + d * 165, cy); g.stroke();
+      });
+      g.beginPath(); g.arc(cx, cy - s * 2, 11, 0, 7); g.fill();
+    };
+    scroll(w / 2, m + 6, 1); scroll(w / 2, h - m - 6, -1);
+    const corner = (x, y, sx, sy) => {
+      g.lineWidth = 6;
+      g.beginPath(); g.arc(x + sx * 52, y + sy * 52, 26, 0, Math.PI * 1.7); g.stroke();
+      g.beginPath(); g.moveTo(x, y + sy * 118); g.quadraticCurveTo(x + sx * 4, y + sy * 4, x + sx * 118, y); g.stroke();
+      g.beginPath(); g.arc(x + sx * 96, y + sy * 26, 12, 0, Math.PI * 1.5); g.stroke(); g.beginPath(); g.arc(x + sx * 26, y + sy * 96, 12, 0, Math.PI * 1.5); g.stroke();
+      g.beginPath(); g.moveTo(x + sx * 6, y + sy * 6); g.lineTo(x + sx * 30, y + sy * 14); g.lineTo(x + sx * 14, y + sy * 30); g.closePath(); g.fill();
+    };
+    corner(m - 10, m - 10, 1, 1); corner(w - m + 10, m - 10, -1, 1); corner(m - 10, h - m + 10, 1, -1); corner(w - m + 10, h - m + 10, -1, -1);
+  }
+  const POSTERMAT = {};
+  function posterMat(key) {
+    if (POSTERMAT[key]) return POSTERMAT[key];
+    const P = POSTERS[key], W = 820, fs = 25, top = 136;
+    const lay = posterLines(document.createElement("canvas").getContext("2d"), P, W, fs);
+    const H = Math.round(top + lay.h + (P.foot ? 130 : 66));
+    const mat = lam(0xffffff, { map: textTex(W, H, (g, w, h) => {
+      g.fillStyle = "#fbfbf9"; g.fillRect(0, 0, w, h);
+      const lg = logoImg(); if (lg.complete && lg.naturalWidth) { g.globalAlpha = 0.09; const s = Math.min(w, h) * 0.66; g.drawImage(lg, (w - s) / 2, (h - s) / 2, s, s); g.globalAlpha = 1; }
+      ornament(g, w, h);
+      g.fillStyle = "#b5171d"; fitFont(g, P.title, 900, 46, w - 230); g.fillText(P.title, w / 2, 92);
+      const l2 = posterLines(g, P, w, fs); g.fillStyle = "#101010"; g.textAlign = "right";
+      l2.lines.forEach(L => { g.font = `800 ${fs}px ${FONT}`; g.fillText(L.num ? L.num + L.t : L.t, w - 66 - (L.num ? 0 : L.nw), top + L.y); });
+      g.textAlign = "center";
+      if (P.foot) { g.fillStyle = "rgba(70,70,70,.38)"; g.font = `800 36px ${FONT}`; g.fillText(P.foot, w / 2, h - 72); }
+    }) });
+    return (POSTERMAT[key] = { mat, w: 0.88, h: 0.88 * H / W });
+  }
+  /* الهيكل التنظيمي المؤطّر تحت الملصق: الترويسة والعنوان، ومربعات بلا صور ولا أسماء أشخاص */
+  const CHARTMAT = {};
+  function chartMat(title) {
+    if (CHARTMAT[title]) return CHARTMAT[title];
+    return (CHARTMAT[title] = lam(0xffffff, { map: textTex(560, 400, (g, w, h) => {
+      g.fillStyle = "#fbfbfa"; g.fillRect(0, 0, w, h);
+      const a = logoImg(), b = uniImg(); if (a.complete && a.naturalWidth) g.drawImage(a, w - 76, 10, 58, 58); if (b.complete && b.naturalWidth) g.drawImage(b, 18, 8, 38, 62);
+      g.fillStyle = "#333"; g.font = `700 13px ${FONT}`; g.fillText("جمهورية العراق", w / 2, 18); g.fillText("وزارة التعليم العالي والبحث العلمي", w / 2, 35); g.fillText("جامعة تكريت – كلية التربية للعلوم الصرفة", w / 2, 52);
+      g.fillStyle = "#24407a"; g.fillRect(w / 2 - 135, 64, 270, 26); g.fillStyle = "#fff"; fitFont(g, title, 800, 17, 250); g.fillText(title, w / 2, 78);
+      g.strokeStyle = "#9aa6b8"; g.lineWidth = 2; g.beginPath(); g.moveTo(w / 2, 90); g.lineTo(w / 2, 104); g.moveTo(76, 104); g.lineTo(w - 76, 104); g.stroke();
+      const box = (x, y) => { g.fillStyle = "#e8edf5"; g.fillRect(x, y, 92, 40); g.strokeRect(x, y, 92, 40); g.fillStyle = "#c3ccda"; g.fillRect(x + 6, y + 6, 24, 28); g.fillStyle = "#8d98aa"; g.fillRect(x + 36, y + 12, 48, 5); g.fillRect(x + 36, y + 24, 40, 5); };
+      for (let i = 0; i < 5; i++) box(30 + i * 104, 112);
+      for (let i = 0; i < 4; i++) box(82 + i * 104, 166);
+      g.fillStyle = "#24407a"; g.fillRect(24, 224, w - 48, 20); g.strokeStyle = "#9aa6b8";
+      for (let r = 0; r < 6; r++) g.strokeRect(24, 244 + r * 24, w - 48, 24);
+      g.beginPath(); g.moveTo(w - 140, 244); g.lineTo(w - 140, 388); g.moveTo(150, 244); g.lineTo(150, 388); g.stroke();
+      g.fillStyle = "#b6bdc8"; for (let r = 0; r < 6; r++) g.fillRect(170, 254 + r * 24, w - 330, 4);
+    }) }));
+  }
+  /* حروف ذهبية بارزة على سطرين متساويين (جدار الشؤون الإدارية والمالية) */
+  function goldLettersMat(a, b) {
+    return basic(0xffffff, { transparent: true, depthWrite: false, map: textTex(1024, 512, (g, w, h) => {
+      const line = (t, yy) => {
+        fitFont(g, t, 900, 190, w - 60);
+        g.fillStyle = "rgba(70,45,10,.85)"; g.fillText(t, w / 2 + 5, yy + 7);
+        const gr = g.createLinearGradient(0, yy - 90, 0, yy + 90); gr.addColorStop(0, "#fff0b0"); gr.addColorStop(0.45, "#e2b84e"); gr.addColorStop(1, "#a97b22");
+        g.fillStyle = gr; g.fillText(t, w / 2, yy);
+      };
+      line(a, h * 0.28); line(b, h * 0.74);
+    }) });
+  }
+  /* لوحة الصحيات البيضوية الذهبية */
+  function ovalPlaqueMat(a, b) {
+    return lam(0xffffff, { transparent: true, alphaTest: 0.4, emissive: 0x2a2008, map: textTex(320, 150, (g, w, h) => {
+      g.fillStyle = "#5a3d1c"; g.beginPath(); g.ellipse(w / 2, h / 2, w / 2 - 4, h / 2 - 6, 0, 0, 7); g.fill();
+      const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, "#f1d27a"); gr.addColorStop(1, "#c79b38"); g.fillStyle = gr;
+      g.beginPath(); g.ellipse(w / 2, h / 2, w / 2 - 14, h / 2 - 16, 0, 0, 7); g.fill();
+      g.fillStyle = "#1e1608"; fitFont(g, a, 800, 40, w - 100); g.fillText(a, w / 2, h * 0.38);
+      g.direction = "ltr"; fitFont(g, b, 700, 26, w - 110); g.fillText(b, w / 2, h * 0.7);
     }) });
   }
   function bannerMat(title, sub) {
@@ -619,7 +764,7 @@
   /* موضع الباب على جداره، واتجاهه نحو داخل الغرفة */
   function doorPos(r, d) {
     const [x0, x1, z0, z1] = r.r, w = d.w || 0.95;
-    const top = d.k === "glass2" || d.k === "carved" ? 2.5 : (d.k === "council" || d.k === "wood2") ? 2.45 : d.k === "glassF" ? 2.6 : 2.25;
+    const top = d.k === "glass2" || d.k === "carved" ? 2.5 : (d.k === "council" || d.k === "wood2" || d.k === "shut2") ? 2.45 : d.k === "glassF" ? 2.6 : d.k === "blackT" ? 2.55 : 2.25;
     if (d.s === "W" || d.s === "E") { const c = d.s === "W" ? x0 : x1; return { axis: "Z", c, w, top, x: c, z: d.at, nx: d.s === "W" ? 1 : -1, nz: 0 }; }
     const c = d.s === "F" ? z1 : z0; return { axis: "X", c, w, top, x: d.at, z: c, nx: 0, nz: d.s === "F" ? -1 : 1 };
   }
@@ -627,7 +772,7 @@
     const out = [];
     ROOMS.forEach(r => {
       if (r.lvl !== lvl) return;
-      (r.doors || []).forEach(d => { if (d.k === "shut") return; const p = doorPos(r, d); if (p.axis === axis && Math.abs(p.c - c) < 0.02) out.push({ a: d.at - p.w / 2, b: d.at + p.w / 2, top: p.top }); });
+      (r.doors || []).forEach(d => { if (d.k === "shut" || d.k === "shut2" || d.k === "none" || d.k === "open") return; const p = doorPos(r, d); if (p.axis === axis && Math.abs(p.c - c) < 0.02) out.push({ a: d.at - p.w / 2, b: d.at + p.w / 2, top: p.top }); });
       (r.wins || []).forEach(wn => { const p = doorPos(r, { s: wn.s, at: 0 }); if (p.axis === axis && Math.abs(p.c - c) < 0.02) out.push({ a: wn.a, b: wn.b, bottom: 1.0, top: 2.0 }); });
     });
     return out;
@@ -641,19 +786,20 @@
     wallZ(outKey, x + s * 0.06, za - 0.15, zb + 0.15, lvl, 0.18, holes, false);
   }
   const WALLS = {
-    0: { Z: [[CX0, ZE, 0], [CX1, ZE, -6.5], [-1, BZ0, ZE]],
-         X: [[-4.6, BX0, CX0], [-9.4, BX0, CX0], [-14.2, BX0, CX0], [-18.8, BX0, CX0], [ZE, BX0, BX1], [-29, BX0, -1], [-6.5, CX1, BX1], [-15, CX1, BX1]] },
-    1: { Z: [[CX0, -2.4, 0], [CX0, -8.0, -6.4], [UX0, ZE, -8.0], [-2.4, -14.8, -8.0], [1.6, BZ0, ZE], [CX1, -22.6, -8.0], [7.2, BZ0, -22.6]],
-         X: [[-2.4, BX0, CX0], [-6.4, BX0, CX0], [-8.0, BX0, UX0], [-14.8, BX0, UX0], [-18.8, BX0, UX0], [ZE, BX0, 7.2], [-28.4, BX0, 1.6], [-32, 1.6, 7.2], [-22.6, CX1, BX1], [-19.4, CX1, BX1], [-16.2, CX1, BX1], [-12.4, CX1, BX1], [-9.6, CX1, BX1], [-6.5, CX1, BX1]] }
+    0: { Z: [[CX0, ZE, 0], [CX1, ZE, -2.2], [-1, BZ0, ZE]],
+         X: [[-4.6, BX0, CX0], [-9.4, BX0, CX0], [-14.2, BX0, CX0], [-18.8, BX0, CX0], [ZE, BX0, BX1], [-29, BX0, -1], [-6.6, CX1, BX1], [-15, CX1, BX1]] },
+    1: { Z: [[-1.6, -14.6, 0], [5.0, -3.0, 0], [7.4, -2.2, 0], [UX0, ZE1, -6.6], [CX1, ZE1, -6.6], [-1.4, BZ0, -23.0], [7.4, BZ0, ZE1]],
+         X: [[-2.2, 5.0, BX1], [-6.6, BX0, UX0], [-6.6, CX1, BX1], [-11.2, -1.6, UX0], [-14.6, BX0, UX0], [-20.0, BX0, UX0], [-23.0, BX0, UX0], [-27.6, -1.4, UX0], [ZE1, UX0, 7.4],
+             [-10.4, CX1, BX1], [-14.8, CX1, BX1], [-18.6, CX1, BX1], [-23.0, CX1, BX1]] }
   };
   /* الأرضيات والسقوف للمناطق المفتوحة (القطع لا تتداخل) */
   const OPENFLOOR = {
-    0: [{ r: [CX0, CX1, -4.6, 0], f: "carpetG", c: "tray" }, { r: [CX0, CX1, ZE, -4.6], f: "carpetG", c: "tray" }, { r: [CX1, BX1, -6.5, 0], f: "carpetG", c: "stairwell" }],
-    1: [{ r: [CX0, CX1, -8.0, 0], f: "carpetG", c: "trayRound" }, { r: [CX1, BX1, -6.5, -2.9], f: "carpetG", c: "ceilW" }, { r: [UX0, CX1, ZE, -8.0], f: "carpetG", c: "trayRound" },
-        { r: [CX1, 7.2, ZE, -22.6], f: "carpetG", c: "ceilW" }, { r: [1.6, 7.2, BZ0, -32], f: "carpetG", c: "ceilW" }, { r: [CX1, BX1, -2.9, 0], f: null, c: "stairtop" }]
+    0: [{ r: [CX0, CX1, -4.6, 0], f: "carpetG", c: "tray" }, { r: [CX0, CX1, ZE, -4.6], f: "carpetG", c: "tray" }, { r: [CX1, BX1, -6.6, 0], f: "carpetG", c: "stairwell" }],
+    1: [{ r: [-1.6, CX1, -6.6, -3.0], f: "carpetG", c: "tray" }, { r: [5.0, CX1, -3.0, -2.2], f: "carpetG", c: "ceilW" }, { r: [UX0, CX1, ZE1, -6.6], f: "carpetG", c: "trayRound" },
+        { r: [CX1, 8.65, -3.4, -2.2], f: "carpetG", c: null }, { r: [8.65, BX1, -3.1, -2.2], f: "carpetG", c: null }, { r: [CX1, BX1, -6.6, -2.2], f: null, c: "ceilW" }]
   };
-  const FLOORKEY = { store: "terr", archive: "terr", wc: "terr", acc: "terrDots", aud: "terrCheck", reg: "carpetS", council: "carpetS", grad: "marbleF", plan: "carpetG", hrMgr: "carpetG", hrStaff: "carpetG", legal: "carpetG", dean: "marbleF", deanSec: "marbleF", deanStaff: "carpetG", media1: "carpetG" };
-  const CEILKEY = { reg: "ceilReg", council: "ceilW", dean: "ceilW", deanSec: "ceilW", deanStaff: "ceilW", hrMgr: "ceilTile", hrStaff: "ceilTile", plan: "ceilTile", grad: "ceilPerf", legal: "ceilTile" };
+  const FLOORKEY = { store: "terr", archive: "terr", wc: "terr", acc: "terrDots", aud: "terrCheck", reg: "carpetS", council: "carpetS", grad: "marbleF", plan: "carpetG", hrMgr: "carpetG", hrStaff: "carpetG", legal: "carpetG", dean: "marbleF", deanSec: "marbleF", deanStaff: "carpetG", media1: "carpetG", aminE: "carpetG", aminB: "carpetG" };
+  const CEILKEY = { reg: "ceilReg", council: "ceilW", dean: "ceilW", deanSec: "ceilW", deanStaff: "ceilW", hrMgr: "ceilTile", hrStaff: "ceilTile", plan: "ceilTile", grad: "ceilPerf", legal: "ceilTile", acc: "ceilTile", media1: "ceilW" };
   function shell() {
     [0, 1].forEach(lvl => {
       const y = lvl * FH;
@@ -673,13 +819,13 @@
         const [x0, x1, z0, z1] = o.r;
         if (o.c === "tray" || o.c === "trayRound") trayCeiling(x0, x1, z0, z1, cy, o.c === "trayRound");
         else if (o.c === "ceilW") flat("ceilW", x0, z0, x1, z1, cy, true);
-        else if (o.c === "stairwell") flat("ceilW", x0, z0, x1, -2.9, cy, true);
+        else if (o.c === "stairwell") { flat("ceilW", x0, -3.1, x1, z1, cy, true); flat("ceilW", x0, -3.4, 8.65, -3.1, cy, true); }
         else if (o.c === "stairtop") flat("ceilW", x0, z0, x1, z1, cy, true);
       });
     });
     // البلاطة بين الطابقين مع فتحة الدرج
     LAYER = "s1";
-    [[BX0, BX1, BZ0, -2.9], [BX0, CX1, -2.9, BZ1]].forEach(([x0, x1, z0, z1]) => bx("slab", x0, CH + 0.012, z0, x1, FH - 0.002, z1));
+    [[BX0, BX1, BZ0, -6.6], [BX0, CX1, -6.6, BZ1], [CX1, BX1, -3.1, BZ1], [CX1, 8.65, -3.4, -3.1]].forEach(([x0, x1, z0, z1]) => bx("slab", x0, CH + 0.012, z0, x1, FH - 0.002, z1));
     // السطح والستارة
     LAYER = "roof";
     bx("slab", BX0, FH + CH + 0.012, BZ0, BX1, 2 * FH, BZ1);
@@ -720,15 +866,17 @@
   function finishes() {
     const C = (id, key, y0, y1) => { LAYER = roomById(id).lvl ? "s1" : "s0"; clad(roomById(id), key, y0, y1); };
     C("g-003", "wallMarble"); C("u-plan", "quilt"); C("u-hrm", "woodPanel", 0, 2.7); C("u-hrm", "panelBeige", 2.7, CH); C("u-hrs", "panelBeige");
-    C("u-council", "panelWhite"); C("u-dean", "panelWhite"); C("u-media", "quilt"); C("g-reg", "wall");
+    C("u-council", "panelWhite"); C("u-dean", "panelWhite"); C("u-dstaff", "panelBeige"); C("u-sec", "panelWhite"); C("g-reg", "wall");
     // ممر الطابق الأول وبهوه: جدران رخامية بيضاء
     LAYER = "s1";
-    wallZ("wallMarble", UX0 + T / 2 + 0.008, ZE, -8.0, 1, 0.016, holesOn("Z", UX0, 1), false, 0, CH);
-    wallZ("wallMarble", CX1 - T / 2 - 0.008, -22.6, -8.0, 1, 0.016, holesOn("Z", CX1, 1), false, 0, CH);
-    // بيت الدرج في الأرضي: ورق جدران مضرّب بنقشة المعيّنات
+    wallZ("wallMarble", UX0 + T / 2 + 0.008, ZE1, -6.6, 1, 0.016, holesOn("Z", UX0, 1), false, 0, CH);
+    wallZ("wallMarble", CX1 - T / 2 - 0.008, ZE1, -6.6, 1, 0.016, holesOn("Z", CX1, 1), false, 0, CH);
+    wallX("wallMarble", -6.6 + T / 2 + 0.008, -1.6, UX0, 1, 0.016, holesOn("X", -6.6, 1), false, 0, CH);
+    wallX("wallMarble", -2.2 - T / 2 - 0.008, CX1, BX1 - 0.15, 1, 0.016, holesOn("X", -2.2, 1), false, 0, CH);
+    // بيت الدرج في الأرضي: ورق جدران مضرّب بنقشة المعيّنات خلف السجاد الأحمر
     LAYER = "s0";
-    wallX("quilt", -6.5 + T / 2 + 0.008, CX1, BX1, 0, 0.016, [], false, 0, FH);
-    wallZ("quilt", BX1 - 0.163, -6.5, 0, 0, 0.016, [], false, 0, FH);
+    wallX("quilt", -6.6 + T / 2 + 0.008, 6.95, BX1, 0, 0.016, [], false, 0, 1.75);
+    wallZ("quilt", BX1 - 0.163, -6.6, -2.2, 0, 0.016, [], false, 0, 2.4);
   }
   /* الشبابيك: إطار داخلي وزجاج، ومن الخارج إطار حجري وزجاج أزرق ومشبّك حديدي (مرسوم لا صورة) */
   function windowAt(side, u, lvl, w = 1.2, h = 1.3, y0 = 1.0, outMat = "winOut", ow = 1.4, oh = 1.45, oy, blind) {
@@ -749,10 +897,11 @@
   }
   function roomWindows() {
     ROOMS.forEach(r => {
-      if (r.sub === "stair" || r.sub === "store" || r.sub === "wc") return;
+      if (r.sub === "stair" || r.sub === "store" || r.sub === "wc" || r.noWin) return;
       LAYER = r.lvl ? "s1" : "s0";
-      const [x0, x1, z0, z1] = r.r, bl = { dean: "zebra", plan: "zebra", hrStaff: "zebra", legal: "zebra", media1: "curtain", acc: "curtain", deanStaff: "curtain" }[r.sub];
-      if (x0 === BX0 && z1 - z0 >= 1.8) windowAt("W", (z0 + z1) / 2, r.lvl, 1.2, 1.3, 1.0, "winOut", 1.4, 1.45, null, bl);
+      const [x0, x1, z0, z1] = r.r, bl = { dean: "zebra", plan: "zebra", hrStaff: "zebra", legal: "zebra", media1: "curtain", acc: "curtain", deanStaff: "curtain", deanSec: "zebra" }[r.sub];
+      if (x0 === BX0 && r.winsW) r.winsW.forEach(z => windowAt("W", z, r.lvl, 1.2, 1.3, 1.0, "winOut", 1.4, 1.45, null, bl));
+      else if (x0 === BX0 && z1 - z0 >= 1.8) windowAt("W", (z0 + z1) / 2, r.lvl, 1.2, 1.3, 1.0, "winOut", 1.4, 1.45, null, bl);
       if (x1 === BX1 && z1 - z0 >= 1.8) windowAt("E", (z0 + z1) / 2, r.lvl, 1.2, 1.3, 1.0, "winOut", 1.4, 1.45, null, bl);
       if (z0 === BZ0 && r.sub !== "dean") { const n = x1 - x0 > 7 ? 2 : 1; for (let i = 0; i < n; i++) windowAt("B", x0 + (x1 - x0) * (i + 0.5) / n, r.lvl, 1.2, 1.3, 1.0, "winOut", 1.4, 1.45, null, bl); }
     });
@@ -841,80 +990,136 @@
   function acOut(x, y, z) {
     device(null, [B(0.3, 0.55, 0.78, MAT.devWhite, 0.15, 0, 0), mm(new THREE.CircleGeometry(0.2, 18), MAT.greyDark, 0.305, 0.28, 0.08, 0, Math.PI / 2, 0), B(0.32, 0.03, 0.03, MAT.steel, 0.16, -0.03, -0.3), B(0.32, 0.03, 0.03, MAT.steel, 0.16, -0.03, 0.3)], x, y, z, 0, 0);
   }
-  /* الحاجز الزجاجي الأسود بين المدخل وبيت الدرج، وبابه بشعار الكلية */
+  /* مدخل الدرج في الأرضي (كما في فيديو النزول): من المدخل باب زجاجي داكن بلا إطار في حاجز زجاجي أسود،
+     ثم ممرّ صغير فيه أريكة مذهّبة ولوحة «خروج»، ثم باب زجاجي مزدوج بإطار أسود وشعار الكلية يُفتح على أول الدرج */
   function stairGlass() {
     LAYER = "s0";
-    const x = CX1, a = -6.5, b = 0, da = -1.6, db = -0.3;
-    [[a, da], [db, b - 0.15]].forEach(([p, q]) => { planeAt(MAT.glassDark, q - p, CH, x, CH / 2, (p + q) / 2, Math.PI / 2); solid(0, x - 0.05, p, x + 0.05, q); });
-    for (let z = a; z <= b; z += 1.2) bx("frameBlack", x - 0.04, 0, z - 0.03, x + 0.04, CH, z + 0.03);
-    bx("frameBlack", x - 0.04, 0, a, x + 0.04, 0.08, b - 0.15); bx("frameBlack", x - 0.04, 2.45, da, x + 0.04, 2.55, db); bx("frameBlack", x - 0.04, CH - 0.06, a, x + 0.04, CH, b - 0.15);
-    planeAt(MAT.glassDark, db - da, CH - 2.55, x, (CH + 2.55) / 2, (da + db) / 2, Math.PI / 2);
+    // الحاجز الزجاجي الأسود بين المدخل والممرّ الصغير (x = 5.6)
+    const x = CX1, a = -2.2, b = -0.15, da = -1.575, db = -0.625;
+    [[a, da], [db, b]].forEach(([p, q]) => { planeAt(MAT.glassDark, q - p, CH, x, CH / 2, (p + q) / 2, Math.PI / 2); solid(0, x - 0.05, p, x + 0.05, q); });
+    [a, da, db, b].forEach(z => bx("frameBlack", x - 0.04, 0, z - 0.03, x + 0.04, CH, z + 0.03));
+    bx("frameBlack", x - 0.04, 0, a, x + 0.04, 0.08, da); bx("frameBlack", x - 0.04, 0, db, x + 0.04, 0.08, b); bx("frameBlack", x - 0.04, CH - 0.06, a, x + 0.04, CH, b);
+    planeAt(MAT.glassDark, db - da, CH - 2.6, x, (CH + 2.6) / 2, (da + db) / 2, Math.PI / 2);
+    // الحاجز بين الممرّ الصغير وبيت الدرج (z = -2.2): باب مزدوج بإطار أسود وشعار، ثم زجاج داكن
+    const z = -2.2, ea = 5.75, eb = 6.95;
+    planeAt(MAT.glassDark, BX1 - 0.15 - eb, CH, (eb + BX1 - 0.15) / 2, CH / 2, z, 0); solid(0, eb, z - 0.05, BX1, z + 0.05);
+    for (let xx = eb; xx <= BX1 - 0.1; xx += 0.96) bx("frameBlack", xx - 0.03, 0, z - 0.04, xx + 0.03, CH, z + 0.04);
+    bx("frameBlack", eb, 0, z - 0.04, BX1 - 0.15, 0.08, z + 0.04); bx("frameBlack", ea, CH - 0.06, z - 0.04, BX1 - 0.15, CH, z + 0.04);
+    frameX("frameBlack", z, ea, eb, 0, 2.45, 0.06, 0.06); planeAt(MAT.glassDark, eb - ea, CH - 2.51, (ea + eb) / 2, (CH + 2.51) / 2, z, 0);
+    const lw = (eb - ea) / 2 - 0.02;
+    [[ea + 0.01, 1], [eb - 0.01, -1]].forEach(([hx, s]) => addObj(compactDoor([
+      B(lw, 2.4, 0.03, MAT.glassDoor, s * lw / 2, 0.02, 0), B(lw, 0.06, 0.05, MAT.frameBlack, s * lw / 2, 0, 0), B(lw, 0.06, 0.05, MAT.frameBlack, s * lw / 2, 2.38, 0),
+      B(0.05, 2.44, 0.05, MAT.frameBlack, s * 0.025, 0, 0), B(0.05, 2.44, 0.05, MAT.frameBlack, s * (lw - 0.025), 0, 0),
+      B(0.025, 0.55, 0.025, MAT.chrome, s * (lw - 0.1), 0.8, 0.04), mm(new THREE.CircleGeometry(0.15, 24), MAT.ph_logo_col, s * lw / 2, 1.45, 0.02), mm(new THREE.CircleGeometry(0.15, 24), MAT.ph_logo_col, s * lw / 2, 1.45, -0.02, 0, Math.PI, 0)
+    ], hx, 0, z, s * 0.55 * -1)));
+    // الممرّ الصغير: أريكة مذهّبة، لوحة «خروج»، وشبّاك صغير على الواجهة
+    device(null, sofa(2, MAT.leatherCream, MAT.gold), 8.6, 0, -0.62, Math.PI, 0, [0.84, 0.43]);
+    planeAt(exitMat(), 0.36, 0.14, BX1 - 0.155, 2.35, -1.1, -Math.PI / 2);
+    plant(9.55, 0, -1.85, "snake", 0.9);
   }
-  /* واجهة شعبة الشؤون القانونية: زجاج داكن من الأرض إلى السقف وباب زجاجي بلا إطار */
+  /* واجهة شعبة الشؤون القانونية على يسار البهو: زجاج داكن من الأرض إلى السقف بإطار أسود، وباب زجاجي عليه ورقة «الشعبة القانونية» */
   function legalFront() {
     LAYER = "s1";
-    const x = CX0, a = -6.4, b = -2.4, da = -6.05, db = -5.15, y = FH;
-    [[a, da], [db, b]].forEach(([p, q]) => { planeAt(MAT.glassDark, q - p, CH, x, y + CH / 2, (p + q) / 2, Math.PI / 2); solid(1, x - 0.05, p, x + 0.05, q); });
-    bx("frameBlack", x - 0.04, y, a, x + 0.04, y + 0.06, b); bx("frameBlack", x - 0.04, y + CH - 0.06, a, x + 0.04, y + CH, b); bx("frameBlack", x - 0.04, y, b - 0.04, x + 0.04, y + CH, b);
-    planeAt(MAT.glassDark, db - da, CH - 2.6, x, y + (CH + 2.6) / 2, (da + db) / 2, Math.PI / 2);
-    planeAt(paperMat("الشعبة القانونية"), 0.32, 0.22, x + 0.05, y + 1.55, -4.0, Math.PI / 2);
+    const z = -3.0, a = -1.6, b = 5.0, da = 3.42, db = 4.38, y = FH;
+    [[a, da], [db, b]].forEach(([p, q]) => { planeAt(MAT.glassDark, q - p, CH, (p + q) / 2, y + CH / 2, z, 0); solid(1, p, z - 0.05, q, z + 0.05); });
+    for (let xx = a; xx <= b + 0.01; xx += 1.1) bx("frameBlack", xx - 0.03, y, z - 0.04, xx + 0.03, y + CH, z + 0.04);
+    bx("frameBlack", a, y, z - 0.04, b, y + 0.06, z + 0.04); bx("frameBlack", a, y + CH - 0.06, z - 0.04, b, y + CH, z + 0.04); bx("frameBlack", da, y + 2.55, z - 0.04, db, y + 2.62, z + 0.04);
+    planeAt(MAT.glassDark, db - da, CH - 2.62, (da + db) / 2, y + (CH + 2.62) / 2, z, 0);
+    addObj(compactDoor([B(db - da - 0.02, 2.53, 0.012, MAT.glassDoor, (db - da - 0.02) / 2, 0.01, 0), B(0.025, 0.9, 0.025, MAT.black, db - da - 0.12, 0.6, 0.05), B(0.025, 0.9, 0.025, MAT.black, db - da - 0.12, 0.6, -0.05), mm(new THREE.PlaneGeometry(0.3, 0.21), paperMat("الشعبة القانونية"), (db - da) / 2, 1.6, -0.012, 0, Math.PI, 0)], da + 0.01, y, z, 1.0));
+    planeAt(paperMat("الشعبة القانونية"), 0.3, 0.21, 2.6, y + 1.6, z - 0.012, Math.PI);
+    projPlateAt(4.45, y, z, "X", -1, "شعبة الشؤون القانونية", "01G025");
+  }
+  /* لوحة نحاسية بارزة عمودياً على الجدار (لوحات ممر الطابق الأول). axis: محور الجدار، out: جهة الممر */
+  function projPlateAt(u, y, c, axis, out, name, code) {
+    const m = plaqueMat(name, code), h = y + 2.42, d = T / 2 + 0.27;
+    if (axis === "Z") { const x = c + out * d; planeAt(m, 0.5, 0.146, x, h, u + 0.007, 0); planeAt(m, 0.5, 0.146, x, h, u - 0.007, Math.PI); bx("black", Math.min(c + out * T / 2, x - out * 0.27), h - 0.085, u - 0.006, Math.max(c + out * T / 2, x - out * 0.27), h + 0.085, u + 0.006); }
+    else { const z = c + out * d; planeAt(m, 0.5, 0.146, u - 0.007, h, z, -Math.PI / 2); planeAt(m, 0.5, 0.146, u + 0.007, h, z, Math.PI / 2); bx("black", u - 0.006, h - 0.085, Math.min(c + out * T / 2, z - out * 0.27), u + 0.006, h + 0.085, Math.max(c + out * T / 2, z - out * 0.27)); }
   }
 
   /* ---------------------------------------------------------------
-     الدرج: قلبتان متوازيتان شرقاً وغرباً، مكسوّتان بموكيت رمادي، ودرابزين
-     ذهبي، وشبّاك على البسطة، وسجادة حمراء ورفّ أحذية عند قاعدته
+     الدرج (من فيديو الصعود والنزول): يبدأ خلف الباب الأسود ويصعد شمالاً بمحاذاة
+     الجدار الأيسر والدرابزين الذهبي على اليمين، ثم بسطة فيها نبتة، فدرجات قليلة
+     شرقاً إلى بسطة ثانية تحت شبّاك بستارة، ثم يستدير يميناً ويصعد جنوباً حتى
+     الطابق الأول. مكسوّ بموكيت رمادي، وتحت القلبة الأخيرة سجاد أحمر ورفّ أحذية.
   --------------------------------------------------------------- */
-  const SA = { x0: 5.75, x1: 8.75, z0: -2.85, z1: -1.65 }, SB = { z0: -1.5, z1: -0.3 }, LX0 = 8.75, LY = FH / 2, NST = 10;
+  const ST = { ax0: 5.75, ax1: 6.95, az: -2.3, mz0: -5.25, mz1: -6.45, bx0: 8.65, bx1: 9.85, run: 0.27 };
+  const RZ = FH / 23, LY1 = 11 * RZ, LY2 = 15 * RZ, LY = LY2;
+  function seg(key, a, b, t = 0.05) {
+    const d = new THREE.Vector3(b[0] - a[0], b[1] - a[1], b[2] - a[2]), L = d.length();
+    const g = new THREE.BoxGeometry(t, t, L).toNonIndexed();
+    g.applyMatrix4(new THREE.Matrix4().compose(new THREE.Vector3((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2), new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), d.normalize()), new THREE.Vector3(1, 1, 1)));
+    (BATCH[bkey(key)] = BATCH[bkey(key)] || []).push(g);
+  }
+  /* درابزين ذهبي من نقطة إلى نقطة (y عند مستوى الدرج): أعمدة رفيعة وحاجز علوي */
+  function railLine(a, b, step = 0.14) {
+    const L = Math.hypot(b[0] - a[0], b[2] - a[2]), n = Math.max(1, Math.round(L / step));
+    for (let i = 0; i <= n; i++) { const t = i / n, x = a[0] + (b[0] - a[0]) * t, y = a[1] + (b[1] - a[1]) * t, z = a[2] + (b[2] - a[2]) * t; bx("gold", x - 0.011, y, z - 0.011, x + 0.011, y + 0.92, z + 0.011); }
+    seg("gold", [a[0], a[1] + 0.94, a[2]], [b[0], b[1] + 0.94, b[2]], 0.05);
+    seg("gold", [a[0], a[1] + 0.45, a[2]], [b[0], b[1] + 0.45, b[2]], 0.022);
+  }
+  function newel(x, y, z, lvl) { device(null, [C(0.03, 1.12, MAT.gold, 0, 0, 0, 8), mm(new THREE.SphereGeometry(0.055, 10, 8), MAT.gold, 0, 1.16, 0)], x, y, z, 0, lvl); }
   function stairsCore() {
     LAYER = "s0";
-    const rise = LY / NST;
-    for (let i = 0; i < NST; i++) {
-      // القلبة الأولى (شمالاً): تصعد نحو الشرق إلى البسطة
-      const xa = SA.x0 + i * RUN, xb = xa + RUN, ya = (i + 1) * rise;
-      bx("stairT", xa, 0, SA.z0, xb, ya, SA.z1); bx("stairEdge", xa, 0, SA.z0 - 0.02, xb, ya, SA.z0);
-      // القلبة الثانية (جنوباً): تصعد نحو الغرب حتى الطابق الأول
-      const xc = LX0 - (i + 1) * RUN, xd = xc + RUN, yc = LY + (i + 1) * rise;
-      bx("wallM", xc, yc - 0.45, SB.z0, xd, yc - 0.2, SB.z1); bx("stairT", xc, yc - 0.2, SB.z0, xd, yc, SB.z1);
-      bx("stairEdge", xc, yc - 0.45, SB.z1, xd, yc, SB.z1 + 0.02);
-    }
-    bx("wallM", LX0, 0, SA.z0, BX1 - 0.15, LY - 0.02, SB.z1 + 0.15); flat("stairT", LX0, SA.z0, BX1 - 0.15, SB.z1 + 0.15, LY);
-    const ang = Math.atan2(LY, NST * RUN), L = Math.hypot(LY, NST * RUN);
-    const rail = (z, x0, x1, y0, y1) => {
-      const up = y1 > y0 === x1 > x0;
-      addGeo("gold", new THREE.BoxGeometry(L, 0.05, 0.05), (x0 + x1) / 2, (y0 + y1) / 2 + 0.92, z, 0, 1, 1, 1, 0, up ? ang : -ang);
-      for (let i = 0; i <= NST; i++) { const t = i / NST, x = x0 + (x1 - x0) * t, yy = y0 + (y1 - y0) * t; bx("gold", x - 0.012, yy, z - 0.012, x + 0.012, yy + 0.92, z + 0.012); }
-      device(null, [C(0.03, 1.15, MAT.gold, 0, 0, 0, 8), mm(new THREE.SphereGeometry(0.05, 8, 6), MAT.gold, 0, 1.18, 0)], x0, y0, z, 0, 0);
-    };
-    rail(-1.575, SA.x0, LX0, 0, LY); rail(-2.9, SA.x0, LX0, 0, LY);
-    // درابزين فتحة الدرج في الطابق الأول
-    LAYER = "s1";
-    const brail = (x0, z0, x1, z1) => { bx("gold", Math.min(x0, x1) - 0.025, FH + 0.92, Math.min(z0, z1) - 0.025, Math.max(x0, x1) + 0.025, FH + 0.97, Math.max(z0, z1) + 0.025); const n = Math.round(Math.hypot(x1 - x0, z1 - z0) / 0.14); for (let i = 0; i <= n; i++) { const x = x0 + (x1 - x0) * i / n, z = z0 + (z1 - z0) * i / n; bx("gold", x - 0.012, FH, z - 0.012, x + 0.012, FH + 0.92, z + 0.012); } };
-    brail(CX1, -2.95, BX1 - 0.15, -2.95); brail(CX1, -1.6, CX1, -2.95); brail(6.6, -1.575, CX1, -1.575);
-    solid(1, CX1, -2.97, BX1, -1.55); solid(1, 6.6, -1.55, BX1, -0.15);
+    const { ax0, ax1, az, mz0, mz1, bx0, bx1, run } = ST;
+    // القلبة الأولى: 11 درجة شمالاً
+    for (let i = 0; i < 11; i++) { const za = az - i * run, zb = za - run, yt = (i + 1) * RZ; bx("stairT", ax0, 0, zb, ax1, yt, za); bx("stairEdge", ax0, yt - RZ, za - 0.02, ax1, yt, za); }
+    // البسطة الأولى (فيها نبتة)
+    const lz = az - 11 * run;
+    bx("wallM", ax0, 0, mz1, ax1, LY1 - 0.02, lz); flat("stairT", ax0, mz1, ax1, lz, LY1);
+    plant(ax0 + 0.25, LY1, mz1 + 0.25, "snake", 0.95);
+    // القلبة الوسطى: 4 درجات شرقاً
+    for (let k = 0; k < 4; k++) { const xa = ax1 + k * run, xb = xa + run, yt = LY1 + (k + 1) * RZ; bx("stairT", xa, 0, mz1, xb, yt, mz0); bx("stairEdge", xa - 0.02, yt - RZ, mz1, xa, yt, mz0); }
+    // البسطة الثانية تحت شبّاك بستارة، وفيها نبتة
+    const l2x = ax1 + 4 * run;
+    bx("wallM", l2x, 0, mz1, bx1, LY2 - 0.02, mz0); flat("stairT", l2x, mz1, bx1, mz0, LY2);
+    windowAt("E", (mz0 + mz1) / 2, 0, 1.0, 1.2, LY2 + 0.95, "winOutS", 1.15, 1.4, null, "roller");
+    plant(bx1 - 0.25, LY2, mz1 + 0.25, "snake", 0.95);
+    // القلبة الأخيرة: 8 درجات جنوباً حتى الطابق الأول (لوح مائل وتحته فراغ)
+    for (let j = 0; j < 8; j++) { const za = mz0 + j * run, zb = za + run, yt = LY2 + (j + 1) * RZ; bx("wallM", bx0, yt - 0.48, za, bx1, yt - 0.2, zb); bx("stairT", bx0, yt - 0.2, za, bx1, yt, zb); bx("stairEdge", bx0, yt - RZ, za - 0.02, bx1, yt, za); }
+    bx("wallM", bx0, LY2 - 0.3, mz0 - 0.02, bx1, LY2 + RZ - 0.2, mz0 + 0.02);
+    // الدرابزين الذهبي على يمين الصاعد طوال الطريق
+    railLine([ax1, 0, az], [ax1, LY1, lz]);
+    railLine([ax1, LY1, mz0], [l2x, LY2, mz0]);
+    railLine([l2x, LY2, mz0], [bx0, LY2, mz0]);
+    railLine([bx0, LY2, mz0], [bx0, FH, mz0 + 8 * run]);
+    newel(ax1, 0, az, 0);
+    // تحت القلبة الأخيرة: سجاد أحمر طويل ورفّ أحذية خشبي داكن ومكيّف على الجدار المضرّب
+    flat("prayer", 7.15, -3.5, 9.65, -2.5, 0.012); flat("prayer", 7.15, -4.75, 9.65, -3.75, 0.012);
+    device(null, [B(1.1, 1.0, 0.34, MAT.woodDark)].concat([0, 1, 2, 3].map(i => B(1.04, 0.015, 0.3, MAT.black, 0, 0.24 * i + 0.02, 0.02))).concat([0, 1, 2].map(i => B(0.015, 0.98, 0.3, MAT.black, -0.27 + i * 0.27, 0.01, 0.02))), 9.62, 0, -4.4, -Math.PI / 2, 0, [0.55, 0.17]);
+    wallItem(splitAC(), BX1 - 0.27, 2.45, -3.0, "W", 0);
     LAYER = "s0";
-    solid(0, 6.6, SA.z0, BX1, SA.z1); solid(0, 7.6, -1.55, BX1, -0.15); solid(0, SA.x0, -1.62, BX1, -1.53); solid(0, SA.x0, -2.95, BX1, -2.85);
-    // السجادة الحمراء الطويلة تحت القلبة الثانية، ورفّ الأحذية، والتكييف، وشبّاك البسطة
-    flat("prayer", 5.8, -1.45, 7.5, -0.35, 0.012);
-    flat("prayer", 5.9, -6.3, 9.7, -5.3, 0.012);
-    device(null, [B(1.1, 1.0, 0.34, MAT.woodDark)].concat([0, 1, 2, 3].map(i => B(1.04, 0.015, 0.3, MAT.black, 0, 0.24 * i + 0.02, 0.02))), 9.2, 0, -3.4, -Math.PI / 2, 0, [0.55, 0.17]);
-    wallItem(splitAC(), 7.8, 2.6, -6.43 + 0.12, "F", 0);
-    windowAt("E", SB.z1 - 0.95 + 0.4, 0, 1.0, 1.25, LY + 1.0, "winOutS", 1.15, 1.4, null, "roller");
-    plant(9.6, LY, -2.6, "snake", 0.9);
+    // التصادم: القلبات والبسطات، والحاجز الزجاجي حول الباب الأسود
+    solid(0, ax0, -2.78, ax1 + 0.03, mz1); solid(0, ax1, mz0 - 0.2, BX1, mz1 - 0.2); solid(0, bx0, mz0 + 0.05, BX1, mz0 - 0.2);
+    // الطابق الأول: درابزين فتحة الدرج من جهة البهو ورأس الممر، وشبّاك رأس الدرج
+    LAYER = "s1";
+    railLine([CX1 + 0.02, FH, -3.4], [bx0, FH, -3.4]);
+    railLine([CX1 + 0.02, FH, -3.4], [CX1 + 0.02, FH, -6.45]);
+    newel(CX1 + 0.02, FH, -3.4, 1); newel(bx0, FH, -3.4, 1);
+    plant(CX1 - 0.25, FH, -6.25, "ficus", 0.9);
+    windowAt("E", -2.65, 1, 0.75, 1.2, 1.05, "winOutS", 0.95, 1.4);
+    solid(1, CX1, -3.42, bx0, -6.6); solid(1, bx0 - 0.03, -3.5, BX1, -6.6); solid(1, CX1 - 0.04, -3.4, CX1 + 0.06, -6.6);
   }
 
   /* ---------------------------------------------------------------
      الأبواب ولوحاتها النحاسية (الاسم والرقم كما على اللوحات)
   --------------------------------------------------------------- */
-  const LEAF = { wood: "doorWood", carved: "doorCarved", carvedLight: "doorCarvedL", black: "doorBlack", blackT: "doorBlack", white: "doorWhite", diamond: "doorDiamond", wood2: "doorWood", council: "doorWhite", glass2: "glassDoor", glassF: "glassDoor", shut: "doorWood" };
-  const FRAME = { white: "white", council: "white", black: "frameBlack", blackT: "frameBlack", glass2: "frameBlack", carvedLight: "woodLight" };
+  const LEAF = { wood: "doorWood", carved: "doorCarved", carvedLight: "doorCarvedL", black: "doorBlack", blackT: "doorBlack", white: "doorWhite", diamond: "doorDiamond", wood2: "doorWood", council: "doorWhite", glass2: "glassDoor", glassF: "glassDoor", shut: "doorWood", shut2: "doorWood", whiteB: "doorWhite", dark: "doorDark" };
+  const FRAME = { white: "white", council: "white", black: "frameBlack", blackT: "frameBlack", glass2: "frameBlack", carvedLight: "woodLight", whiteB: "frameBlack" };
   function doors() {
     ROOMS.forEach(r => (r.doors || []).forEach(d => {
       const k = d.k || "wood";
       LAYER = r.lvl ? "s1" : "s0";
+      if (k === "none" || k === "open") return; // تُرسم في دالة خاصة أو فتحة بلا باب
       const p = doorPos(r, d), y = r.lvl * FH, a = d.at - p.w / 2, b = d.at + p.w / 2, fk = FRAME[k] || "woodFrame";
       if (k === "glass2" || k === "glassF") { if (k === "glass2") glassDouble(p, y); else glassSingle(p, y); return; }
       if (p.axis === "Z") frameZ(fk, p.c, a, b, y, y + p.top, 0.09, T / 2 + 0.03); else frameX(fk, p.c, a, b, y, y + p.top, 0.09, T / 2 + 0.03);
       const lm = MAT[LEAF[k]];
+      if (k === "shut2") { // باب خشبي مزدوج مغلق
+        if (p.axis === "Z") { bx("doorWood", p.c - T / 2 - 0.01, y, a, p.c + T / 2 + 0.01, y + p.top, b); bx("black", p.c - T / 2 - 0.015, y, d.at - 0.008, p.c + T / 2 + 0.015, y + p.top, d.at + 0.008); }
+        else { bx("doorWood", a, y, p.c - T / 2 - 0.01, b, y + p.top, p.c + T / 2 + 0.01); bx("black", d.at - 0.008, y, p.c - T / 2 - 0.015, d.at + 0.008, y + p.top, p.c + T / 2 + 0.015); }
+        solid(r.lvl, p.axis === "Z" ? p.c - 0.1 : a, p.axis === "Z" ? a : p.c - 0.1, p.axis === "Z" ? p.c + 0.1 : b, p.axis === "Z" ? b : p.c + 0.1);
+        return;
+      }
       if (k === "shut") { // باب مغلق
         if (p.axis === "Z") bx("doorWood", p.c - T / 2 - 0.01, y, a, p.c + T / 2 + 0.01, y + p.top, b); else bx("doorWood", a, y, p.c - T / 2 - 0.01, b, y + p.top, p.c + T / 2 + 0.01);
         solid(r.lvl, p.axis === "Z" ? p.c - 0.1 : a, p.axis === "Z" ? a : p.c - 0.1, p.axis === "Z" ? p.c + 0.1 : b, p.axis === "Z" ? b : p.c + 0.1);
@@ -930,10 +1135,16 @@
       leaves.forEach(([u, s]) => {
         const hx = p.axis === "Z" ? p.c + p.nx * (T / 2) : u, hz = p.axis === "Z" ? u : p.c + p.nz * (T / 2);
         const ry = Math.atan2(-p.nz, p.nx), parts = [B(lw, lh, 0.045, lm, lw / 2, 0, s * 0.03), B(0.03, 0.03, 0.14, MAT.brass, lw - 0.08, 1.02, s * 0.03)];
-        if (d.logo) parts.push(mm(new THREE.CircleGeometry(0.17, 24), MAT.ph_logo_col, lw / 2, 1.5, s * 0.03 + 0.024));
-        addObj(compactDoor(parts, hx, y, hz, ry));
+        if (d.logo) parts.push(mm(new THREE.CircleGeometry(0.17, 24), MAT.ph_logo_col, lw / 2, 1.5, s * 0.03 + 0.024), mm(new THREE.CircleGeometry(0.17, 24), MAT.ph_logo_col, lw / 2, 1.5, s * 0.03 - 0.024, 0, Math.PI, 0));
+        if (d.emblem) [1, -1].forEach(f => parts.push(B(0.42, 0.2, 0.02, MAT.woodDark, lw / 2, 1.18, s * 0.03 + f * 0.03), mm(new THREE.CircleGeometry(0.15, 24), MAT.ph_logo_col, lw / 2, 1.55, s * 0.03 + f * 0.034, 0, f > 0 ? 0 : Math.PI, 0)));
+        let ryy = ry;
+        if (d.ajar != null) { const closed = p.axis === "Z" ? -Math.PI / 2 * s : (s > 0 ? 0 : Math.PI), dd = Math.atan2(Math.sin(ry - closed), Math.cos(ry - closed)); ryy = closed + Math.sign(dd) * d.ajar; }
+        addObj(compactDoor(parts, hx, y, hz, ryy));
       });
-      if (!r.noPlate) plateAbove(p, y, r.name, r.code);
+      if (!r.noPlate) {
+        if (r.lvl !== 1) plateAbove(p, y, r.name, r.code);
+        else if (d === r.doors[0]) projPlateAt(d.at + p.w / 2 + 0.14, y, p.c, p.axis, p.axis === "Z" ? -p.nx : -p.nz, r.plate || r.name, r.code);
+      }
     }));
     // لوحة بيضاء فوق باب شعبة التسجيل
     const rg = roomById("g-reg"), pg = doorPos(rg, rg.doors[0]);
@@ -1164,45 +1375,65 @@
   }
   function upperHall() {
     LAYER = "s1";
-    const y = FH;
-    // جدار رخامي ذهبي بحروف بارزة على سطرين وشعار الكلية فوقه
-    const gz = -8.0 + T / 2;
-    bx("goldMarble", CX0 + 0.08, y, gz, UX0 - 0.08, y + CH - 0.02, gz + 0.04);
-    const gw = planeAt(lettersMat("شعبة الشؤون", 768, 300, "#e9c86a", 130, "الإدارية والمالية"), 1.85, 0.72, (CX0 + UX0) / 2, y + 1.95, gz + 0.05, 0);
+    const y = FH, gx = -1.6 + T / 2;
+    // الجدار الذهبي في آخر البهو (يقابل الصاعد): «شعبة الشؤون / الإدارية والمالية» وشعار الكلية
+    bx("goldMarble", gx, y, -6.52, gx + 0.04, y + CH - 0.02, -4.1);
+    const gw = planeAt(goldLettersMat("شعبة الشؤون", "الادارية والمالية"), 2.3, 1.15, gx + 0.05, y + 1.85, -5.25, Math.PI / 2);
     gw.userData.device = "goldwall"; PICK.push(gw);
-    pic(MAT.ph_logo_col, 0.38, 0.38, (CX0 + UX0) / 2 + 0.55, y + 2.85, gz + 0.06, 0, "white", 0.02);
-    device(null, sofa(2, MAT.leatherYellow, MAT.chrome, true), 2.3, y, gz + 0.5, 0, 1, [0.85, 0.45]);
-    [-3.4, -4.3].forEach(z => device(null, sofa(1, MAT.leatherYellow, MAT.chrome, true), CX0 + 0.55, y, z, Math.PI / 2, 1, [0.5, 0.45]));
-    device(null, extinguisherParts(), UX0 + 0.12, y, -7.75, 0, 1); planeAt(fireSignMat(), 0.32, 0.22, CX0 + T / 2 + 0.01, y + 1.55, -7.75, Math.PI / 2);
-    plant(UX0 - 0.15, y, -7.6, "snake");
-    niche(CX1 - T / 2, y + 0.6, -8.7, -1, 1);
-    device(null, rollupParts("welcome"), 5.2, y, -7.0, -Math.PI / 2, 1, [0.15, 0.42]);
-    planeAt(exitMat(), 0.36, 0.14, CX0 + T / 2 + 0.01, y + 2.35, -2.2, Math.PI / 2);
-    // ممر الطابق الأول: تجاويف مضاءة، ملصقات «مهام الشعبة» وتحتها مخططات مؤطّرة، طفايات
-    [-12.0, -18.3].forEach(z => niche(UX0 + T / 2, y + 0.6, z, 1, 1));
-    ROOMS.filter(r => r.poster).forEach(r => {
-      const d = r.doors[r.doors.length - 1], west = r.r[1] === UX0, x = west ? UX0 + T / 2 + 0.015 : CX1 - T / 2 - 0.015, z = d.at + (west ? 1.1 : -0.95), ry = west ? Math.PI / 2 : -Math.PI / 2;
-      pic(posterMat(r.poster), 0.55, 0.78, x, y + 1.75, z, ry, "frameBlack", 0.015);
-      pic(chartMat(), 0.42, 0.3, x, y + 1.05, z, ry, "woodDark", 0.025);
-    });
-    [[UX0 + 0.12, -16.9], [5.45, -11.9], [5.45, -23.6]].forEach(([x, z]) => device(null, extinguisherParts(), x, y, z, 0, 1));
-    planeAt(fireSignMat(), 0.34, 0.24, CX1 - T / 2 - 0.01, y + 1.6, -8.4, -Math.PI / 2);
-    [[5.35, -14.9], [3.5, -21.6]].forEach(([x, z]) => device(null, [C(0.14, 0.62, MAT.steel, 0, 0, 0, 14), C(0.15, 0.04, MAT.chrome, 0, 0.62, 0, 14)], x, y, z, 0, 1, [0.15, 0.15]));
-    // نهاية الممر: باب «امانة المجلس» الأبيض المزدوج ولوحته، ورفّان ذهبيان مرآتيان، والعلم، و«مكتب العميد»
-    const zz = ZE + T / 2;
-    bx("white", UXM - 0.95, y + 2.45, zz, UXM + 0.95, y + CH - 0.05, zz + 0.06);
+    pic(MAT.ph_logo_col, 0.4, 0.4, gx + 0.06, y + 2.9, -5.95, Math.PI / 2, "white", 0.02);
+    device(null, sofa(3, MAT.leatherYellow, MAT.chrome, true), gx + 0.5, y, -5.3, Math.PI / 2, 1, [1.18, 0.45]);
+    [0.75, 1.65].forEach(x => device(null, sofa(1, MAT.leatherYellow, MAT.chrome, true), x, y, -3.48, Math.PI, 1, [0.5, 0.43]));
+    device(null, extinguisherParts(), gx + 0.14, y, -4.0, 0, 1); planeAt(fireSignMat(), 0.32, 0.22, gx + 0.01, y + 1.62, -3.95, Math.PI / 2);
+    plant(2.5, y, -3.35, "snake");
+    // ملصق مهام الموارد البشرية وتحته الهيكل التنظيمي، على جدار البهو الشمالي بجانب باب الشعبة
+    posterOn(1.62, y, -6.6 + T / 2 + 0.02, 0, "hr");
+    // لوحة الشعبة البارزة على العمود عند رأس الممر
+    projPlateAt(-6.75, y, UX0, "Z", 1, "شعبة الموارد البشرية", "01G024");
+    planeAt(exitMat(), 0.36, 0.14, 5.0 + T / 2 + 0.01, y + 2.3, -2.6, Math.PI / 2);
+    // الصحيات: لوحتان بيضويتان
+    ROOMS.filter(r => r.oval).forEach(r => { const d = r.doors[0]; planeAt(ovalPlaqueMat(r.oval[0], r.oval[1]), 0.36, 0.17, d.at, y + 2.48, r.r[2] - T / 2 - 0.012, Math.PI); });
+    // الممر: لافتة الترحيب، تجاويف مضاءة بنباتات، طفايات وسلال، والملصقات
+    device(null, rollupParts("welcome"), UX0 + 0.42, y, -7.55, Math.PI / 2 - 0.35, 1, [0.15, 0.42]);
+    niche(UX0 + T / 2, y + 0.6, -7.0, 1, 1);
+    [-12.9, -15.6, -20.0].forEach(z => niche(CX1 - T / 2, y + 0.6, z, -1, 1));
+    niche(UX0 + T / 2, y + 0.6, -19.3, 1, 1);
+    // إطار أبيض كبير على الجدار الغربي بين الأبواب
+    [[-13.2, -15.5]].forEach(([a, b]) => { bx("white", UX0 + T / 2, y + 0.95, b, UX0 + T / 2 + 0.05, y + 1.0, a); bx("white", UX0 + T / 2, y + 2.35, b, UX0 + T / 2 + 0.05, y + 2.4, a); bx("white", UX0 + T / 2, y + 0.95, b, UX0 + T / 2 + 0.05, y + 2.4, b + 0.05); bx("white", UX0 + T / 2, y + 0.95, a - 0.05, UX0 + T / 2 + 0.05, y + 2.4, a); });
+    posterOn(UX0 + T / 2 + 0.02, y, -16.35, Math.PI / 2, "acc");
+    posterOn(UX0 + T / 2 + 0.02, y, -21.0, Math.PI / 2, "media");
+    posterOn(CX1 - T / 2 - 0.02, y, -21.1, -Math.PI / 2, "plan");
+    [[5.32, -10.45], [5.32, -18.55]].forEach(([x, z]) => device(null, [C(0.16, 0.62, MAT.red, 0, 0.12, 0, 14), C(0.035, 0.12, MAT.black, 0, 0.74, 0, 8), C(0.09, 0.1, MAT.black, 0.12, 0, 0.08, 10), C(0.09, 0.1, MAT.black, -0.12, 0, 0.08, 10)], x, y, z, 0, 1, [0.18, 0.18]));
+    planeAt(fireSignMat(), 0.34, 0.24, CX1 - T / 2 - 0.03, y + 1.6, -10.5, -Math.PI / 2);
+    [[5.35, -14.6], [3.48, -18.45], [5.35, -21.72]].forEach(([x, z]) => device(null, [C(0.14, 0.62, MAT.steel, 0, 0, 0, 14), C(0.15, 0.04, MAT.chrome, 0, 0.62, 0, 14)], x, y, z, 0, 1, [0.15, 0.15]));
+    // «مكتب العميد» بحروف ذهبية فوق بابه على اليسار في آخر الممر، وعلم العراق بجانبه
+    planeAt(lettersMat("مكتب العميد", 512, 120), 1.15, 0.28, UX0 + T / 2 + 0.035, y + 2.62, -23.7, Math.PI / 2);
+    device(null, flagStand("iq"), UX0 + 0.35, y, -24.55, 0, 1, [0.18, 0.18]);
+    plant(UX0 + 0.3, y, -22.95, "croton", 0.9);
+    // نهاية الممر: باب قاعة المجلس الأبيض المزدوج تحت لوحة «امانة المجلس» وشعار الكلية، بين رفّين ذهبيين مرآتيين
+    const zz = ZE1 + T / 2;
+    bx("white", UX0 + 0.05, y + 2.45, zz, CX1 - 0.05, y + CH - 0.05, zz + 0.06);
     planeAt(councilHeaderMat(), 1.75, 0.82, UXM, y + 2.92, zz + 0.065, 0);
-    [[3.42, 0.42], [5.62, 0.8]].forEach(([x, w]) => {
-      const p = [B(w, 2.95, 0.3, MAT.white)];
-      for (let i = 0; i < 4; i++) p.push(B(w - 0.08, 0.6, 0.02, MAT.goldMirror, 0, 0.15 + i * 0.7, 0.14), B(w - 0.06, 0.03, 0.26, MAT.white, 0, 0.12 + i * 0.7, 0.01));
-      for (let k = 0; k < 4; k++) for (let j = 0; j < 4; j++) p.push(mm(new THREE.BoxGeometry(w * 0.3, 0.02, 0.01), MAT.goldTrim, -w * 0.25 + (k % 2) * w * 0.5, 0.45 + j * 0.7, 0.155, 0, 0, (k + j) % 2 ? 0.78 : -0.78));
+    [[UX0 + 0.27, 0.42], [CX1 - 0.27, 0.42]].forEach(([x, w]) => {
+      const p = [B(w, 2.45, 0.3, MAT.white)];
+      for (let i = 0; i < 3; i++) p.push(B(w - 0.08, 0.62, 0.02, MAT.goldMirror, 0, 0.2 + i * 0.75, 0.14), B(w - 0.06, 0.03, 0.26, MAT.white, 0, 0.16 + i * 0.75, 0.01));
+      for (let k = 0; k < 2; k++) for (let j = 0; j < 3; j++) p.push(mm(new THREE.BoxGeometry(w * 0.55, 0.02, 0.01), MAT.goldTrim, 0, 0.5 + j * 0.75, 0.155, 0, 0, k ? 0.78 : -0.78));
       device("council", p, x, y, zz + 0.16, 0, 1, [w / 2, 0.16]);
     });
-    device(null, flagStand("iq"), 3.6, y, -22.3, 0, 1, [0.18, 0.18]);
-    planeAt(lettersMat("مكتب العميد", 512, 120), 1.25, 0.3, UX0 + T / 2 + 0.012, y + 2.75, -23.0, Math.PI / 2);
-    bx("white", 7.2 - T / 2 - 0.06, y + 2.45, -24.0, 7.2 - T / 2, y + CH - 0.05, -22.6);
-    planeAt(lettersMat("امانة المجلس", 640, 150, "#d9b04f"), 1.3, 0.32, 7.2 - T / 2 - 0.065, y + 2.9, -23.3, -Math.PI / 2);
-    plant(6.9, y, -22.85, "snake");
+    [UX0 + 0.27, CX1 - 0.27].forEach(x => device(null, extinguisherParts(), x, y, zz + 0.45, 0, 1));
+    // على اليمين: باب أمين المجلس المعيّني، فوقه «امانة المجلس» بحروف ذهبية، ولوحته البارزة
+    bx("white", CX1 - T / 2 - 0.06, y + 2.42, -24.75, CX1 - T / 2, y + CH - 0.05, -23.45);
+    planeAt(lettersMat("امانة المجلس", 640, 150, "#d9b04f"), 1.15, 0.3, CX1 - T / 2 - 0.065, y + 2.9, -24.1, -Math.PI / 2);
+    projPlateAt(-23.42, y, CX1, "Z", -1, "أمين المجلس", "01G017");
+    plant(CX1 - 0.3, y, -23.05, "croton", 0.9);
+  }
+  /* ملصق «مهام الشعبة» وتحته الهيكل التنظيمي المؤطّر وأزرار الكهرباء. (x,z) على وجه الجدار، ry اتجاه الوجه */
+  function posterOn(x, y, z, ry, key) {
+    const P = POSTERS[key], pm = posterMat(key), sx = Math.sin(ry), sz = Math.cos(ry), cy = y + 1.25 + pm.h / 2;
+    const m = pic(pm.mat, pm.w, pm.h, x + sx * 0.012, cy, z + sz * 0.012, ry, null);
+    m.userData.device = "poster_" + key; PICK.push(m);
+    if (P.chart) { const ch = pic(chartMat(P.chart), 0.6, 0.43, x + sx * 0.03, y + 1.25 - 0.3, z + sz * 0.03, ry, P.frame || "woodDark", 0.03); ch.userData.device = "poster_" + key; PICK.push(ch); }
+    const ox = Math.cos(ry), oz = -Math.sin(ry);
+    device(null, [B(0.26, 0.09, 0.02, MAT.goldTrim), B(0.06, 0.05, 0.01, MAT.woodDark, -0.07, 0.02, 0.01), B(0.06, 0.05, 0.01, MAT.woodDark, 0.02, 0.02, 0.01)], x + ox * (pm.w / 2 + 0.2) + sx * 0.01, y + 1.05, z + oz * (pm.w / 2 + 0.2) + sz * 0.01, ry, 1);
   }
 
   /* ---------------------------------------------------------------
@@ -1292,60 +1523,77 @@
       device(null, waterCooler(), -0.7, y, -29.4, Math.PI / 2, 0, [0.17, 0.17]);
       const hp = planeAt(new THREE.MeshBasicMaterial({ visible: false }), 2.0, 1.4, CXM, y + 1.3, -25.4, 0); hp.userData.device = "reghall"; PICK.push(hp);
     } else if (sub === "hrMgr") {
-      // شعبة الموارد البشرية: جدران خشبية، كنبات جلدية بنية حول سجادة، طاولة زجاجية بأرجل ذهبية، علم، رفّ رسائل، ساعة مزخرفة
-      device(null, slatDesk(1.7, 0.8), -0.4, y, -9.4, Math.PI, 1, [0.85, 0.4]); device(null, chairExec(MAT.leatherDark, 0.85), -0.4, y, -8.7, Math.PI, 1);
-      device(null, flagStand("iq"), -2.05, y, -10.4, 0, 1, [0.18, 0.18]);
-      rug("rugBeige", -1.6, -13.4, 1.6, -10.6, y);
-      device(null, sofa(2, MAT.leatherBrown, null, false), -1.5, y, -13.4, Math.PI / 2, 1, [0.85, 0.45]);
-      [-11.0, -13.1].forEach(z => device(null, sofa(1, MAT.leatherBrown, null, false), 1.9, y, z, -Math.PI / 2, 1, [0.5, 0.45]));
-      device(null, [B(1.0, 0.03, 0.55, MAT.glassCab, 0, 0.42, 0), B(0.9, 0.03, 0.45, MAT.glassCab, 0, 0.12, 0), C(0.025, 0.42, MAT.gold, -0.45, 0, -0.22, 6), C(0.025, 0.42, MAT.gold, 0.45, 0, -0.22, 6), C(0.025, 0.42, MAT.gold, -0.45, 0, 0.22, 6), C(0.025, 0.42, MAT.gold, 0.45, 0, 0.22, 6)], 0.2, y, -12.0, Math.PI / 2, 1, [0.5, 0.28]);
-      device(null, [B(1.0, 1.7, 0.36, MAT.white), B(0.92, 1.55, 0.01, MAT.pigeon, 0, 0.08, 0.18)], 2.7, y, -14.55, 0, 1, [0.5, 0.18]);
-      wallItem([B(0.95, 0.3, 0.24, MAT.devWhite), B(0.85, 0.04, 0.02, MAT.devGrey, 0, 0.04, 0.12)], -0.4, y + 2.75, -14.65, "F", 1);
-      wallItem([mm(new THREE.CylinderGeometry(0.22, 0.22, 0.05, 20), MAT.white, 0, 0, 0, Math.PI / 2), mm(new THREE.TorusGeometry(0.22, 0.03, 6, 20), MAT.gold, 0, 0, 0.03), B(0.015, 0.14, 0.005, MAT.black, 0, 0, 0.03)], UX0 - T / 2 - 0.02, y + 2.2, -11.6, "W", 1);
-      F.ac = false;
+      // شعبة الموارد البشرية (كما في الفيديو): جدران خشبية، كنبة جلدية بنية طويلة على اليسار وطاولة زجاجية بأرجل ذهبية،
+      // مكتب المدير على اليمين تحت شعار الكلية، باب أسود بنافذة علوية وعلم في الجدار المقابل، كرسيان جلديان، رفّ رسائل أبيض
+      rug("rugBeige", -1.3, -10.5, 1.5, -7.0, y);
+      device(null, sofa(3, MAT.leatherBrown, null, false), -1.15, y, -8.35, Math.PI / 2, 1, [1.18, 0.45]);
+      device(null, [B(1.0, 0.03, 0.55, MAT.glassCab, 0, 0.42, 0), B(0.9, 0.03, 0.45, MAT.glassCab, 0, 0.12, 0), C(0.025, 0.42, MAT.gold, -0.45, 0, -0.22, 6), C(0.025, 0.42, MAT.gold, 0.45, 0, -0.22, 6), C(0.025, 0.42, MAT.gold, -0.45, 0, 0.22, 6), C(0.025, 0.42, MAT.gold, 0.45, 0, 0.22, 6)], -0.15, y, -8.35, Math.PI / 2, 1, [0.5, 0.28]);
+      device(null, slatDesk(1.7, 0.8), 2.25, y, -8.7, -Math.PI / 2, 1, [0.85, 0.4]); device(null, chairExec(MAT.leatherDark, 0.85), 2.9, y, -8.7, -Math.PI / 2, 1);
+      device(null, chairGuest(MAT.leatherBrown, MAT.woodDark), 1.3, y, -9.2, Math.PI / 2, 1, [0.25, 0.25]);
+      pic(MAT.ph_logo_col, 0.42, 0.42, UX0 - T / 2 - 0.045, y + 2.05, -8.7, -Math.PI / 2, "white", 0.02);
+      device(null, flagStand("iq"), 0.12, y, -10.92, 0, 1, [0.18, 0.18]);
+      [0.85, 1.83].forEach(x => device(null, sofa(1, MAT.leatherBrown, null, false), x, y, -10.62, 0, 1, [0.49, 0.43]));
+      device(null, [B(0.84, 1.7, 0.36, MAT.white), B(0.76, 1.55, 0.01, MAT.pigeon, 0, 0.08, 0.18)], 2.77, y, -10.9, 0, 1, [0.42, 0.18]);
+      wallItem(splitAC(), 1.3, y + 2.75, -11.2 + T / 2 + 0.12, "F", 1);
+      wallItem([mm(new THREE.CylinderGeometry(0.22, 0.22, 0.05, 20), MAT.white, 0, 0, 0, Math.PI / 2), mm(new THREE.TorusGeometry(0.22, 0.03, 6, 20), MAT.gold, 0, 0, 0.03), B(0.015, 0.14, 0.005, MAT.black, 0, 0, 0.03)], -1.6 + T / 2 + 0.05, y + 2.35, -8.35, "E", 1);
+      F.ac = false; F.lights = 2;
     } else if (sub === "hrStaff") {
-      [[-4.9, -9.4], [-3.2, -9.4], [-4.9, -12.0], [-3.2, -12.0]].forEach(([x, z]) => { device(null, slatDesk(1.4, 0.7), x, y, z, Math.PI, 1, [0.7, 0.35]); device(null, chairExec(MAT.leatherBeige, 0.7), x, y, z + 0.68, Math.PI, 1); });
-      device(null, cabinet(1.0, 1.95, 0.42, MAT.cream, true), -4.4, y, -14.55, 0, 1, [0.5, 0.21]);
+      // غرفة موظفي الموارد البشرية: مكاتب بواجهات شرائح، شبابيك بستائر مخططة على الواجهة الغربية
+      [[-4.9, -8.2], [-3.3, -8.2], [-4.9, -12.7], [-3.3, -12.7]].forEach(([x, z]) => { device(null, slatDesk(1.4, 0.7), x, y, z, Math.PI / 2, 1, [0.7, 0.35]); device(null, chairExec(MAT.leatherBeige, 0.7), x - 0.66, y, z, Math.PI / 2, 1); });
+      [-4.9, -3.85].forEach(x => device(null, cabinet(1.0, 1.95, 0.42, MAT.cream, true), x, y, -14.38, Math.PI, 1, [0.5, 0.21]));
+      wallItem(splitAC(), -3.8, y + 2.7, -6.6 - T / 2 - 0.12, "B", 1);
     } else if (sub === "qa") {
-      // حاجز خشبي بشبابيك زجاجية ورفوف تسليم، يفصل المراجعين عن الموظفين
-      const px = 1.6, y0 = y;
-      bx("woodPanelD", px - 0.05, y0, -18.73, px + 0.05, y0 + 1.0, -16.45); bx("woodPanelD", px - 0.05, y0, -15.6 + 0.0, px + 0.05, y0 + 1.0, -14.87);
-      bx("woodDark", px - 0.3, y0 + 1.0, -18.73, px + 0.3, y0 + 1.04, -16.45);
-      planeAt(MAT.glass2s, 2.28, 1.1, px, y0 + 1.6, -17.59, Math.PI / 2);
-      bx("woodPanelD", px - 0.05, y0 + 2.15, -18.73, px + 0.05, y0 + CH, -14.87); [-18.73, -17.97, -17.21, -16.45].forEach(z => bx("woodDark", px - 0.04, y0 + 1.0, z - 0.03, px + 0.04, y0 + 2.15, z + 0.03));
-      bx("woodPanelD", px - 0.05, y0 + 1.0, -15.6, px + 0.05, y0 + 2.15, -14.87);
-      solid(1, px - 0.06, -18.73, px + 0.06, -16.45); solid(1, px - 0.06, -15.6, px + 0.06, -14.87);
-      const cp = planeAt(new THREE.MeshBasicMaterial({ visible: false }), 2.2, 1.2, px + 0.06, y0 + 1.5, -17.6, Math.PI / 2); cp.userData.device = "counter"; PICK.push(cp);
-      [-18.1, -17.1].forEach(z => { device(null, officeDesk(0.95, 0.6, MAT.woodLight, MAT.white), px - 0.42, y, z, Math.PI / 2, 1, [0.47, 0.3]); device(null, chairExec(MAT.leatherBeige, 0.6), px - 1.05, y, z, Math.PI / 2, 1); });
-      device(null, cabinet(1.0, 1.95, 0.42, MAT.cream, true), -3.4, y, -18.55, 0, 1, [0.5, 0.21]); device(null, cabinet(1.0, 1.95, 0.42, MAT.cream, true), -2.35, y, -18.55, 0, 1, [0.5, 0.21]);
-      deskSet(c, "office", -D / 2 + 1.2, 0, "f");
+      // ضمان الجودة: حاجز خشبي بثلاثة شبابيك زجاجية ورفوف تسليم يقابل الداخل، وخلفه مكاتب الموظفين
+      const px = 7.15, za = -10.47, zb = -14.0;
+      bx("woodPanelD", px - 0.05, y, zb, px + 0.05, y + 1.0, za); bx("woodDark", px - 0.3, y + 1.0, zb, px + 0.3, y + 1.04, za);
+      planeAt(MAT.glass2s, za - zb, 1.1, px, y + 1.6, (za + zb) / 2, -Math.PI / 2);
+      bx("woodPanelD", px - 0.05, y + 2.15, zb, px + 0.05, y + CH, za); for (let z = zb; z <= za + 0.01; z += (za - zb) / 3) bx("woodDark", px - 0.04, y + 1.0, z - 0.03, px + 0.04, y + 2.15, z + 0.03);
+      bx("woodPanelD", px - 0.05, y + 2.15, -14.73, px + 0.05, y + CH, zb);
+      solid(1, px - 0.06, zb, px + 0.06, za);
+      const cp = planeAt(new THREE.MeshBasicMaterial({ visible: false }), za - zb, 1.2, px - 0.06, y + 1.5, (za + zb) / 2, -Math.PI / 2); cp.userData.device = "counter"; PICK.push(cp);
+      [-11.2, -12.4, -13.5].forEach(z => { device(null, officeDesk(0.95, 0.6, MAT.woodLight, MAT.white), px + 0.45, y, z, -Math.PI / 2, 1, [0.47, 0.3]); device(null, chairExec(MAT.leatherBeige, 0.6), px + 1.08, y, z, -Math.PI / 2, 1); });
+      [-11.0, -12.05, -13.1].forEach(z => device(null, cabinet(1.0, 1.95, 0.42, MAT.cream, true), BX1 - 0.37, y, z, -Math.PI / 2, 1, [0.5, 0.21]));
+      F.ac = false; wallItem(splitAC(), BX1 - 0.27, y + 2.7, -14.0, "W", 1);
     } else if (sub === "aud") {
       deskSet(c, "office", 0.2, 0, "f", true);
       c.dev(null, cabinet(1.0, 2.0, 0.42, MAT.white, true), -D / 2 + 0.25, W / 2 - 0.7, "f", [0.5, 0.21]);
     } else if (sub === "acc") {
-      // شعبة الحسابات: رفوف خشبية فاتحة من الأرض إلى السقف مليئة بالأضابير
+      // شعبة الحسابات: أرضية تيرازو، رفوف خشبية فاتحة من الأرض إلى السقف مليئة بالأضابير في الركن، مكاتب، وشبابيك بستائر شفافة
       const sh = (x, z, ry, w) => device("shelves", shelves(w, 2.5, 0.38, MAT.woodLight, 6).concat([B(w, 0.85, 0.4, MAT.woodLight, 0, 0, 0.01)]), x, y, z, ry, 1, [w / 2, 0.19]);
-      sh(9.62, -14.3, -Math.PI / 2, 3.2); sh(7.9, -16.0, 0, 3.0); sh(7.9, -12.6, Math.PI, 2.6);
-      device(null, officeDesk(1.4, 0.7), 7.4, y, -14.3, -Math.PI / 2, 1, [0.7, 0.35]); device(null, chairExec(MAT.leatherBeige, 0.7), 8.05, y, -14.3, -Math.PI / 2, 1);
+      sh(-4.75, -14.88, Math.PI, 2.3); sh(-2.35, -14.88, Math.PI, 2.3); sh(-5.68, -16.25, Math.PI / 2, 1.9);
+      [[-3.4, -16.6], [-3.4, -18.7], [-0.6, -16.6], [-0.6, -18.7]].forEach(([x, z], i) => { device(null, officeDesk(1.4, 0.7, MAT.woodLight, MAT.cream), x, y, z, Math.PI / 2, 1, [0.7, 0.35]); device(null, chairExec(i ? MAT.leatherBeige : MAT.leatherDark, i ? 0.7 : 0.85), x - 0.66, y, z, Math.PI / 2, 1); });
+      device(null, [B(0.6, 0.72, 0.5, MAT.white), B(0.5, 0.3, 0.42, MAT.devGrey, 0, 0.72, 0)], -5.55, y, -19.4, Math.PI / 2, 1, [0.3, 0.25]);
+      F.ac = false; wallItem(splitAC(), -4.6, y + 2.7, -20.0 + T / 2 + 0.12, "F", 1);
     } else if (sub === "plan") {
-      // شعبة التخطيط والمتابعة: ورق جدران مضرّب، إطار خشبي داكن في السقف، مكتبان داكنان، كنبة بيج، خزانات زجاجية، مكيّف شباك، سجادة دائرية، خزنة
-      LAYER = "c1"; [[CX1, BX1, -16.27, -16.2], [CX1, BX1, -19.4, -19.33]].forEach(([a, b, p, q]) => bx("woodDark", a, y + CH - 0.3, p, b, y + CH, q)); bx("woodDark", BX1 - 0.22, y + CH - 0.3, -19.4, BX1 - 0.15, y + CH, -16.2); LAYER = "s1";
-      deskSet(c, "exec", -D / 2 + 1.3, 0, "f");
-      device(null, sofa(3, MAT.leatherBeige, null, true), 6.8, y, -18.95, 0, 1, [1.18, 0.45]);
-      device(null, cabinet(0.9, 2.0, 0.42, MAT.woodLight, true), 7.6, y, -16.48, Math.PI, 1, [0.45, 0.21]); device(null, cabinet(0.9, 2.0, 0.42, MAT.woodLight, true), 8.55, y, -16.48, Math.PI, 1, [0.45, 0.21]);
-      device(null, [B(0.55, 0.75, 0.5, MAT.greyDark), B(0.04, 0.1, 0.02, MAT.chrome, 0.18, 0.45, 0.26)], 9.55, y, -16.6, Math.PI, 1, [0.28, 0.25]);
-      rug("rugRound", 6.4, -18.6, 8.0, -17.0, y);
-      wallItem([B(0.7, 0.45, 0.5, MAT.devWhite), B(0.62, 0.36, 0.02, MAT.devGrey, 0, 0.04, 0.25)], BX1 - 0.16, y + 1.6, -18.5, "W", 1);
+      // شعبة التخطيط والمتابعة: ورق جدران مضرّب، إطار خشبي داكن في السقف، مكتب داكن قرب الشبّاك ومكيّف شبّاك، كنبة بيج منجّدة، خزانات زجاجية، سجادة دائرية، خزنة
+      LAYER = "c1"; [[CX1, BX1, -18.67, -18.6], [CX1, BX1, -23.0, -22.93]].forEach(([a, b, p, q]) => bx("woodDark", a, y + CH - 0.3, p, b, y + CH, q)); bx("woodDark", BX1 - 0.22, y + CH - 0.3, -23.0, BX1 - 0.15, y + CH, -18.6); bx("woodDark", CX1 + 0.07, y + CH - 0.3, -23.0, CX1 + 0.14, y + CH, -18.6); LAYER = "s1";
+      device(null, execDesk(1.8, 0.85, MAT.mahog, MAT.mahogDark), 8.75, y, -20.7, -Math.PI / 2, 1, [0.9, 0.43]); device(null, chairExec(MAT.leatherDark, 0.85), 9.4, y, -20.7, -Math.PI / 2, 1);
+      [-20.25, -21.15].forEach(z => device(null, chairGuest(MAT.leatherBeige, MAT.chrome), 7.6, y, z, Math.PI / 2, 1, [0.25, 0.25]));
+      device(null, sofa(3, MAT.leatherBeige, null, true), 7.3, y, -18.98, Math.PI, 1, [1.18, 0.43]);
+      [7.8, 8.75].forEach(x => device(null, cabinet(0.9, 2.0, 0.42, MAT.woodLight, true), x, y, -22.72, 0, 1, [0.45, 0.21]));
+      device(null, [B(0.55, 0.75, 0.5, MAT.greyDark), B(0.04, 0.1, 0.02, MAT.chrome, 0.18, 0.45, 0.26)], 9.55, y, -22.55, 0, 1, [0.28, 0.25]);
+      rug("rugRound", 6.6, -21.6, 8.2, -20.0, y);
+      wallItem([B(0.7, 0.45, 0.5, MAT.devWhite), B(0.62, 0.36, 0.02, MAT.devGrey, 0, 0.04, 0.25)], BX1 - 0.16, y + 1.65, -22.2, "W", 1);
       F.ac = false;
     } else if (sub === "media1") {
-      rug("rugBlue", 6.4, -22.0, 9.4, -19.9, y);
-      [[9.0, -20.4], [9.0, -21.7]].forEach(([x, z]) => { device(null, execDesk(1.2, 0.75, MAT.mahog, MAT.cream), x, y, z, -Math.PI / 2, 1, [0.6, 0.38]); device(null, chairExec(MAT.leatherDark, 0.85), x + 0.65, y, z, -Math.PI / 2, 1); });
-      device(null, cabinet(1.0, 2.0, 0.42, MAT.white, true), 6.3, y, -19.65, Math.PI, 1, [0.5, 0.21]);
-      device(null, acStand(), 6.0, y, -22.3, 0, 1, [0.25, 0.18]);
+      // شعبة الإعلام: سجادة بإطار أزرق، مكتبان داكنان بواجهات كريمية، خزانات زجاجية، تكييف واقف، شبّاك بستارة
+      rug("rugBlue", -4.2, -22.6, 1.8, -20.4, y);
+      device(null, execDesk(1.6, 0.8, MAT.mahog, MAT.cream), -4.7, y, -21.5, Math.PI / 2, 1, [0.8, 0.4]); device(null, chairExec(MAT.leatherDark, 0.9), -5.38, y, -21.5, Math.PI / 2, 1);
+      device(null, execDesk(1.3, 0.75, MAT.mahog, MAT.cream), -1.2, y, -20.62, Math.PI, 1, [0.65, 0.38]); device(null, chairExec(MAT.leatherBeige, 0.75), -1.2, y, -20.25, Math.PI, 1);
+      [-2.9, -1.9, -0.9].forEach(x => device(null, cabinet(1.0, 2.0, 0.42, MAT.white, true), x, y, -22.75, 0, 1, [0.5, 0.21]));
+      device(null, acStand(), -5.6, y, -22.62, 0, 1, [0.25, 0.18]);
       F.ac = false;
     } else if (sub === "wc") {
-      device(null, [B(1.5, 0.85, 0.5, MAT.white), B(1.54, 0.04, 0.54, MAT.terr, 0, 0.85, 0), C(0.18, 0.04, MAT.devWhite, -0.35, 0.86, 0, 16), C(0.18, 0.04, MAT.devWhite, 0.35, 0.86, 0, 16)], -1.0, y, -2.05, 0, 1, [0.75, 0.25]);
+      const [x0, x1] = r.r;
+      device(null, [B(1.3, 0.85, 0.5, MAT.white), B(1.34, 0.04, 0.54, MAT.terr, 0, 0.85, 0), C(0.16, 0.04, MAT.devWhite, -0.3, 0.86, 0, 16), C(0.16, 0.04, MAT.devWhite, 0.3, 0.86, 0, 16), B(1.2, 0.8, 0.02, MAT.glass, 0, 1.2, -0.24)], (x0 + x1) / 2 - 0.3, y, -0.42, Math.PI, 1, [0.65, 0.25]);
       F.ac = false;
+    } else if (sub === "aminE") {
+      device(null, sofa(2, MAT.leatherBeige, null, true), 8.3, y, -23.45, Math.PI, 1, [0.84, 0.43]);
+      F.ac = false;
+    } else if (sub === "aminB") {
+      [-26.0, -27.05, -28.1].forEach(z => device(null, cabinet(1.0, 1.95, 0.42, MAT.cream, true), BX1 - 0.37, y, z, -Math.PI / 2, 1, [0.5, 0.21]));
+      device(null, officeDesk(1.3, 0.7), 8.7, y, -31.0, Math.PI, 1, [0.65, 0.35]); device(null, chairExec(MAT.leatherBeige, 0.7), 8.7, y, -31.68, Math.PI, 1);
+      F.lights = 3;
     } else if (sub === "deanSec") { deanSecretary(c); F.lights = 0; F.ac = false; }
     else if (sub === "deanStaff") { deanStaff(c); F.ac = false; F.lights = 2; }
     else if (sub === "dean") { deanOffice(c); F.lights = 0; F.ac = false; }
@@ -1359,95 +1607,95 @@
     for (let i = 0; i < 4; i++) for (let k = 0; k < 3; k++) if (R() < 0.8) p.push(B(0.5, 0.3 + R() * 0.12, 0.38, R() < 0.5 ? MAT.woodLight : MAT.paper, -0.6 + k * 0.6, 0.03 + i * 0.52, 0));
     return p;
   }
-  /* استقبال مكتب العميد: إنارة خطية، قوالب بيضاء وإنارة جدارية، كنبات رمادية بإطار كريمي، مكتب أبيض مقوّس، طاولة سوداء بإضاءة ذهبية */
+  /* استقبال مكتب العميد (يُدخل إليه من باب «مكتب العميد»): إنارة خطية في السقف، قوالب بيضاء وإنارة جدارية ذهبية،
+     كنبات رمادية بإطار كريمي وتجويف رفوف بينها، مكتب أبيض مقوّس، طاولة سوداء بحافة ذهبية، باب أسود إلى مكتب العميد وباب معيّني إلى مدير مكتبه */
   function deanSecretary(c) {
     const y = c.y;
-    device(null, [B(1.7, 0.06, 0.8, MAT.white, 0, 0.74, 0), B(1.6, 0.7, 0.06, MAT.white, 0, 0.04, 0.34), C(0.4, 0.74, MAT.white, 0.85, 0, 0, 16), B(0.06, 0.74, 0.7, MAT.white, -0.8, 0, 0), mm(new THREE.PlaneGeometry(0.3, 0.08), nameplateMat("مكتب العميد"), 0.3, 0.84, 0.3, -0.35, 0, 0), C(0.005, 0.25, MAT.gold, -0.5, 0.77, 0.25, 6), mm(new THREE.PlaneGeometry(0.15, 0.1), flagMat("iq"), -0.43, 0.95, 0.25)], -3.6, y, -20.0, Math.PI, 1, [0.85, 0.4]);
-    device(null, chairExec(MAT.leatherCream, 0.8), -3.6, y, -19.35, Math.PI, 1);
-    device(null, [C(0.18, 0.04, MAT.leatherCream, 0, 0.55, 0, 14), C(0.03, 0.55, MAT.black, 0, 0, 0, 6)], -2.4, y, -19.5, 0, 1);
-    device(null, [B(1.0, 0.04, 0.6, MAT.black, 0, 0.42, 0), B(1.0, 0.02, 0.6, MAT.gold, 0, 0.4, 0), B(0.96, 0.38, 0.56, MAT.black, 0, 0.02, 0)], -3.4, y, -21.4, 0, 1, [0.5, 0.3]);
-    device(null, sofa(3, MAT.sofaGrey, MAT.cream), 2.75, y, -20.8, -Math.PI / 2, 1, [1.18, 0.45]);
-    device(null, sofa(1, MAT.sofaGrey, MAT.cream), -5.4, y, -22.6, Math.PI / 2, 1, [0.5, 0.45]);
-    plant(2.6, y, -19.3, "bamboo"); plant(-5.6, y, -23.6, "snake");
-    // قوالب بيضاء مستطيلة وإنارة جدارية ذهبية
-    for (let z = -23.6; z < -19.2; z += 1.5) { bx("panelTrim", BX0 + 0.16, y + 0.6, z, BX0 + 0.18, y + 0.63, z + 1.1); bx("panelTrim", BX0 + 0.16, y + 2.3, z, BX0 + 0.18, y + 2.33, z + 1.1); }
-    [-1.0, 1.4].forEach(x => device(null, [B(0.1, 0.24, 0.06, MAT.gold, 0, 0, 0.03), B(0.08, 0.03, 0.02, MAT.ledWarm, 0, 0.24, 0.04)], x, y + 1.85, -24 + T / 2, Math.PI, 1));
+    device(null, sofa(2, MAT.sofaGrey, MAT.cream), 0.95, y, -23.5, Math.PI, 1, [0.84, 0.43]);
+    device(null, sofa(1, MAT.sofaGrey, MAT.cream), -0.83, y, -23.5, Math.PI, 1, [0.5, 0.43]);
+    // تجويف رفوف أبيض بين الكنبات
+    const nz = -23.0 - T / 2; bx("white", -0.3, y, nz - 0.3, 0.08, y + 0.75, nz); [1.2, 1.65].forEach(h => bx("white", -0.3, y + h, nz - 0.26, 0.08, y + h + 0.03, nz));
+    device(null, [B(0.12, 0.18, 0.1, MAT.goldTrim, -0.08, 0, 0), B(0.12, 0.16, 0.04, MAT.black, 0.1, 0, 0)], -0.11, y + 1.23, nz - 0.15, Math.PI, 1);
+    device(null, [B(1.0, 0.04, 0.6, MAT.black, 0, 0.42, 0), B(1.0, 0.02, 0.6, MAT.gold, 0, 0.4, 0), B(0.96, 0.38, 0.56, MAT.black, 0, 0.02, 0)], 1.0, y, -25.0, 0, 1, [0.5, 0.3]);
+    device(null, [B(1.7, 0.06, 0.8, MAT.white, 0, 0.74, 0), B(1.6, 0.7, 0.06, MAT.white, 0, 0.04, 0.34), C(0.4, 0.74, MAT.white, 0.85, 0, 0, 16), B(0.06, 0.74, 0.7, MAT.white, -0.8, 0, 0), mm(new THREE.PlaneGeometry(0.3, 0.08), nameplateMat("مكتب العميد"), 0.3, 0.84, 0.3, -0.35, 0, 0), C(0.005, 0.25, MAT.gold, -0.5, 0.77, 0.25, 6), mm(new THREE.PlaneGeometry(0.15, 0.1), flagMat("iq"), -0.43, 0.95, 0.25)], -0.25, y, -26.4, Math.PI / 2, 1, [0.85, 0.42]);
+    device(null, chairExec(MAT.leatherCream, 0.8), -0.92, y, -26.4, Math.PI / 2, 1);
+    plant(2.95, y, -27.3, "bamboo"); plant(-1.12, y, -25.6, "snake");
+    for (let x = -1.0; x < 2.9; x += 1.45) { const z = -27.6 + T / 2 + 0.03; bx("panelTrim", x, y + 0.6, z, x + 1.1, y + 0.63, z + 0.02); bx("panelTrim", x, y + 2.3, z, x + 1.1, y + 2.33, z + 0.02); }
+    [-0.4, 2.4].forEach(x => device(null, [B(0.1, 0.24, 0.06, MAT.gold, 0, 0, 0.03), B(0.08, 0.03, 0.02, MAT.ledWarm, 0, 0.24, 0.04)], x, y + 1.85, -27.6 + T / 2 + 0.025, 0, 1));
+    wallItem(splitAC(), -1.4 + T / 2 + 0.12, y + 2.75, -24.6, "E", 1);
     LAYER = "c1"; const cy = y + CH;
-    flat("ceilW", BX0, -24, UX0, -18.8, cy, true);
-    [[-4.6, -23.2, -4.6, -19.6], [-4.6, -19.6, 1.8, -19.6], [1.8, -23.2, 1.8, -19.6], [-1.4, -23.2, -1.4, -21.4]].forEach(([a, b, p, q]) => bx("led", Math.min(a, p) - 0.02, cy - 0.012, Math.min(b, q) - 0.02, Math.max(a, p) + 0.02, cy - 0.004, Math.max(b, q) + 0.02));
-    bx("cove", BX0 + 0.3, cy - 0.2, -18.95, UX0 - 0.1, cy - 0.17, -18.92); LAYER = "s1";
-    wallItem(splitAC(), -1.0, y + 2.6, -18.87, "B", 1);
+    [[-0.9, -26.9, 2.7, -26.9], [-0.9, -23.6, 2.7, -23.6], [-0.9, -26.9, -0.9, -23.6], [2.7, -26.9, 2.7, -23.6], [0.9, -26.9, 0.9, -23.6]].forEach(([a, b, p, q]) => bx("led", Math.min(a, p) - 0.02, cy - 0.012, Math.min(b, q) - 0.02, Math.max(a, p) + 0.02, cy - 0.004, Math.max(b, q) + 0.02));
+    LAYER = "s1";
   }
+  /* مكتب مدير مكتب العميد: مكتبان بنقشة المفتاح اليوناني يواجهان الداخل، خزانات خشبية زجاجية، سجادة فارسية، خزنة حمراء، وشاشة فوق باب العميد */
   function deanStaff(c) {
     const y = c.y;
-    device(null, greekDesk(1.5, 0.75), -2.2, y, -27.2, 0, 1, [0.75, 0.38]); device(null, chairExec(MAT.leatherBeige, 0.8), -2.2, y, -27.9, 0, 1);
-    device(null, greekDesk(1.4, 0.7), -5.1, y, -26.4, Math.PI / 2, 1, [0.7, 0.35]); device(null, chairExec(MAT.black, 0.7), -5.58, y, -26.4, Math.PI / 2, 1);
-    [-0.3, 0.6].forEach(x => device(null, cabinet(0.85, 2.1, 0.42, MAT.woodLight, true), x, y, -24.38, Math.PI, 1, [0.43, 0.21]));
-    rug("rugBlue", -3.6, -27.9, -0.6, -25.0, y);
-    device(null, [B(0.5, 0.6, 0.45, MAT.red), B(0.04, 0.1, 0.02, MAT.chrome, 0.15, 0.35, 0.23)], 1.2, y, -27.9, -Math.PI / 2, 1, [0.25, 0.23]);
-    device(null, [B(0.55, 0.3, 0.45, MAT.black)], 1.2, y + 0.6, -27.9, -Math.PI / 2, 1);
-    wallItem([B(0.6, 0.36, 0.05, MAT.black), mm(new THREE.PlaneGeometry(0.56, 0.32), MAT.screenOn, 0, 0.18, 0.026)], -4.2, y + 2.55, -28.4 + T / 2, "F", 1);
-    device(null, extinguisherParts(), -5.6, y, -28.1, 0, 1);
+    rug("rugDean", -0.9, -31.6, 2.5, -28.4, y);
+    device(null, greekDesk(1.5, 0.75), 0.6, y, -30.3, 0, 1, [0.75, 0.38]); device(null, chairExec(MAT.leatherBeige, 0.8), 0.6, y, -31.0, 0, 1);
+    device(null, greekDesk(1.4, 0.7), 1.75, y, -32.7, 0, 1, [0.7, 0.35]); device(null, chairExec(MAT.black, 0.7), 1.75, y, -33.38, 0, 1);
+    [-28.6, -29.55, -30.5].forEach(z => device(null, cabinet(0.9, 2.1, 0.42, MAT.woodLight, true), UX0 - 0.28, y, z, -Math.PI / 2, 1, [0.45, 0.21]));
+    device(null, [B(0.5, 0.6, 0.45, MAT.red), B(0.04, 0.1, 0.02, MAT.chrome, 0.15, 0.35, 0.23)], -1.0, y, -28.15, Math.PI / 2, 1, [0.25, 0.23]);
+    device(null, [B(0.55, 0.3, 0.45, MAT.black)], -1.0, y + 0.6, -28.15, Math.PI / 2, 1);
+    wallItem([B(0.6, 0.36, 0.05, MAT.black), mm(new THREE.PlaneGeometry(0.56, 0.32), MAT.screenOn, 0, 0.18, 0.026)], -1.4 + T / 2 + 0.03, y + 2.5, -29.0, "E", 1);
+    device(null, extinguisherParts(), -1.18, y, -29.75, 0, 1);
   }
-  /* مكتب عميد الكلية */
+  /* مكتب عميد الكلية: المكتب ولوحة الاسم وخلفه مكتبة الدروع، والأعلام بين البابين الخشبيين، وجلسة ضيوف بكنبات كريمية
+     حول سجادة، ووحدة تلفاز بكؤوسها وساعة، وتكييف واقف، وستارة خيزران، وشبابيك بستائر مخططة، وسقف شبكي بإطار خشبي */
   function deanOffice(c) {
-    const y = c.y;
-    // سقف بإطار خشبي داكن ولوح شبكي في الوسط
+    const y = c.y, X0 = BX0 + 0.15, X1 = -1.4 - T / 2;
     LAYER = "c1"; const cy = y + CH;
-    bx("woodDark", BX0 + 0.15, cy - 0.25, -33.85, 1.53, cy, -33.6); bx("woodDark", BX0 + 0.15, cy - 0.25, -28.47, 1.53, cy, -28.3);
-    bx("woodDark", BX0 + 0.15, cy - 0.25, -33.6, BX0 + 0.4, cy, -28.47); bx("woodDark", 1.28, cy - 0.25, -33.6, 1.53, cy, -28.47);
-    planeAt(MAT.latticeCeil, 2.2, 1.6, -2.2, cy - 0.02, -31.2, 0).rotation.x = Math.PI / 2;
+    bx("woodDark", X0, cy - 0.25, -33.85, X1, cy, -33.6); bx("woodDark", X0, cy - 0.25, -29.4, X1, cy, -29.2);
+    bx("woodDark", X0, cy - 0.25, -33.6, X0 + 0.25, cy, -29.4); bx("woodDark", X1 - 0.25, cy - 0.25, -33.6, X1, cy, -29.4);
+    planeAt(MAT.latticeCeil, 2.2, 1.6, -3.7, cy - 0.02, -31.5, 0).rotation.x = Math.PI / 2;
+    planeAt(MAT.latticeCeil, 2.2, 1.6, -3.7, cy - 0.02, -26.2, 0).rotation.x = Math.PI / 2;
     LAYER = "s1";
-    // المكتب وخلفه المكتبة، ولوحة الاسم
     const desk = execDesk(2.3, 1.0, MAT.mahog, MAT.mahogDark, MAT.mahog);
     desk.push(B(0.62, 0.16, 0.06, MAT.woodDark, 0, 0.77, 0.38), mm(new THREE.PlaneGeometry(0.56, 0.12), deanPlateMat(), 0, 0.85, 0.415, -0.12, 0, 0));
     desk.push(B(0.3, 0.12, 0.22, MAT.white, -0.75, 0.77, 0.25), C(0.05, 0.12, MAT.goldTrim, 0.8, 0.77, -0.2, 8));
-    device("deandesk", desk, -2.6, y, -32.2, 0, 1, [1.15, 0.5]);
-    device("deandesk", [C(0.32, 0.05, MAT.black, 0, 0.02, 0, 10), C(0.035, 0.4, MAT.chrome, 0, 0.05, 0, 8), B(0.7, 0.16, 0.65, MAT.leatherBrown, 0, 0.45, 0), B(0.72, 0.95, 0.18, MAT.leatherBrown, 0, 0.55, -0.3), B(0.14, 0.32, 0.6, MAT.leatherBrown, -0.37, 0.55, 0), B(0.14, 0.32, 0.6, MAT.leatherBrown, 0.37, 0.55, 0)].concat(Array.from({ length: 12 }, (_, i) => B(0.03, 0.03, 0.01, MAT.leatherDark, -0.25 + (i % 4) * 0.17, 0.75 + Math.floor(i / 4) * 0.22, -0.205))), -2.6, y, -33.0, 0, 1);
-    [-3.2, -2.0].forEach(x => device(null, chairGuest(MAT.leatherCream, MAT.mahogDark), x, y, -31.05, Math.PI, 1, [0.25, 0.25]));
-    device(null, bookcase(2.6, 2.25, 0.42), -2.6, y, -33.6, 0, 1, [1.3, 0.21]);
-    [[0.95, "uniW"], [1.1, "uni"], [1.25, "iq"]].forEach(([x, k], i) => device(null, flagStand(k), x, y, -32.0 + i * 0.12, 0, 1, i === 1 ? [0.3, 0.3] : null));
-    // جلسة الضيوف: كنبات جلدية كريمية بأذرع خشبية داكنة حول سجادة، وطاولات
-    rug("rugDean", -5.6, -31.6, -1.2, -28.9, y);
-    device(null, sofa(3, MAT.leatherCream, MAT.mahog), -5.5, y, -30.3, Math.PI / 2, 1, [1.18, 0.45]);
-    device(null, sofa(3, MAT.leatherCream, MAT.mahog), -2.8, y, -28.95, Math.PI, 1, [1.18, 0.45]);
-    [-1.05].forEach(x => device(null, sofa(1, MAT.leatherCream, MAT.mahog), x, y, -30.3, -Math.PI / 2, 1, [0.5, 0.45]));
-    device(null, coffeeTable(1.2, 0.6, MAT.mahog), -3.6, y, -30.3, 0, 1, [0.6, 0.3]);
-    device(null, [C(0.08, 0.2, MAT.crystal, 0, 0.45, 0, 10), mm(new THREE.SphereGeometry(0.14, 8, 6), MAT.plantG, 0, 0.75, 0)], -3.6, y, -30.3, 0, 1);
-    // وحدة التلفاز بكؤوسها، الساعة، التكييف الواقف، الستارة الخيزرانية القابلة للطي
+    device("deandesk", desk, -3.7, y, -32.2, 0, 1, [1.15, 0.5]);
+    device("deandesk", [C(0.32, 0.05, MAT.black, 0, 0.02, 0, 10), C(0.035, 0.4, MAT.chrome, 0, 0.05, 0, 8), B(0.7, 0.16, 0.65, MAT.leatherBrown, 0, 0.45, 0), B(0.72, 0.95, 0.18, MAT.leatherBrown, 0, 0.55, -0.3), B(0.14, 0.32, 0.6, MAT.leatherBrown, -0.37, 0.55, 0), B(0.14, 0.32, 0.6, MAT.leatherBrown, 0.37, 0.55, 0)].concat(Array.from({ length: 12 }, (_, i) => B(0.03, 0.03, 0.01, MAT.leatherDark, -0.25 + (i % 4) * 0.17, 0.75 + Math.floor(i / 4) * 0.22, -0.205))), -3.7, y, -33.0, 0, 1);
+    [-4.3, -3.1].forEach(x => device(null, chairGuest(MAT.leatherCream, MAT.mahogDark), x, y, -31.05, Math.PI, 1, [0.25, 0.25]));
+    device(null, bookcase(2.6, 2.25, 0.42), -3.7, y, -33.6, 0, 1, [1.3, 0.21]);
+    [[-1.75, "uniW"], [-1.85, "uni"], [-1.75, "iq"]].forEach(([x, k], i) => device(null, flagStand(k), x, y, -29.85 - i * 0.22, 0, 1, i === 1 ? [0.2, 0.3] : null));
+    // جلسة الضيوف
+    rug("rugDean", -5.6, -29.0, -2.0, -24.4, y);
+    device(null, sofa(3, MAT.leatherCream, MAT.mahog), -5.5, y, -26.7, Math.PI / 2, 1, [1.18, 0.45]);
+    device(null, sofa(2, MAT.leatherCream, MAT.mahog), -4.1, y, -28.4, Math.PI, 1, [0.84, 0.45]);
+    device(null, sofa(1, MAT.leatherCream, MAT.mahog), -2.05, y, -27.2, -Math.PI / 2, 1, [0.5, 0.45]);
+    device(null, coffeeTable(1.2, 0.6, MAT.mahog), -3.75, y, -26.7, Math.PI / 2, 1, [0.3, 0.6]);
+    device(null, [C(0.08, 0.2, MAT.crystal, 0, 0.45, 0, 10), mm(new THREE.SphereGeometry(0.14, 8, 6), MAT.plantG, 0, 0.75, 0)], -3.75, y, -26.7, 0, 1);
+    // وحدة التلفاز وكؤوسها والساعة فوقها على الجدار الجنوبي، والتكييف الواقف، وستارة الخيزران قرب الباب الأسود
     const tvU = [B(2.0, 0.5, 0.45, MAT.white), B(2.0, 0.05, 0.46, MAT.mahogDark, 0, 0.5, 0), B(0.45, 1.3, 0.4, MAT.mahogDark, -0.8, 0.55, 0)]; for (let k = 0; k < 5; k++) tvU.push(C(0.05, 0.22 + (k % 2) * 0.1, MAT.goldTrim, -0.2 + k * 0.25, 0.55, 0, 10, 0.08));
-    device(null, tvU, 1.2, y, -29.45, -Math.PI / 2, 1, [1.0, 0.23]);
-    wallItem(tvParts(1.2), 1.43, y + 1.5, -29.6, "W", 1);
-    wallItem([mm(new THREE.CylinderGeometry(0.24, 0.24, 0.06, 24), MAT.mahogDark, 0, 0, 0, Math.PI / 2), mm(new THREE.CircleGeometry(0.2, 24), MAT.cream, 0, 0, 0.031), B(0.015, 0.15, 0.005, MAT.black, 0, 0.02, 0.034), B(0.11, 0.015, 0.005, MAT.black, 0.04, 0, 0.034)], -1.2, y + 2.7, -28.4 - T / 2, "B", 1);
-    device(null, acStand(), -0.3, y, -28.72, Math.PI, 1, [0.25, 0.18]);
+    device(null, tvU, -3.7, y, -23.38, Math.PI, 1, [1.0, 0.23]);
+    wallItem(tvParts(1.2), -3.6, y + 1.45, -23.0 - T / 2 - 0.03, "B", 1);
+    wallItem([mm(new THREE.CylinderGeometry(0.24, 0.24, 0.06, 24), MAT.mahogDark, 0, 0, 0, Math.PI / 2), mm(new THREE.CircleGeometry(0.2, 24), MAT.cream, 0, 0, 0.031), B(0.015, 0.15, 0.005, MAT.black, 0, 0.02, 0.034), B(0.11, 0.015, 0.005, MAT.black, 0.04, 0, 0.034)], -3.6, y + 2.7, -23.0 - T / 2 - 0.03, "B", 1);
+    device(null, acStand(), -5.55, y, -23.45, Math.PI, 1, [0.25, 0.18]);
     const scr = []; for (let i = 0; i < 4; i++) scr.push(mm(new THREE.BoxGeometry(0.45, 1.75, 0.03), MAT.rattan, i * 0.43, 0.9, (i % 2) * 0.12, 0, (i % 2 ? -0.5 : 0.5), 0));
-    device(null, scr, -5.75, y, -33.65, 0, 1);
-    plant(-0.3, y, -33.55, "bamboo"); plant(-5.55, y, -31.9, "ficus");
-    c.lights(2);
+    device(null, scr, -5.75, y, -30.3, Math.PI / 2, 1);
+    plant(-2.0, y, -29.6, "bamboo"); plant(-5.55, y, -33.5, "ficus"); plant(-5.6, y, -24.0, "ficus", 0.8);
+    c.lights(3);
   }
-  /* قاعة مجلس الكلية */
+  /* قاعة مجلس الكلية: يُدخل إليها من الباب الأبيض المزدوج تحت «امانة المجلس». طاولة طويلة بإطار ماهوجني وسطوح جلدية زرقاء
+     وشريط زجاجي ولوحات أسماء، كراسٍ جلدية بنية منجّدة، كرسي كريمي عند المدخل، وفي آخرها باب خشبي مزدوج تحت «امانة مجلس كلية التربية للعلوم الصرفة» والأعلام */
   function councilRoom(c) {
-    const y = c.y, cx = UXM, x0 = cx - 0.75, x1 = cx + 0.75, za = -25.6, zb = -30.6;
+    const y = c.y, cx = 5.3, x0 = cx - 0.75, x1 = cx + 0.75, za = -26.3, zb = -32.4;
     const tb = [B(x1 - x0, 0.06, za - zb, MAT.mahog, 0, 0.72, 0), B(x1 - x0 - 0.2, 0.68, za - zb - 0.4, MAT.mahogDark, 0, 0.04, 0), B(0.28, 0.008, za - zb - 0.5, MAT.glassTop, 0, 0.785, 0)];
-    for (let i = 0; i < 6; i++) { const z = (za - zb) / 2 - 0.45 - i * 0.82; [-1, 1].forEach(s => tb.push(B(0.44, 0.006, 0.66, MAT.leatherBlue, s * 0.45, 0.78, z), B(0.24, 0.08, 0.02, MAT.black, s * 0.45, 0.79, z - 0.1), mm(new THREE.PlaneGeometry(0.2, 0.05), MAT.nameGold, s * 0.45, 0.84, z - 0.11 + s * 0, -0.2, s > 0 ? -Math.PI / 2 + Math.PI / 2 : 0, 0), B(0.12, 0.07, 0.12, MAT.white, s * 0.2, 0.79, z + 0.15))); }
-    tb.push(C(0.09, 0.22, MAT.crystal, 0, 0.78, -0.6, 10), mm(new THREE.SphereGeometry(0.17, 10, 8), MAT.flowers, 0, 1.1, -0.6), C(0.09, 0.22, MAT.crystal, 0, 0.78, 1.2, 10), mm(new THREE.SphereGeometry(0.17, 10, 8), MAT.flowers, 0, 1.1, 1.2));
+    for (let i = 0; i < 7; i++) { const z = (za - zb) / 2 - 0.45 - i * 0.82; [-1, 1].forEach(s => tb.push(B(0.44, 0.006, 0.66, MAT.leatherBlue, s * 0.45, 0.78, z), B(0.24, 0.08, 0.02, MAT.black, s * 0.45, 0.79, z - 0.1), mm(new THREE.PlaneGeometry(0.2, 0.05), MAT.nameGold, s * 0.45, 0.84, z - 0.11, -0.2, 0, 0), B(0.12, 0.07, 0.12, MAT.white, s * 0.2, 0.79, z + 0.15))); }
+    tb.push(C(0.09, 0.22, MAT.crystal, 0, 0.78, -0.9, 10), mm(new THREE.SphereGeometry(0.17, 10, 8), MAT.flowers, 0, 1.1, -0.9), C(0.09, 0.22, MAT.crystal, 0, 0.78, 1.3, 10), mm(new THREE.SphereGeometry(0.17, 10, 8), MAT.flowers, 0, 1.1, 1.3));
     device("council", tb, cx, y, (za + zb) / 2, 0, 1, [(x1 - x0) / 2 + 0.05, (za - zb) / 2]);
     const chest = () => [C(0.3, 0.04, MAT.black, 0, 0.02, 0, 10), C(0.035, 0.4, MAT.chrome, 0, 0.04, 0, 8), B(0.62, 0.15, 0.6, MAT.leatherBrown, 0, 0.42, 0), B(0.64, 0.82, 0.16, MAT.leatherBrown, 0, 0.5, -0.27), B(0.12, 0.3, 0.55, MAT.leatherBrown, -0.32, 0.5, 0), B(0.12, 0.3, 0.55, MAT.leatherBrown, 0.32, 0.5, 0)].concat(Array.from({ length: 9 }, (_, i) => B(0.025, 0.025, 0.01, MAT.leatherDark, -0.18 + (i % 3) * 0.18, 0.75 + Math.floor(i / 3) * 0.2, -0.19)));
-    for (let i = 0; i < 6; i++) { const z = za - 0.45 - i * 0.82; device(null, chest(), x0 - 0.62, y, z, Math.PI / 2, 1, [0.32, 0.32]); device(null, chest(), x1 + 0.62, y, z, -Math.PI / 2, 1, [0.32, 0.32]); }
-    device(null, chairExec(MAT.leatherCream, 0.9), cx, y, za + 0.55, Math.PI, 1);
-    device(null, chest().concat([B(0.66, 0.2, 0.17, MAT.leatherBrown, 0, 1.3, -0.27)]), cx, y, zb - 0.3, 0, 1, [0.32, 0.32]);
-    // آخر القاعة: باب خشبي مزدوج، فوقه «امانة مجلس كلية التربية للعلوم الصرفة»، والأعلام، ورفوف خشبية داكنة في الركنين
-    planeAt(lettersMat("امانة مجلس", 900, 260, "#c99a3c", 110, "كلية التربية للعلوم الصرفة"), 2.4, 0.66, cx, y + 2.95, -32 + T / 2 + 0.03, 0);
-    [[5.3, "iq"], [5.65, "uniW"], [6.0, "uniW"]].forEach(([x, k]) => device(null, flagStand(k), x, y, -31.55, 0, 1, [0.18, 0.18]));
-    [[1.85, -29.6, Math.PI / 2], [6.6, -31.6, 0]].forEach(([x, z, ry]) => device(null, [B(1.1, 2.2, 0.36, MAT.mahogDark), B(1.0, 0.03, 0.3, MAT.mahog, 0, 0.75, 0.02), B(1.0, 0.03, 0.3, MAT.mahog, 0, 1.45, 0.02), B(0.2, 0.12, 0.14, MAT.goldTrim, -0.25, 1.48, 0.05), B(0.16, 0.18, 0.12, MAT.white, 0.25, 0.78, 0.05)], x, y, z, ry, 1, [0.55, 0.18]));
-    device(null, [B(0.5, 0.4, 0.45, MAT.devGrey), B(0.46, 0.06, 0.3, MAT.black, 0, 0.4, 0)], 6.7, y, -30.4, -Math.PI / 2, 1, [0.25, 0.23]);
-    wallItem(tvParts(1.25), 7.2 - T / 2 - 0.02, y + 1.75, -26.0, "W", 1);
-    wallItem(splitAC(), 7.2 - T / 2 - 0.02, y + 2.7, -28.6, "W", 1); wallItem(splitAC(), 1.6 + T / 2 + 0.02, y + 2.7, -28.6, "E", 1);
-    [[6.9, -24.4], [1.9, -31.6]].forEach(([x, z]) => device(null, extinguisherParts(), x, y, z, 0, 1));
-    // السقف: لوحات شبكية على الأطراف، وقرص خشبي داكن تتدلى منه ثريا كريستالية
+    for (let i = 0; i < 7; i++) { const z = za - 0.45 - i * 0.82; device(null, chest(), x0 - 0.55, y, z, Math.PI / 2, 1, [0.3, 0.3]); device(null, chest(), x1 + 0.55, y, z, -Math.PI / 2, 1, [0.3, 0.3]); }
+    device(null, chairExec(MAT.leatherCream, 0.9), cx, y, za + 0.5, Math.PI, 1);
+    device(null, chest().concat([B(0.66, 0.2, 0.17, MAT.leatherBrown, 0, 1.3, -0.27)]), cx, y, zb - 0.32, 0, 1, [0.3, 0.3]);
+    planeAt(lettersMat("امانة مجلس", 900, 260, "#c99a3c", 110, "كلية التربية للعلوم الصرفة"), 2.4, 0.66, cx, y + 2.95, BZ0 + 0.2, 0);
+    [[cx + 1.0, "iq"], [cx + 1.3, "uniW"], [cx - 1.0, "uniW"]].forEach(([x, k]) => device(null, flagStand(k), x, y, -33.55, 0, 1, [0.17, 0.17]));
+    device(null, [B(1.1, 2.2, 0.36, MAT.woodDark), B(1.0, 0.03, 0.3, MAT.wood, 0, 0.75, 0.02), B(1.0, 0.03, 0.3, MAT.wood, 0, 1.45, 0.02), B(0.2, 0.12, 0.14, MAT.goldTrim, -0.25, 1.48, 0.05), B(0.16, 0.18, 0.12, MAT.white, 0.25, 0.78, 0.05)], UX0 + 0.27, y, -33.0, Math.PI / 2, 1, [0.55, 0.18]);
+    wallItem(tvParts(1.25), 7.4 - T / 2 - 0.04, y + 1.75, -29.6, "W", 1);
+    wallItem(splitAC(), 7.4 - T / 2 - 0.02, y + 2.75, -31.6, "W", 1); wallItem(splitAC(), UX0 + T / 2 + 0.02, y + 2.75, -29.0, "E", 1);
+    device(null, extinguisherParts(), 7.15, y, -27.95, 0, 1);
     LAYER = "c1"; const cy = y + CH;
-    [[1.75, 2.35], [6.45, 7.05]].forEach(([a, b]) => planeAt(MAT.latticeCeil, b - a, 7.6, (a + b) / 2, cy - 0.03, -28, 0).rotation.x = Math.PI / 2);
-    [-26.4, -29.6].forEach(z => { const d = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.75, 0.06, 32), MAT.medallion); d.position.set(cx, cy - 0.05, z); addObj(d); device(null, chandelier("feather"), cx, cy - 0.08, z, 0, 1); });
+    [[UX0 + 0.15, UX0 + 0.75], [6.65, 7.25]].forEach(([a, b]) => planeAt(MAT.latticeCeil, b - a, 8.2, (a + b) / 2, cy - 0.03, -29.5, 0).rotation.x = Math.PI / 2);
+    [-27.6, -31.0].forEach(z => { const d = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.75, 0.06, 32), MAT.medallion); d.position.set(cx, cy - 0.05, z); addObj(d); device(null, chandelier("feather"), cx, cy - 0.08, z, 0, 1); });
     LAYER = "s1";
   }
 
@@ -1552,15 +1800,13 @@
   --------------------------------------------------------------- */
   const yawTo = (fx, fz, tx, tz) => Math.atan2(-(tx - fx), -(tz - fz));
   const KIND = { dean: "dean", deanSec: "dean", deanStaff: "dean", council: "hall", reg: "hall", store: "service", archive: "service", wc: "service", stair: "stair" };
-  const PARENT = { "g-store": "g-lobby", "g-stair": "g-lobby", "g-010": "g-reg", "g-011": "g-reg", "u-wc": "u-hall", "u-legal": "u-hall", "u-x1": "u-hall", "u-hrs": "u-hrm", "u-dstaff": "u-sec", "u-dean": "u-dstaff", "u-amin": "u-end" };
+  const PARENT = { "g-store": "g-lobby", "g-stair": "g-lobby", "g-010": "g-reg", "g-011": "g-reg", "u-wcm": "u-stair", "u-wcw": "u-stair", "u-legal": "u-hall", "u-sw": "u-hall", "u-hrm": "u-hall", "u-hrs": "u-hrm", "u-dstaff": "u-sec", "u-dean": "u-dstaff", "u-amin2": "u-amin" };
   const OPENDEF = {
     "g-lobby": { parent: "out", portal: [[WX, 2.6], [WX, -0.9]], spot: [WX, -0.9, 0] },
     "g-cor": { parent: "g-lobby", portal: [[CXM, -4.0], [CXM, -5.4]], spot: [CXM, -5.6, 0] },
-    "u-stair": { parent: "u-hall", portal: [[4.9, -0.9], [5.9, -0.9]], spot: [5.2, -0.9, -Math.PI / 2] },
-    "u-hall": { parent: null, spot: [3.6, -1.0, yawTo(3.6, -1.0, 2.2, -7.9)] },
-    "u-cor": { parent: "u-hall", portal: [[UXM, -7.3], [UXM, -8.8]], spot: [UXM, -9.0, 0] },
-    "u-end": { parent: "u-cor", portal: [[5.0, -23.3], [6.2, -23.3]], spot: [6.3, -23.0, yawTo(6.3, -23.0, 4.4, -24)] },
-    "u-back": { parent: "u-council", portal: [[2.37, -25.2], [2.37, -30.95], [UXM, -31.62], [UXM, -32.7]], spot: [3.6, -33.0, yawTo(3.6, -33.0, 1.6, -33.2)] }
+    "u-stair": { parent: "u-hall", portal: [[6.6, -2.85], [5.3, -3.3]], spot: [7.6, -2.8, Math.PI / 2] },
+    "u-hall": { parent: null, spot: [3.4, -4.6, yawTo(3.4, -4.6, -1.6, -5.3)] },
+    "u-cor": { parent: "u-hall", portal: [[UXM, -5.9], [UXM, -7.4]], spot: [UXM, -7.6, 0] }
   };
   function regions() {
     REG.length = 0;
@@ -1568,7 +1814,9 @@
       const [x0, x1, z0, z1] = r.r, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, d = r.doors[0], p = doorPos(r, d);
       let portal = [{ x: p.x - p.nx * 0.7, z: p.z - p.nz * 0.7 }, { x: p.x + p.nx * 0.75, z: p.z + p.nz * 0.75 }];
       let sx = p.x + p.nx * 1.3, sz = p.z + p.nz * 1.3, syaw = yawTo(sx, sz, cx, cz);
-      if (r.id === "g-stair") { sx = 6.4; sz = -0.95; syaw = yawTo(6.4, -0.95, 8.0, -2.25); }
+      if (r.id === "g-stair") { sx = 6.35; sz = -1.25; syaw = 0; }
+      if (r.id === "u-sw") portal = [{ x: 0.05, z: -4.3 }, { x: -0.25, z: -3.6 }, { x: -0.95, z: -3.55 }, { x: -2.35, z: -3.55 }];
+      if (r.id === "u-hrs") portal = [{ x: 0.75, z: -8.3 }, { x: 0.55, z: -9.75 }, { x: -0.9, z: -10.45 }, { x: -2.35, z: -10.45 }];
       if (r.id === "g-010") portal = [{ x: -0.2, z: -25.1 }, { x: -0.3, z: -27.7 }, { x: -1.75, z: -27.7 }];
       if (r.id === "g-011") portal = [{ x: -0.2, z: -25.1 }, { x: -0.3, z: -30.2 }, { x: -1.75, z: -30.2 }];
       REG.push({ id: r.id, lvl: r.lvl, x0, z0, x1, z1, name: r.name + (r.code ? " " + r.code : ""), short: r.short || r.name, kind: KIND[r.sub] || "office", room: r, ph: r.ph, parent: PARENT[r.id] || (r.lvl ? "u-cor" : "g-cor"), portal, spot: { x: sx, z: sz, yaw: syaw } });
@@ -1685,24 +1933,28 @@
     }
     P.lvl = (a.camY || 0) > FH + 0.8 ? 1 : 0;
   }
-  const E0 = EYE, E1 = FH + EYE, EL = LY + EYE, EG = GY + EYE;
+  const E0 = EYE, E1 = FH + EYE, EL = LY + EYE, EG = GY + EYE, EA = LY1 + EYE, EB = LY2 + EYE;
+  /* الصعود كما صُوِّر: القلبة الأولى شمالاً، ثم يميناً إلى البسطة تحت الشبّاك، ثم يميناً جنوباً إلى الطابق الأول، ثم يميناً إلى البهو */
   const climbFrames = () => [
-    { p: [6.0, E0, -2.25], look: [9, E0 + 0.9, -2.25], move: 0.7, cap: "تصعد الدرج إلى الطابق الأول…" },
-    { p: [8.35, EL, -2.25], look: [11, EL + 0.3, -2.25], move: 2.6 },
-    { p: [9.35, EL, -1.6], look: [12, EL + 0.4, -1.6], move: 1.0 },
-    { p: [9.0, EL, -0.9], look: [5, EL + 1.2, -0.9], move: 1.0 },
-    { p: [6.0, E1, -0.9], look: [2, E1, -0.9], move: 2.6, cap: "الطابق الأول" },
-    { p: [3.4, E1, -1.0], look: [3.4, E1, -8], move: 1.4, cap: "" }
+    { p: [6.35, E0, -2.15], look: [6.35, E0 + 0.7, -6], move: 0.8, cap: "تصعد الدرج: القلبة الأولى شمالاً بمحاذاة الجدار والدرابزين الذهبي على يمينك…" },
+    { p: [6.35, EA, -5.75], look: [10, EA + 0.6, -5.85], move: 2.8 },
+    { p: [7.9, (EA + EB) / 2, -5.85], look: [11, EB + 0.5, -5.85], move: 1.0 },
+    { p: [9.2, EB, -5.85], look: [9.25, EB + 0.9, -1], move: 0.9, cap: "البسطة تحت الشبّاك، ثم يميناً" },
+    { p: [9.25, E1, -2.8], look: [9.25, E1 - 0.1, 2], move: 2.4, hold: 0.7, cap: "الطابق الأول: أمامك باب الصحيات وعلى يسارك الشبّاك" },
+    { p: [8.2, E1, -2.8], look: [-1.6, FH + 1.7, -4.6], move: 1.0, cap: "" },
+    { p: [4.6, E1, -4.4], look: [-1.6, FH + 1.8, -5.3], move: 1.8 }
   ];
   function climb() { play(climbFrames()); }
   function descend() {
     play([
-      { p: [6.0, E1, -0.9], look: [9, E1 - 0.9, -0.9], move: 0.7, cap: "تنزل إلى الطابق الأرضي…" },
-      { p: [8.4, EL, -0.9], look: [11, EL - 0.2, -0.9], move: 2.6 },
-      { p: [9.35, EL, -1.6], look: [9.35, EL - 0.3, -4], move: 1.0 },
-      { p: [9.0, EL, -2.25], look: [5, EL - 1.2, -2.25], move: 1.0 },
-      { p: [6.0, E0, -2.25], look: [2, E0, -2.25], move: 2.6, cap: "" },
-      { p: [4.6, E0, -1.0], look: [1, E0, -1.0], move: 1.3 }
+      { p: [8.4, E1, -2.8], look: [9.3, E1 - 0.3, -2.8], move: 0.6, cap: "تنزل إلى الطابق الأرضي…" },
+      { p: [9.25, E1, -3.0], look: [9.25, E1 - 1.2, -6], move: 0.7 },
+      { p: [9.25, EB, -5.6], look: [6, EB - 0.4, -5.85], move: 2.4 },
+      { p: [7.6, (EA + EB) / 2, -5.85], look: [5, EA - 0.3, -5.85], move: 1.0 },
+      { p: [6.35, EA, -5.85], look: [6.35, EA - 1.2, 0], move: 0.8 },
+      { p: [6.35, E0, -2.5], look: [6.35, E0, 2], move: 2.6, cap: "" },
+      { p: [6.35, E0, -1.3], look: [2, E0, -1.1], move: 0.9 },
+      { p: [4.7, E0, -1.1], look: [1, E0, -1.6], move: 1.2 }
     ]);
   }
   function teleport(lvl, x, z, yaw) {
@@ -1725,24 +1977,26 @@
       { p: [CXM, E0, -23.0], look: [CXM, 1.5, -24], move: 1.0, cap: "" },
       { p: [CXM, E0, -25.6], look: [3.0, 1.3, -32], move: 1.6, hold: 3.2, cap: "شعبة التسجيل وشؤون الطلبة بسقفها المزخرف وثرياها الذهبية" },
       { p: [CXM, E0, -22.5], look: [CXM, 1.6, -4], move: 1.8, cap: "" },
-      { p: [CXM, E0, -1.4], look: [5.6, 1.4, -0.95], move: 4.4, cap: "إلى الدرج خلف الباب الزجاجي" },
-      { p: [5.1, E0, -0.95], look: [9, 1.6, -0.95], move: 1.2 },
-      { p: [6.0, E0, -1.3], look: [9, E0 + 0.6, -2.25], move: 1.0 },
+      { p: [CXM, E0, -1.4], look: [5.6, 1.4, -1.1], move: 4.4, cap: "إلى الدرج: الباب الزجاجي الداكن على يمين الداخل" },
+      { p: [5.0, E0, -1.1], look: [9, 1.5, -1.1], move: 1.0 },
+      { p: [6.35, E0, -1.2], look: [6.35, E0 + 0.4, -6], move: 1.0, hold: 1.8, cap: "الباب الزجاجي الأسود بشعار الكلية، وخلفه أول الدرج" },
       ...climbFrames(),
-      { p: [3.0, E1, -4.8], look: [2.2, FH + 1.8, -8], move: 1.6, hold: 3.2, cap: "بهو شعبة الشؤون الإدارية والمالية، وعلى اليسار شعبة الشؤون القانونية بواجهتها الزجاجية" },
-      { p: [UXM, E1, -8.6], look: [UXM, FH + 1.5, -20], move: 1.6, hold: 1.0, cap: "ممر الطابق الأول" },
-      { p: [UXM, E1, -9.2], look: [1.0, FH + 1.3, -10.6], move: 0.8, hold: 2.4, cap: "شعبة الموارد البشرية" },
-      { p: [UXM, E1, -13.1], look: [8, FH + 1.3, -14.5], move: 1.8, hold: 2.6, cap: "شعبة الحسابات ورفوف أضابيرها" },
-      { p: [4.0, E1, -15.6], look: [0.5, FH + 1.4, -17.3], move: 1.4, hold: 2.6, cap: "شعبة ضمان الجودة وحاجزها الخشبي بشبابيك المراجعين" },
-      { p: [UXM, E1, -16.9], look: [8, FH + 1.3, -18.5], move: 1.0, hold: 2.4, cap: "شعبة التخطيط والمتابعة" },
-      { p: [UXM, E1, -21.6], look: [UXM, FH + 2.1, -24], move: 2.2, hold: 3.4, cap: "باب «امانة المجلس»، وعلى اليسار «مكتب العميد»، وعلى اليمين باب أمين المجلس" },
-      { p: [UXM, E1, -24.45], look: [UXM, FH + 1.2, -32], move: 1.6, hold: 3.6, cap: "قاعة مجلس الكلية" },
-      { p: [UXM, E1, -23.0], look: [1, E1, -23.0], move: 1.4, cap: "" },
-      { p: [2.4, E1, -23.0], look: [-3.6, FH + 1.2, -21.0], move: 1.2, hold: 2.6, cap: "استقبال مكتب العميد" },
-      { p: [-4.2, E1, -22.3], look: [-4.2, FH + 1.0, -26], move: 1.8, cap: "" },
-      { p: [-4.2, E1, -25.0], look: [-2.2, FH + 1.1, -27.4], move: 1.2, hold: 2.4, cap: "مكتب مدير مكتب العميد" },
-      { p: [-4.6, E1, -27.6], look: [-4.6, FH + 1.4, -31], move: 1.4, cap: "" },
-      { p: [-4.6, E1, -29.4], look: [-2.6, FH + 1.0, -32.6], move: 1.4, hold: 4.4, cap: "مكتب عميد الكلية الأستاذ الدكتور " + DEAN_NAME }
+      { p: [1.4, E1, -4.6], look: [-1.6, FH + 1.9, -5.3], move: 1.4, hold: 3.4, cap: "بهو شعبة الشؤون الإدارية والمالية: الجدار الذهبي ومقاعد الانتظار، وعلى اليسار الشعبة القانونية بواجهتها الزجاجية" },
+      { p: [1.6, E1, -5.0], look: [1.62, FH + 1.6, -6.6], move: 1.2, hold: 3.6, cap: "ملصق «مهام شعبة الموارد البشرية» وتحته الهيكل التنظيمي، وعلى يساره باب الشعبة" },
+      { p: [UXM, E1, -6.4], look: [UXM, FH + 1.5, -25], move: 1.6, hold: 2.6, cap: "ممر الطابق الأول: يميناً الترقيات وضمان الجودة والتدقيق والتخطيط، ويساراً الحسابات والإعلام ومكتب العميد" },
+      { p: [UXM, E1, -11.2], look: [8.5, FH + 1.3, -11.6], move: 2.2, hold: 2.6, cap: "شعبة ضمان الجودة بحاجزها الخشبي وشبابيك المراجعين" },
+      { p: [UXM, E1, -16.3], look: [UX0, FH + 1.85, -16.35], move: 1.8, hold: 3.4, cap: "ملصق «مهام شعبة الحسابات»" },
+      { p: [UXM, E1, -17.6], look: [-2, FH + 1.3, -17.8], move: 0.8, hold: 2.4, cap: "شعبة الحسابات ورفوف أضابيرها" },
+      { p: [UXM, E1, -21.0], look: [CX1, FH + 1.85, -21.1], move: 1.6, hold: 3.0, cap: "ملصق «مهام شعبة التخطيط والمتابعة»، ويقابله ملصق «مهام شعبة الاعلام»" },
+      { p: [UXM, E1, -21.05], look: [UX0, FH + 1.85, -21.0], move: 1.2, hold: 2.6, cap: "مهام شعبة الإعلام" },
+      { p: [UXM, E1, -23.0], look: [UXM, FH + 2.0, -25], move: 1.2, hold: 3.4, cap: "آخر الممر: باب قاعة المجلس تحت «امانة المجلس»، وعلى اليسار «مكتب العميد»، وعلى اليمين باب أمين المجلس" },
+      { p: [UXM, E1, -25.6], look: [5.3, FH + 1.1, -33], move: 1.4, hold: 3.6, cap: "قاعة مجلس الكلية" },
+      { p: [UXM, E1, -23.7], look: [1, E1, -23.7], move: 1.4, cap: "" },
+      { p: [2.1, E1, -24.0], look: [-1.0, FH + 1.2, -26.2], move: 1.2, hold: 2.6, cap: "مكتب العميد – الاستقبال" },
+      { p: [1.6, E1, -26.9], look: [1.6, FH + 1.2, -30], move: 1.4, cap: "" },
+      { p: [1.6, E1, -28.6], look: [0.4, FH + 1.0, -31.5], move: 1.0, hold: 2.4, cap: "مكتب مدير مكتب العميد" },
+      { p: [-0.6, E1, -29.0], look: [-3, E1, -29.0], move: 1.4, cap: "" },
+      { p: [-2.4, E1, -29.6], look: [-3.7, FH + 1.0, -32.6], move: 1.4, hold: 4.4, cap: "مكتب عميد الكلية الأستاذ الدكتور " + DEAN_NAME }
     ], null, true);
   }
 
@@ -1782,7 +2036,7 @@
   function renderLabels() {
     const box = U.$("#dn-labels");
     if (!LBL.length) {
-      REG.filter(r => r.spot && r.kind !== "stair" && r.kind !== "corridor").forEach(r => {
+      REG.filter(r => r.spot && r.kind !== "stair" && r.kind !== "corridor" && !(r.room && r.room.hidden)).forEach(r => {
         const b = document.createElement("button"); b.type = "button"; b.className = "dn-lbl k-" + r.kind + (r.ph === 0 ? " approx" : ""); b.textContent = r.short || r.name; b.title = r.name;
         b.onclick = () => teleport(r.lvl, r.spot.x, r.spot.z, r.spot.yaw);
         box.appendChild(b); LBL.push({ el: b, r });
@@ -1806,8 +2060,8 @@
   }
   function triggers() {
     if (anim) return;
-    if (P.lvl === 0 && P.x > 5.78 && P.x < 6.55 && P.z < SA.z1 - 0.04 && P.z > SA.z0 + 0.04) climb();
-    else if (P.lvl === 1 && P.x > 5.78 && P.x < 6.55 && P.z < SB.z1 - 0.04 && P.z > SB.z0 + 0.04) descend();
+    if (P.lvl === 0 && P.x > 5.8 && P.x < 6.9 && P.z < -2.28 && P.z > -2.76) climb();
+    else if (P.lvl === 1 && P.x > 8.75 && P.x < 9.75 && P.z < -3.15 && P.z > -3.49) descend();
   }
   const MAPB = { x0: -7.0, x1: 11.0, z0: -35.0, z1: 2.0 };
   function mapXY(cv, x, z) { return [(x - MAPB.x0) * cv.width / (MAPB.x1 - MAPB.x0), (z - MAPB.z0) * cv.height / (MAPB.z1 - MAPB.z0)]; }
@@ -1840,7 +2094,7 @@
     const d = DEV[key]; if (!d) return;
     const box = U.$("#dn-info");
     box.innerHTML = `<button class="btn icon-btn btn-ghost tour-info-x" type="button" aria-label="إغلاق"><svg><use href="#i-close"/></svg></button>
-      <span class="ti-tag">عمادة كلية التربية للعلوم الصرفة</span><h4>${U.esc(d.name)}</h4><p>${U.esc(d.what)}</p>`;
+      <span class="ti-tag">عمادة كلية التربية للعلوم الصرفة</span><h4>${U.esc(d.name)}</h4><p>${U.esc(d.what)}</p>${d.list ? "<ol>" + d.list.map(t => "<li>" + U.esc(t) + "</li>").join("") + "</ol>" : ""}`;
     box.hidden = false; box.querySelector(".tour-info-x").onclick = closeInfo;
   }
   function closeInfo() { const b = U.$("#dn-info"); if (b) b.hidden = true; }
@@ -1972,10 +2226,10 @@
   }
   function renderRoomList() {
     const order = { lobby: 0, corridor: 1, office: 2, dean: 3, hall: 4, service: 5, stair: 6 };
-    const grp = l => REG.filter(r => r.lvl === l && r.spot && !(r.id === "u-end")).sort((a, b) => (order[a.kind] - order[b.kind]) || (a.z1 - b.z1 ? b.z1 - a.z1 : a.x0 - b.x0));
+    const grp = l => REG.filter(r => r.lvl === l && r.spot && !(r.room && r.room.hidden)).sort((a, b) => (order[a.kind] - order[b.kind]) || (a.z1 - b.z1 ? b.z1 - a.z1 : a.x0 - b.x0));
     const btn = r => `<button type="button" class="tile3d" data-r="${r.id}"><i class="k-${r.kind}"></i><span>${U.esc(r.name)}</span>${r.ph === 0 ? '<em class="dn-approx">تقريبية</em>' : ""}</button>`;
     U.$("#dn-rooms").innerHTML = [0, 1].map(l => `<div class="panel"><div class="panel-h"><h3>${l ? "الطابق الأول" : "الطابق الأرضي"}</h3></div><div class="tour-list">${l ? "" : `<button type="button" class="tile3d" data-r="out"><i class="k-outside"></i><span>الممر المسقّف أمام باب العمادة</span></button>`}${grp(l).map(btn).join("")}</div></div>`).join("") +
-      `<div class="panel"><div class="panel-h"><h3>كيف تتجول</h3></div><ul class="tour-how"><li><b>للالتفات:</b> اسحب بالماوس أو بإصبعك.</li><li><b>للمشي:</b> اضغط على الأرض فتمشي إليها، أو استخدم W A S D والأسهم، أو عصا التحكم على الهاتف.</li><li><b>الدرج:</b> على يمين الداخل خلف الحاجز الزجاجي الأسود؛ ادخل من بابه وامشِ إلى القلبة اليسرى فتصعد تلقائياً.</li><li><b>من الأعلى:</b> زر الطبقات يرفع السقف فترى كل غرف الطابق بأثاثها، واضغط على أي غرفة لتدخلها.</li></ul>
+      `<div class="panel"><div class="panel-h"><h3>كيف تتجول</h3></div><ul class="tour-how"><li><b>للالتفات:</b> اسحب بالماوس أو بإصبعك.</li><li><b>للمشي:</b> اضغط على الأرض فتمشي إليها، أو استخدم W A S D والأسهم، أو عصا التحكم على الهاتف.</li><li><b>الدرج:</b> على يمين الداخل خلف الحاجز الزجاجي الأسود؛ ادخل من بابه الزجاجي ثم امشِ إلى الباب الأسود بشعار الكلية فتصعد تلقائياً. وللنزول امشِ من رأس الدرج نحو القلبة.</li><li><b>من الأعلى:</b> زر الطبقات يرفع السقف فترى كل غرف الطابق بأثاثها، واضغط على أي غرفة لتدخلها.</li></ul>
       <button type="button" class="btn btn-sm u-mt8" data-r="ov"><svg aria-hidden="true"><use href="#i-layers"/></svg>اعرض الطابق من الأعلى</button>
       <p class="faint" style="font-size:.74rem;margin-top:10px">المجسّم مبني لقطةً لقطة على فيديوهات العمادة وصورها، وكل الأسماء واللوحات مكتوبة نصّاً كما تظهر فيها، ولا يظهر أي شخص. لا يوجد مخطط هندسي، لذا الأبعاد تقديرية. الغرف المعلّمة «تقريبية» صُوِّر بابها واسمها فقط، فبُنيت من الداخل على طراز الغرف المصوّرة.</p></div>`;
   }
